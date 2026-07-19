@@ -17,6 +17,11 @@ accepts only in-memory objects. It does not read files, call GitHub, discover ag
 skills, execute a procedure, or mutate lifecycle state. `to_dict()` returns a detached
 copy so callers cannot mutate the stored canonical decision.
 
+Every normalized request identifies one `required_procedure` by identity and pinned
+revision. `available_procedures` contains the complete caller-observed availability
+set. The resolver sorts that set before including it in the hashed decision. It never
+infers a required procedure from phase alone and never selects a same-phase substitute.
+
 ## First tracer
 
 The golden Verify request selects `verify-evidence` at Gate `Evidence needed`. The
@@ -43,6 +48,16 @@ Not wanted:
 - filesystem or network discovery inside the resolver;
 - consumer repository, label, Project, or lifecycle-writer vocabulary; or
 - a claim that Slice 2 is complete before the remaining phases and red canaries pass.
+
+## Unavailable procedure tracer
+
+If the required procedure is absent from `available_procedures`, the resolver returns
+a hashed decision with Gate `Blocked`, `allowed=false`, and reason code
+`SKILL_UNAVAILABLE`. `required_procedure` preserves the unavailable identity and
+revision, while `primary_procedure` is null because nothing was selected. The decision
+requests `procedure-availability` evidence and includes the normalized availability
+set in its hash. Adding an unrelated procedure therefore changes the decision hash but
+cannot satisfy the requirement or become a silent substitute.
 
 ## Verification
 

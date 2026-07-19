@@ -26,6 +26,7 @@ GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
 REQUIRED_RESOLUTION_FIELDS = {
     "allowed",
     "anti_example",
+    "available_procedures",
     "capability_profile_version",
     "environment",
     "executes",
@@ -41,6 +42,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "rationale",
     "reason_code",
     "required_evidence",
+    "required_procedure",
     "resolution_hash",
     "revision",
     "schema_version",
@@ -119,6 +121,60 @@ def validate_resolution(resolution: object) -> list[str]:
     ):
         errors.append("required_evidence must be a list of non-empty strings")
 
+    available_procedures = resolution.get("available_procedures")
+    valid_available_procedures = isinstance(available_procedures, list) and all(
+        isinstance(item, dict)
+        and set(item) == {"identity", "revision"}
+        and all(isinstance(value, str) and value for value in item.values())
+        for item in available_procedures
+    )
+    if not valid_available_procedures:
+        errors.append("available_procedures must be normalized procedure references")
+    elif available_procedures != sorted(
+        available_procedures,
+        key=lambda item: (item["identity"], item["revision"]),
+    ) or len(available_procedures) != len(
+        {(item["identity"], item["revision"]) for item in available_procedures}
+    ):
+        errors.append("available_procedures must be sorted and unique")
+
+    required_procedure = resolution.get("required_procedure")
+    valid_required_procedure = (
+        isinstance(required_procedure, dict)
+        and set(required_procedure) == {"identity", "revision"}
+        and all(isinstance(value, str) and value for value in required_procedure.values())
+    )
+    if not valid_required_procedure:
+        errors.append("required_procedure must identify one pinned procedure")
+
+    primary_procedure = resolution.get("primary_procedure")
+    unavailable = (
+        resolution.get("gate") == "Blocked"
+        and resolution.get("reason_code") == "SKILL_UNAVAILABLE"
+    )
+    if unavailable:
+        if primary_procedure is not None:
+            errors.append("unavailable required procedure cannot be selected")
+        if isinstance(required_evidence, list) and "procedure-availability" not in required_evidence:
+            errors.append("unavailable required procedure needs availability evidence")
+    elif not isinstance(primary_procedure, str) or not primary_procedure:
+        errors.append("primary_procedure must identify the selected procedure")
+
+    if valid_required_procedure and valid_available_procedures:
+        required_reference = (
+            required_procedure["identity"],
+            required_procedure["revision"],
+        )
+        available_references = {
+            (item["identity"], item["revision"]) for item in available_procedures
+        }
+        if unavailable and required_reference in available_references:
+            errors.append("unavailable required procedure is present in availability facts")
+        if not unavailable and required_reference not in available_references:
+            errors.append("selected procedure is absent from availability facts")
+        if not unavailable and primary_procedure != required_procedure["identity"]:
+            errors.append("selected procedure must equal the required procedure")
+
     for field in ("finished", "good"):
         value = resolution.get(field)
         if not isinstance(value, list) or not value or not all(
@@ -166,7 +222,6 @@ def validate_resolution(resolution: object) -> list[str]:
         "environment",
         "lane",
         "policy_version",
-        "primary_procedure",
         "project_profile_version",
         "task_id",
         "workflow",

@@ -64,27 +64,36 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
     if not isinstance(request, dict) or not isinstance(procedures, dict):
         raise TypeError("request and procedures must be objects")
 
+    available_procedures = sorted(
+        (
+            {"identity": item["identity"], "revision": item["revision"]}
+            for item in request["available_procedures"]
+            if isinstance(item, dict)
+        ),
+        key=lambda item: (item["identity"], item["revision"]),
+    )
     available = {
         (item["identity"], item["revision"])
-        for item in request["available_procedures"]
-        if isinstance(item, dict)
+        for item in available_procedures
     }
-    phase_procedures = [
+    required_procedure = request["required_procedure"]
+    required_identity = (
+        required_procedure["identity"],
+        required_procedure["revision"],
+    )
+    matches = [
         procedure
         for procedure in procedures["procedures"]
         if isinstance(procedure, dict)
         and procedure.get("phase") == request["phase"]
+        and (procedure.get("identity"), procedure.get("revision"))
+        == required_identity
     ]
-    matches = [
-        procedure
-        for procedure in phase_procedures
-        if (procedure.get("identity"), procedure.get("revision")) in available
-    ]
-    if len(matches) > 1 or (not matches and len(phase_procedures) != 1):
-        raise ValueError("normalized request must resolve exactly one procedure")
+    if len(matches) != 1:
+        raise ValueError("normalized request must identify exactly one required procedure")
 
-    skill_unavailable = not matches
-    procedure = phase_procedures[0] if skill_unavailable else matches[0]
+    procedure = matches[0]
+    skill_unavailable = required_identity not in available
     accepted_evidence = _accepted_evidence(request)
     required_evidence = [
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
@@ -111,7 +120,7 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
             "summary": "The required procedure is unavailable for the requested phase.",
         }
         reason_code = "SKILL_UNAVAILABLE"
-        required_evidence = []
+        required_evidence = ["procedure-availability"]
     workflow = request["workflow"]
     capability_profile = request["capability_profile"]
     consumer_profile = request["consumer_profile"]
@@ -119,6 +128,7 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
     payload = {
         "allowed": allowed,
         "anti_example": anti_example,
+        "available_procedures": available_procedures,
         "capability_profile_version": capability_profile["version"],
         "environment": request["environment"],
         "executes": False,
@@ -129,11 +139,15 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],
-        "primary_procedure": procedure["identity"],
+        "primary_procedure": None if skill_unavailable else procedure["identity"],
         "project_profile_version": consumer_profile["version"],
         "rationale": rationale,
         "reason_code": reason_code,
         "required_evidence": required_evidence,
+        "required_procedure": {
+            "identity": required_procedure["identity"],
+            "revision": required_procedure["revision"],
+        },
         "revision": request["revision"],
         "schema_version": "1.0.0",
         "source_identities": {
