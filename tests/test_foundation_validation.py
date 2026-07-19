@@ -347,17 +347,15 @@ class SourceContractTests(unittest.TestCase):
 
     def test_procedure_cannot_use_course_identity_as_runtime_authority(self) -> None:
         catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
-        catalog["procedures"][0]["rationale"]["principle_ids"] = ["ai-engineer-09"]
-        principle_registry = {
-            "principles": [
-                {
-                    "id": "aec-exact-evidence",
-                    "revision": "aec-exact-evidence:1.0.0",
-                    "statement": "Accepted evidence matches the evaluated inputs.",
-                }
-            ],
-            "schema_version": "1.0.0",
-        }
+        verify_procedure = next(
+            procedure
+            for procedure in catalog["procedures"]
+            if procedure["identity"] == "verify-evidence"
+        )
+        verify_procedure["rationale"]["principle_ids"] = ["ai-engineer-09"]
+        principle_registry = load_json(
+            ROOT / "config/principles/aec-engineering.json"
+        )
 
         self.assertIn(
             "procedure verify-evidence references non-AEC principle ai-engineer-09",

@@ -1,9 +1,49 @@
 {
   "principles": [
     {
+      "id": "aec-ticket-to-pr-intake",
+      "revision": "aec-ticket-to-pr-intake:1.0.0",
+      "statement": "Is there one observable outcome with an owner and boundary?"
+    },
+    {
+      "id": "aec-ticket-to-pr-framing",
+      "revision": "aec-ticket-to-pr-framing:1.0.0",
+      "statement": "Are context, constraints, risks, authority, and unknowns explicit?"
+    },
+    {
+      "id": "aec-ticket-to-pr-spec",
+      "revision": "aec-ticket-to-pr-spec:1.0.0",
+      "statement": "Are behavior, interfaces, non-goals, and binary acceptance criteria resolved?"
+    },
+    {
+      "id": "aec-ticket-to-pr-plan",
+      "revision": "aec-ticket-to-pr-plan:1.0.0",
+      "statement": "Are vertical slices, dependencies, ownership, proof, and stop rules defined?"
+    },
+    {
+      "id": "aec-ticket-to-pr-build",
+      "revision": "aec-ticket-to-pr-build:1.0.0",
+      "statement": "Does the smallest coherent implementation make an honest red case green?"
+    },
+    {
       "id": "aec-evidence-input-binding",
       "revision": "aec-evidence-input-binding:1.0.0",
       "statement": "Accepted evidence must declare the same revision and environment as the decision inputs."
+    },
+    {
+      "id": "aec-ticket-to-pr-review",
+      "revision": "aec-ticket-to-pr-review:1.0.0",
+      "statement": "Has an independent reviewer checked the exact base and head against the spec?"
+    },
+    {
+      "id": "aec-ticket-to-pr-pr",
+      "revision": "aec-ticket-to-pr-pr:1.0.0",
+      "statement": "Are findings resolved and required checks current on the merge candidate?"
+    },
+    {
+      "id": "aec-ticket-to-pr-deploy",
+      "revision": "aec-ticket-to-pr-deploy:1.0.0",
+      "statement": "Is the intended revision live, observed, and recoverable?"
     }
   ],
   "schema_version": "1.0.0"

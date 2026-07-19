@@ -1,6 +1,114 @@
 {
   "procedures": [
     {
+      "anti_example": "A broad request advances without one observable outcome.",
+      "finished": [
+        "The observable outcome, owner, and task boundary are explicit."
+      ],
+      "good": [
+        "One observable outcome names its owner and task boundary."
+      ],
+      "identity": "intake-outcome",
+      "phase": "Intake",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-intake"],
+        "summary": "Is there one observable outcome with an owner and boundary?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "outcome-statement",
+        "owner-and-boundary"
+      ],
+      "revision": "intake-outcome:1.0.0"
+    },
+    {
+      "anti_example": "Work advances while authority or material unknowns remain implicit.",
+      "finished": [
+        "Context, constraints, risks, authority, and unknowns are recorded."
+      ],
+      "good": [
+        "The delivery boundary distinguishes known facts from unresolved questions."
+      ],
+      "identity": "frame-delivery-context",
+      "phase": "Framing",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-framing"],
+        "summary": "Are context, constraints, risks, authority, and unknowns explicit?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "context-and-constraints",
+        "authority-and-risks",
+        "open-questions"
+      ],
+      "revision": "frame-delivery-context:1.0.0"
+    },
+    {
+      "anti_example": "Implementation begins while observable behavior remains ambiguous.",
+      "finished": [
+        "Behavior, interfaces, non-goals, and binary acceptance criteria are resolved."
+      ],
+      "good": [
+        "The contract separates required behavior from explicit non-goals."
+      ],
+      "identity": "specify-behavior-contract",
+      "phase": "Spec",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-spec"],
+        "summary": "Are behavior, interfaces, non-goals, and binary acceptance criteria resolved?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "behavior-and-interface-contract",
+        "non-goals",
+        "binary-acceptance-criteria"
+      ],
+      "revision": "specify-behavior-contract:1.0.0"
+    },
+    {
+      "anti_example": "A task list omits ownership, proof, or a stop condition.",
+      "finished": [
+        "Vertical slices, dependencies, ownership, proof, and stop rules are defined."
+      ],
+      "good": [
+        "Each bounded slice names its dependency, owner, proof, and stop rule."
+      ],
+      "identity": "plan-vertical-delivery",
+      "phase": "Plan",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-plan"],
+        "summary": "Are vertical slices, dependencies, ownership, proof, and stop rules defined?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "vertical-slice-plan",
+        "dependency-and-ownership-map",
+        "proof-and-stop-rules"
+      ],
+      "revision": "plan-vertical-delivery:1.0.0"
+    },
+    {
+      "anti_example": "A broad implementation changes unrelated behavior to make tests pass.",
+      "finished": [
+        "The smallest coherent implementation makes the accepted red case green."
+      ],
+      "good": [
+        "The implementation is bounded to the behavior demonstrated by the red case."
+      ],
+      "identity": "build-coherent-slice",
+      "phase": "Build",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-build"],
+        "summary": "Does the smallest coherent implementation make an honest red case green?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "red-case-result",
+        "green-case-result"
+      ],
+      "revision": "build-coherent-slice:1.0.0"
+    },
+    {
       "anti_example": "A passing test from another revision is treated as proof.",
       "finished": [
         "Every required verification fact is accepted for the exact revision and environment."
@@ -20,6 +128,70 @@
         "integration-test-report"
       ],
       "revision": "verify-evidence:1.0.0"
+    },
+    {
+      "anti_example": "Approval from another revision is applied to the current change.",
+      "finished": [
+        "Independent review covers the exact base, head, and accepted specification."
+      ],
+      "good": [
+        "The reviewer records findings against the exact change and its contract."
+      ],
+      "identity": "review-exact-change",
+      "phase": "Review",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-review"],
+        "summary": "Has an independent reviewer checked the exact base and head against the spec?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "independent-review",
+        "base-head-binding"
+      ],
+      "revision": "review-exact-change:1.0.0"
+    },
+    {
+      "anti_example": "A stale green check is treated as current merge-candidate evidence.",
+      "finished": [
+        "All findings are resolved and required checks are current on the merge candidate."
+      ],
+      "good": [
+        "The merge candidate binds resolved findings and required checks to one revision."
+      ],
+      "identity": "prepare-merge-candidate",
+      "phase": "PR",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-pr"],
+        "summary": "Are findings resolved and required checks current on the merge candidate?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "resolved-findings",
+        "current-required-checks"
+      ],
+      "revision": "prepare-merge-candidate:1.0.0"
+    },
+    {
+      "anti_example": "A successful build is reported as proof that the revision is live.",
+      "finished": [
+        "The intended revision is live, observed, and covered by a recovery path."
+      ],
+      "good": [
+        "Deployment evidence binds the live observation and recovery path to one revision."
+      ],
+      "identity": "prove-live-revision",
+      "phase": "Deploy",
+      "rationale": {
+        "principle_ids": ["aec-ticket-to-pr-deploy"],
+        "summary": "Is the intended revision live, observed, and recoverable?"
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "live-revision",
+        "live-observation",
+        "recovery-path"
+      ],
+      "revision": "prove-live-revision:1.0.0"
     }
   ],
   "schema_version": "1.0.0"

@@ -1,7 +1,8 @@
 # Deterministic Resolver
 
-Slice 2 begins with one Verify-phase tracer. It proves the complete in-memory path
-from a normalized request and procedure catalog to one immutable mentoring decision.
+Slice 2 uses one project-neutral procedure catalog for all nine lifecycle phases. Each
+golden request proves the complete in-memory path from normalized facts and that catalog
+to one immutable mentoring decision.
 
 ## Public interface
 
@@ -45,12 +46,24 @@ accept or translate the former `identity` and `version` aliases. The embedded pr
 keeps its own schema version `1.0.0`, and the output decision schema stays at `1.0.0`
 because its field structure did not change.
 
-## First tracer
+## Lifecycle golden catalog
 
-The golden Verify request selects `verify-evidence` at Gate `Evidence needed`. The
-decision includes structured rationale, requested evidence, Good, Finished, one
-anti-example, all source revisions, and a SHA-256 hash over canonical JSON bytes.
-Running the same request twice must produce identical bytes and hash.
+The golden catalog contains one explicit procedure for Intake, Framing, Spec, Plan,
+Build, Verify, Review, PR, and Deploy. Every procedure contains a phase-specific
+rationale, evidence request, Good, Finished, and one anti-example. Each golden request
+selects its pinned procedure at Gate `Evidence needed` and maps to the lifecycle stage
+defined by the workflow registry.
+
+The catalog is the single runtime source of procedure facts. Golden requests contain
+only normalized caller-owned facts and a pinned procedure reference. A contract test
+requires exact phase coverage, one golden request per phase, stable canonical bytes,
+and a fixed SHA-256 hash across two consecutive resolutions.
+All nine requests share one caller-fact baseline. They vary only by phase, task,
+workflow stage, and the required and available pinned procedure reference.
+
+New phase procedures use only the neutral `aec-ticket-to-pr-*` identities documented
+in the independently authored workflow contract. They add no private-course text or
+lesson-to-policy mapping.
 
 Good:
 
@@ -59,9 +72,9 @@ Good:
 - source identities and revisions are copied into the hashed decision; and
 - the request, catalog, and stored decision remain unchanged.
 
-Finished for this tracer:
+Finished for the lifecycle goldens:
 
-- the focused resolver test passes twice with identical canonical bytes and hash;
+- all nine focused resolver cases pass twice with identical canonical bytes and hash;
 - the expanded decision schema and validator accept the generated decision; and
 - the complete Slice 1 foundation gate remains green.
 

@@ -17,6 +17,11 @@ the MIT-licensed `owainlewis/workflows` project.
 | Assure & Release | PR | Are findings resolved and required checks current on the merge candidate? |
 | Assure & Release | Deploy | Is the intended revision live, observed, and recoverable? |
 
+RESOLVE-004 assigns the new phase procedures stable `aec-ticket-to-pr-*` principle
+identities derived only from these independently authored exit contracts. These
+identities do not identify or map to private course lessons. Verify retains its existing
+tracer contract until the dedicated course-boundary work replaces it.
+
 ## Gate decision
 
 Each phase resolves exactly one Gate. Precedence is:

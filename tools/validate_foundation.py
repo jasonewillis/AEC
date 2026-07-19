@@ -764,6 +764,9 @@ def main() -> int:
         ROOT / "config" / "principles" / "aec-engineering.json"
     )
     runtime_authority_paths = sorted((ROOT / "config").rglob("*.json"))
+    golden_requests = sorted(
+        (ROOT / "tests" / "fixtures" / "resolver" / "golden").glob("*.json")
+    )
     checks = [
         report_errors(
             "provenance",
@@ -797,20 +800,14 @@ def main() -> int:
             "resolution.valid",
             validate_resolution(load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")),
         ),
-        report_errors(
-            "resolution-request.verify",
-            validate_resolution_request(
-                load_json(
-                    ROOT
-                    / "tests"
-                    / "fixtures"
-                    / "resolver"
-                    / "golden"
-                    / "verify.json"
-                )
-            ),
-        ),
     ]
+    checks.extend(
+        report_errors(
+            f"resolution-request.{request_path.stem}",
+            validate_resolution_request(load_json(request_path)),
+        )
+        for request_path in golden_requests
+    )
 
     wrong_hash = validate_resolution(
         load_json(ROOT / "tests" / "fixtures" / "resolution.wrong-hash.json")

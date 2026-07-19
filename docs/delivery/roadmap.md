@@ -14,10 +14,10 @@ The foundation is intentionally delivered in reversible vertical slices.
 
 ## Current position
 
-Slice 1 is merged. Slice 2 now has Verify-phase success, unavailable-procedure blocked,
-and malformed-request rejected tracers. These tracers do not complete Slice 2: the
-eight remaining lifecycle goldens and the full threat-model canary catalog remain
-required before its binary exit gate can pass.
+Slice 1 is merged. Slice 2 now has deterministic goldens for all nine lifecycle phases,
+an unavailable-procedure blocked tracer, and malformed-request rejection. These
+tracers do not complete Slice 2: the full threat-model canary catalog and remaining
+hash-sensitivity and decision-completeness outcomes still must pass its binary exit gate.
 
 ## Completion rule
 
