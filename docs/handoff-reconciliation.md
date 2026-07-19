@@ -18,7 +18,9 @@ The handoff's "Main-thread completion response" requires answering six questions
 | Course provenance (13 AI Engineer + 8 Evals & Monitoring lessons, IDs, principles, phase mapping) | `provenance/course-guidance.json`, `docs/course-traceability/README.md`, `tools/validate_foundation.py:210-266` |
 | AEC read-only / consumer-owned lifecycle authority | `AGENTS.md:5-11`, `config/projects/jwtravelscanner.json:2,7`, `tools/validate_foundation.py:319-353`, `docs/consumer-contract.md` |
 | Foundation-owned vs consumer-owned responsibility boundaries | `docs/architecture/overview.md:19-25`, `docs/consumer-contract.md:7-24` |
-| Red canaries (partial subset — 5 of the handoff's 9) | `tests/fixtures/resolution.wrong-hash.json`, `tests/fixtures/resolution.mutating-aec.json`, `tests/test_foundation_validation.py` (wrong-hash, mutating-AEC, skipped-phase, missing-course-lesson, blueprint-adoption-without-license, duplicate-upstream, invalid-gate/reason, AEC-cannot-claim-writer) |
+| Red canaries against schema / provenance / workflow drift | `tests/fixtures/resolution.wrong-hash.json`, `tests/fixtures/resolution.mutating-aec.json`, `tests/test_foundation_validation.py` (wrong-hash, mutating-AEC, skipped-phase, missing-course-lesson, blueprint-adoption-without-license, duplicate-upstream, invalid-gate/reason, AEC-cannot-claim-writer). These are honest red canaries per `AGENTS.md:37` ("A green-only check is not a proof harness. Every critical gate needs a red canary.") but they exercise Slice 1's contract surface, **not** the handoff's threat-model canary list. See row below for coverage of the handoff's 9. |
+| Handoff's "Mandatory red canaries" list (9 items) | **1 of 9 partially covered.** Only `test_aec_cannot_claim_consumer_lifecycle_authority` maps to the handoff's #9 (*duplicate or unauthorized lifecycle writer*), and even then only via profile-authority validation — not runtime duplicate-writer detection. The other 8 handoff canaries (unavailable skill, duplicate skill discovery, wrong-revision evidence, stale lifecycle phase, missing browser capability, conflicting project policy, private-file inclusion, label-green-while-evidence-red) require concepts (skills, capabilities, evidence records, lifecycle state, projections) that arrive in Slices 2–5. See Q2 amendment #13. |
+| Migration constraint (handoff: "FedJobAdvisor currently treats `.agents/skills/fja-*` as canonical … Preserve that contract during the current integration.") | **Vacuously preserved** under Reading A. The AEC repo is a separate GitHub repository (`jasonewillis/AEC`) with no files under `.agents/`, `.claude/`, or `.codex/`. It cannot modify FJA's skill-root contract because it does not touch the FJA repository at all. Preservation is a byproduct of decoupling, not an act of enforcement. |
 | Schema/validator field-parity gate | `tests/test_foundation_validation.py:61-64` |
 | Auto-merge deferred / AEC cannot merge or deploy | `AGENTS.md:5-11`, `docs/architecture/overview.md:19-25`, `docs/workflows/ticket-to-pr.md:38-43`, `docs/operating-model.md:56-66` |
 | Foundation gate CI, read-only permissions | `.github/workflows/foundation-gate.yml:9-10` (`contents: read`), `fetch-depth: 2`, no write scopes |
@@ -43,26 +45,46 @@ Listed most-material first. Each amendment names the earliest AEC slice that sho
 | 10 | **Workflow families** (feature / bug / refactor / research / ops / migration / security) | One workflow (`ticket-to-pr`) | Extend `config/workflows/` with a workflow-family taxonomy schema in a later slice. Do not add more workflows until Slice 2 validates the pattern on one. | Slice 6 (Pilot) — driven by real jwTravelScanner issues. |
 | 11 | **AEC not a single point of failure** | Read-only design + consumer-owned writer partially address it | Add explicit "AEC-unavailable degraded mode" note to `docs/operating-model.md`. Consumer harness must remain able to advance a task when AEC is offline. | Slice 3. |
 | 12 | **Generic state-provider contract** (GH-issue / GH-Project / offline providers, all normalizing into one lifecycle schema) | Not addressed on either side (also absent from the handoff itself) | Add `schemas/state-provider.schema.json` + `docs/state-providers.md`. Deferred because jwTravelScanner uses a single provider; only becomes load-bearing at Slice 7. | Slice 7 (Productization). |
-| 13 | **Red canary extension** (9 mandatory canaries per handoff, currently 5) | 5 present, 4 missing (unavailable skill, duplicate skill discovery, missing browser capability, private-file inclusion) | Add fixtures for the 4 missing scenarios once the concepts they exercise (skills, capabilities) exist as first-class objects. Skills / capabilities enter in Slice 3. | Slice 3. |
+| 13 | **Red canary extension** (9 mandatory canaries per handoff) | **1 of 9 partial.** Only handoff #9 (*duplicate or unauthorized lifecycle writer*) is touched, via `test_aec_cannot_claim_consumer_lifecycle_authority`, which validates the profile-level claim only — not runtime duplicate-writer detection. The other 8 (unavailable skill, duplicate skill discovery, wrong-revision evidence, stale lifecycle phase, missing browser capability, conflicting project policy, private-file inclusion, label-green-while-red) require concepts that are not first-class in Slice 1. Slice 1's other 15 tests exercise schema / provenance / workflow drift, which is honest red-canary discipline but is a different threat surface than the handoff's threat-model list. | Add fixtures for the handoff canaries as their exercised concepts arrive: skills + capabilities in Slice 3; wrong-revision-evidence + stale-lifecycle-phase + label-green-while-red in Slice 4 (Consumer evidence); conflicting-project-policy in Slice 5 (Single writer); private-file-inclusion in Slice 2 (Resolver, as part of the injection-safe input contract, folded into gap G2). Full handoff-canary parity is a **Slice 5 exit gate**. | Slices 2–5, per concept. |
 | 14 | **Adaptive advice model** (observed problem → evidence → cause → recommended change → measurement window → rollback) | Absent | Add `schemas/advice-proposal.schema.json` + `docs/adaptive-advice.md`. AEC proposals must go through the normal issue/PR flow. | Slice 6 (Pilot) — needs live measurements first. |
 | 15 | **`.agentic/` neutral source tree + thin adapters + generated adapter carrying source digest** | Not adopted — AEC uses `config/` at repo root instead | Non-amendment: AEC's `config/projects/*.json` + `config/workflows/*.json` + `provenance/*.json` layout is functionally equivalent for a single-repo foundation. Adopt `.agentic/` only when a consumer needs the pattern embedded inside its own tree; document this as an intentional divergence. | Slice 7 (Productization) — revisit when a second consumer joins. |
 
 ## Q3. Direct conflict with the current integration dependency order
 
-**Yes — one substantive conflict, documented and accepted under Reading A.**
+**Yes — two substantive conflicts. Both are named, engaged directly rather than rationalised around, and accepted under Reading A.**
 
-The handoff prescribes: "Implement the resolver decision schema, canonical hash, and Claude/Codex parity fixtures as the smallest extension to FedJobAdvisor issue `#8808`."
+### Conflict 1 — step-6 ordering (violated)
 
-`main` reality: the resolver decision schema and canonical hash were implemented in a **standalone** `jasonewillis/AEC` repo (Slice 1) with jwTravelScanner as the first consumer. The FedJobAdvisor track is decoupled.
+The handoff prescribes at step 6 of the "Recommended implementation sequence":
 
-**Rationale for the pivot:**
+> "Implement the resolver decision schema, canonical hash, and Claude/Codex parity fixtures as the smallest extension to FedJobAdvisor issue `#8808`."
+
+`main` reality: the resolver decision schema and canonical hash were implemented in a **standalone** `jasonewillis/AEC` repo (Slice 1) with jwTravelScanner as the first consumer. Step 6 is **violated** — this is not an ordering nit, it is the reversal the handoff explicitly named.
+
+Rationale for accepting the violation:
 
 1. Cleaner licensing / provenance boundary — the standalone repo carries a single MIT LICENSE and its own upstream-lock without entangling FJA's history.
 2. Reproducible foundation gate — the CI on `jasonewillis/AEC` runs the validator + tests + whitespace check in <10s on a fresh clone; FJA's CI is heavier and shares scope with unrelated work.
 3. Independent exact-head review possible — `PR #2` was reviewed at `e6c4152` in a fresh clone with no cached notes; the same review inside FJA would fight FJA's existing agent state.
 4. jwTravelScanner is a private consumer with no active production surface — the safest first consumer for a foundation with unproven mentoring behavior.
 
-**Acknowledged cost of the pivot:** the handoff's three-issue FedJobAdvisor pilot under `#8810` is not covered by this AEC repo. If that pilot proceeds, it will need its own AEC integration proof (via Slice 3+ agent adapters, once they exist), or an explicit decision to leave FJA outside AEC.
+These reasons explain why the pivot was chosen; they do not dissolve the handoff clause. The clause was overridden by a direction call outside the handoff's authority boundary, and this reconciliation records the override rather than pretending it did not happen.
+
+### Conflict 2 — "must not reorder or replace" (engaged)
+
+The handoff states:
+
+> "the jwTravelScanner work **must not reorder or replace** the active FedJobAdvisor dependency stack"
+
+Reading A's answer: AEC is a **separate GitHub repository** with no files under `.agents/`, `.claude/`, `.codex/`, or FJA's tree. It touches zero FJA files. Under the literal reading of the clause — the FJA dependency stack must not be reordered or replaced — Reading A satisfies the constraint: the AEC repo cannot reorder or replace what it does not touch.
+
+The clause has a second reading: "must not sequence AEC ahead of FJA." Under that reading Reading A conflicts, and Conflict 1's step-6 violation is the same conflict re-stated. The reconciliation adopts the literal reading and pays the ordering cost visibly, rather than adopting the sequencing reading and claiming compliance.
+
+### Authority note
+
+The handoff itself warns: "A chat-thread identity is not durable authority. This handoff provides architecture and acceptance requirements, not independent authority to mutate those systems." Reading A was chosen by Jason in the AEC-Slice-1 session and merged as PR #2 with independent exact-head review at `e6c4152`. That merge is the durable authority the override rests on.
+
+**Acknowledged cost of the pivot:** the handoff's three-issue FedJobAdvisor pilot under `#8810` is not covered by this AEC repo. If that pilot proceeds, it will need its own AEC integration proof (via Slice 3+ agent adapters, once they exist), or an explicit decision to leave FJA outside AEC. FJA-side migration constraint ("Preserve that contract during the current integration") is vacuously preserved by Reading A because AEC does not touch FJA files.
 
 ## Q4. Smallest next implementation slice
 
