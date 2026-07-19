@@ -625,6 +625,14 @@ def resolve(
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],
+        "primary_blocker": (
+            {
+                "identity": required_procedure["identity"],
+                "reason_code": "SKILL_UNAVAILABLE",
+            }
+            if skill_unavailable
+            else None
+        ),
         "primary_procedure": None if skill_unavailable else procedure["identity"],
         "project_profile_version": consumer_profile["profile_version"],
         "rationale": rationale,
@@ -635,7 +643,7 @@ def resolve(
             "revision": required_procedure["revision"],
         },
         "revision": request["revision"],
-        "schema_version": "2.0.0",
+        "schema_version": "3.0.0",
         "source_identities": {
             "capability_profile": capability_profile["identity"],
             "consumer_profile": consumer_profile["project"],

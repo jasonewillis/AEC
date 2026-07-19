@@ -31,7 +31,8 @@ This repository currently provides:
 
 - a versioned ticket-to-PR workflow registry;
 - deterministic request, procedure-catalog, rejection, and decision schemas plus a
-  canonical SHA-256 contract with normalized request and catalog input bindings;
+  canonical SHA-256 contract with normalized request and catalog input bindings and
+  exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
 - provenance locks for upstream pattern sources;
 - factual-only provenance for 13 AI Engineer lessons, one supplemental gateway PDF,

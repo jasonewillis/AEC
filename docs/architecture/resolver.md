@@ -46,8 +46,14 @@ project-profile contract with `project` and `profile_version`. The resolver does
 accept or translate the former `identity` and `version` aliases. The embedded profile
 keeps its own schema version `1.0.0`.
 
-The output decision schema is deliberately versioned `2.0.0`. Every accepted decision,
-including a blocked unavailable-procedure decision, contains two SHA-256 input bindings:
+The output decision schema is deliberately versioned `3.0.0`. Every accepted decision,
+including a blocked unavailable-procedure decision, contains exactly one primary
+subject. A successful or evidence-needed decision contains a `primary_procedure` and a
+null `primary_blocker`. A blocked unavailable-procedure decision contains a null
+`primary_procedure` and a structured `primary_blocker` with the required procedure
+identity and `SKILL_UNAVAILABLE` reason code.
+
+Every accepted decision also contains two SHA-256 input bindings:
 
 - `resolution_request` binds the complete validated request;
 - `procedure_catalog` binds the complete validated procedure catalog.
@@ -55,6 +61,15 @@ including a blocked unavailable-procedure decision, contains two SHA-256 input b
 Both bindings are part of the canonical decision payload and therefore part of the
 decision hash. A material change to either accepted input changes its binding and the
 decision hash, even when the selected mentoring card remains the same.
+The primary subject is also part of the canonical payload, so changing a procedure or
+blocker changes the decision hash. Recomputing that hash cannot legitimize a decision
+with both primary subjects, neither primary subject, or a blocker for another required
+procedure.
+
+The JSON Schema enforces the closed blocker shape and exactly-one primary-subject
+choice. Standard JSON Schema cannot compare two sibling string values, so the Python
+validator is the documented semantic superset that requires `primary_blocker.identity`
+to equal `required_procedure.identity`.
 
 Collections whose order has no contract meaning are normalized before binding. These
 are request procedure availability, blockers, capabilities, agent adapters, evidence,
@@ -108,10 +123,11 @@ Not wanted:
 If the required procedure is absent from `available_procedures`, the resolver returns
 a hashed decision with Gate `Blocked`, `allowed=false`, and reason code
 `SKILL_UNAVAILABLE`. `required_procedure` preserves the unavailable identity and
-revision, while `primary_procedure` is null because nothing was selected. The decision
-requests `procedure-availability` evidence and includes the normalized availability
-set in its hash. Adding an unrelated procedure therefore changes the decision hash but
-cannot satisfy the requirement or become a silent substitute.
+revision. `primary_procedure` is null because nothing was selected, while
+`primary_blocker` repeats the required identity and the exact unavailable reason. The
+decision requests `procedure-availability` evidence and includes the normalized
+availability set in its hash. Adding an unrelated procedure therefore changes the
+decision hash but cannot satisfy the requirement or become a silent substitute.
 
 ## Invalid input and tampered decision tracer
 
@@ -134,9 +150,15 @@ verification:
 - `Ready` requires `allowed=true`, `ACCEPTANCE_EVIDENCE_COMPLETE`, and no required
   evidence;
 - `Evidence needed` requires `allowed=true`, `ACCEPTANCE_EVIDENCE_INCOMPLETE`, and at
-  least one required evidence kind; and
+  least one required evidence kind;
+- every Ready or Evidence needed decision has one exact primary procedure and no
+  primary blocker; and
 - `Blocked` currently permits only `SKILL_UNAVAILABLE`, `allowed=false`, no selected
-  procedure, and exactly `procedure-availability` evidence.
+  procedure, one exact primary blocker, and exactly `procedure-availability` evidence.
+
+The completeness matrix runs all nine lifecycle goldens and the unavailable-procedure
+tracer through the same invariant checks for rationale, evidence request, Good,
+Finished, anti-example, and exactly one primary subject.
 
 Reason codes are a closed schema enum. Callers cannot turn a valid decision green by
 changing the gate or inventing an uppercase reason code and recomputing the hash.
