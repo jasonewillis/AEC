@@ -26,8 +26,11 @@ These rules apply to every agent working in this repository.
 - Do not copy or adapt Blueprint expressive content unless a compatible adoption
   license is verified and recorded.
 - Do not copy course transcripts, recordings, slides, or proprietary lesson text.
-- Independently author procedures from learned principles and cite stable source
-  identifiers in provenance records.
+- Keep private course provenance factual-only: stable source-set identities, exact
+  titles, source filenames, and verified hashes. Do not store summaries, mappings,
+  effects, guidance, or prompt text derived from private lessons.
+- Define runtime principles independently under AEC-owned identities. Private course
+  identifiers must never become procedure or policy authority.
 - Pin every upstream reference to a full Git commit and validate the relationship.
 
 ## Quality

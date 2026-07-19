@@ -23,6 +23,8 @@ from aec.resolver import (  # noqa: E402
 
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 HASH_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
+SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
+AEC_PRINCIPLE_ID = re.compile(r"^aec-[a-z0-9-]+$")
 REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
 SUPPORTED_REASON_CODES = {
     "ACCEPTANCE_EVIDENCE_COMPLETE",
@@ -31,6 +33,132 @@ SUPPORTED_REASON_CODES = {
 }
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
+COURSE_EXPRESSIVE_FIELDS = {
+    "advice",
+    "body",
+    "content",
+    "description",
+    "effect",
+    "excerpt",
+    "guidance",
+    "interpretation",
+    "lesson_mapping",
+    "notes",
+    "operational_effect",
+    "phase",
+    "policy_mapping",
+    "principle",
+    "prompt",
+    "runtime_prompt",
+    "summary",
+}
+AI_ENGINEER_TITLES = (
+    "The Shift To Agentic Engineering",
+    "How Coding Agents Work",
+    "The Agent Development Workflow",
+    "Choose Your Agent",
+    "Project Foundations",
+    "Agent Skills",
+    "Spec-Driven Development",
+    "Task Management",
+    "Testing Agent Work",
+    "Reviewing Agent Work",
+    "Deploy With Agents",
+    "Scaling Your Impact",
+    "BONUS: Agent Loops And Goals",
+)
+AI_ENGINEER_HASHES = (
+    "cedad90972f6dff876b5549964bccaa4f5036d2a3c164eca41fc2d5c01e8bb64",
+    "fa9eee23f8396ea6452850c4c7379816128c5aea85321c094aeffac17d31543a",
+    "ea3ece74e598476330b758c06bce300d41361c879f52cd0735cc2da7387ad515",
+    "3fca81dc82eb2c93125dd259c9b25ce346b0f5e9b87a9c1c62b10fa3667703c6",
+    "36cb20c37f4f51f82294de68deacc9aec94ec403e66230da394f49b098a39b47",
+    "840fc9fa2a946cad8692ad6309a7cce299031faab3f948c6867d7a997c92eda6",
+    "29bcf2e81764aafb02b773791f3550ee0f7a8d3b7058851c43fea73c0848c748",
+    "0df87b9138090380163a9379a89498963005700fbc5c75e8f2e296b0907524ec",
+    "eaefc642913ee7234b3f99765f54d8cdae76749d9bcbfa6c807a0d689a5d1e05",
+    "58bd76df8c2cc7a6dc0cd0232c761a3420f880d16448dc9108b7e610d8048391",
+    "ca2d968a390c8682eee559fc86a21a0e7897c3addcbde0a95da5b29257f72ba7",
+    "9837b27ce179b6a123b7fe26a0a565e311c65a1e30c3c5201777618ff3921218",
+    "9e09e88233d2502b3fd233a11bad47d14ac5bb685b75fca723d64a9dd856a594",
+)
+EXPECTED_AI_ENGINEER_LESSONS = tuple(
+    {
+        "id": f"ai-engineer-{index:02d}",
+        "sha256": sha256,
+        "source_file": f"{index}. {title}.rtf",
+        "title": title,
+    }
+    for index, (title, sha256) in enumerate(
+        zip(AI_ENGINEER_TITLES, AI_ENGINEER_HASHES, strict=True),
+        start=1,
+    )
+)
+EXPECTED_EVALS_LESSONS = tuple(
+    {
+        "id": f"evals-monitoring-{index:02d}",
+        "sha256": None,
+        "source_file": None,
+        "title": title,
+    }
+    for index, title in enumerate(
+        (
+            "Introduction",
+            "Introduction To LangFuse",
+            "LangFuse For Pydantic Agents",
+            "Introduction To Evals",
+            "Unit Tests",
+            "Manual Evals",
+            "LLM-As-A-Judge",
+            "Resources",
+        ),
+        start=1,
+    )
+)
+EXPECTED_COURSE_SOURCE_SETS = (
+    {
+        "id": "ai-engineer",
+        "lessons": list(EXPECTED_AI_ENGINEER_LESSONS),
+        "relationship": "factual-provenance-only",
+        "supplemental": [
+            {
+                "id": "ai-engineer-gateway",
+                "sha256": (
+                    "9ec5e796ad9ee48e8b46e030f2bbf0cafacc8b7c987950b43bc1acc6c2bd4144"
+                ),
+                "source_file": "2a. coding-agents-and-the-gateway.md.pdf",
+                "title": "Coding Agents And The Gateway",
+            }
+        ],
+        "title": "AI Engineer",
+        "visibility": "private",
+    },
+    {
+        "id": "aia-week-5-evals-monitoring",
+        "lessons": list(EXPECTED_EVALS_LESSONS),
+        "relationship": "factual-provenance-only",
+        "supplemental": [],
+        "title": "AIA Week 5 Evals & Monitoring",
+        "visibility": "private",
+    },
+)
+PRIVATE_COURSE_IDENTITIES = frozenset(
+    {
+        "ai-engineer",
+        "ai-engineer-gateway",
+        "aia-week-5-evals-monitoring",
+        *(f"ai-engineer-{number:02d}" for number in range(1, 14)),
+        *(f"evals-monitoring-{number:02d}" for number in range(1, 9)),
+    }
+)
+COURSE_RUNTIME_IDENTITY = re.compile(
+    r"(?<![a-z0-9])(?:"
+    + "|".join(
+        re.escape(identity)
+        for identity in sorted(PRIVATE_COURSE_IDENTITIES, key=len, reverse=True)
+    )
+    + r")(?![a-z0-9])"
+)
 
 REQUIRED_RESOLUTION_FIELDS = {
     "allowed",
@@ -329,62 +457,240 @@ def validate_provenance(provenance: object) -> list[str]:
     return errors
 
 
-def validate_course_guidance(guidance: object) -> list[str]:
-    """Validate complete, uniquely identified course-derived guidance."""
-    if not isinstance(guidance, dict):
-        return ["course guidance must be an object"]
+def _nested_keys(value: object) -> set[str]:
+    """Return every string key found in nested JSON-compatible data."""
+    if isinstance(value, dict):
+        return set(value).union(*(_nested_keys(item) for item in value.values()))
+    if isinstance(value, list):
+        return set().union(*(_nested_keys(item) for item in value))
+    return set()
+
+
+def _nested_strings(value: object) -> list[str]:
+    """Return decoded string keys and values from JSON-compatible data."""
+    strings: list[str] = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(key, str):
+                strings.append(key)
+            strings.extend(_nested_strings(item))
+    elif isinstance(value, list):
+        for item in value:
+            strings.extend(_nested_strings(item))
+    elif isinstance(value, str):
+        strings.append(value)
+    return strings
+
+
+def _render_path(path: Path) -> Path:
+    """Render repository paths relatively and external fixtures absolutely."""
+    try:
+        return path.relative_to(ROOT)
+    except ValueError:
+        return path
+
+
+def validate_course_inventory(inventory: object) -> list[str]:
+    """Validate factual-only metadata for private course source sets."""
+    if not isinstance(inventory, dict):
+        return ["course inventory must be an object"]
 
     errors: list[str] = []
-    if set(guidance) != {
-        "ai_engineer_lessons",
-        "evals_monitoring_lessons",
-        "schema_version",
-    }:
-        errors.append("course guidance fields do not match the contract")
-    if guidance.get("schema_version") != "1.0.0":
-        errors.append("course guidance schema_version must equal 1.0.0")
-    core = guidance.get("ai_engineer_lessons")
-    evals = guidance.get("evals_monitoring_lessons")
-    if not isinstance(core, list) or len(core) != 13:
+    for field in sorted(_nested_keys(inventory) & COURSE_EXPRESSIVE_FIELDS):
+        errors.append(
+            f"course inventory contains forbidden expressive field: {field}"
+        )
+    if set(inventory) != {"schema_version", "source_sets"}:
+        errors.append("course inventory fields do not match the contract")
+    if inventory.get("schema_version") != "1.0.0":
+        errors.append("course inventory schema_version must equal 1.0.0")
+    source_sets = inventory.get("source_sets")
+    if not isinstance(source_sets, list):
+        return errors + ["course inventory source_sets must be a list"]
+
+    by_id: dict[str, dict[str, Any]] = {}
+    lesson_ids: list[str] = []
+    for source_set in source_sets:
+        if not isinstance(source_set, dict):
+            errors.append("every course source set must be an object")
+            continue
+        if set(source_set) != {
+            "id",
+            "lessons",
+            "relationship",
+            "supplemental",
+            "title",
+            "visibility",
+        }:
+            errors.append("course source set fields do not match the contract")
+        source_id = source_set.get("id")
+        if not isinstance(source_id, str) or not source_id:
+            errors.append("every course source set must have a non-empty id")
+            continue
+        if source_id in by_id:
+            errors.append("course source set identifiers must be unique")
+        by_id[source_id] = source_set
+        if source_set.get("visibility") != "private":
+            errors.append(f"course source set {source_id} must remain private")
+        if source_set.get("relationship") != "factual-provenance-only":
+            errors.append(
+                f"course source set {source_id} must remain factual-provenance-only"
+            )
+        if not isinstance(source_set.get("title"), str) or not source_set.get("title"):
+            errors.append(f"course source set {source_id} needs a title")
+
+        for collection_name in ("lessons", "supplemental"):
+            records = source_set.get(collection_name)
+            if not isinstance(records, list):
+                errors.append(
+                    f"course source set {source_id} {collection_name} must be a list"
+                )
+                continue
+            for record in records:
+                if not isinstance(record, dict):
+                    errors.append("every course source record must be an object")
+                    continue
+                if set(record) != {"id", "sha256", "source_file", "title"}:
+                    errors.append("course source record fields do not match the contract")
+                record_id = record.get("id")
+                if not isinstance(record_id, str) or not record_id:
+                    errors.append("every course source record must have a non-empty id")
+                else:
+                    lesson_ids.append(record_id)
+                if not isinstance(record.get("title"), str) or not record.get("title"):
+                    errors.append(f"course source record {record_id or '<unknown>'} needs a title")
+                source_file = record.get("source_file")
+                if source_file is not None and (
+                    not isinstance(source_file, str) or not source_file
+                ):
+                    errors.append(
+                        f"course source record {record_id or '<unknown>'} has an invalid source_file"
+                    )
+                sha256 = record.get("sha256")
+                if sha256 is not None and (
+                    not isinstance(sha256, str) or not SHA256_HEX.fullmatch(sha256)
+                ):
+                    errors.append(
+                        f"course source record {record_id or '<unknown>'} has an invalid sha256"
+                    )
+
+    if set(by_id) != {"ai-engineer", "aia-week-5-evals-monitoring"}:
+        errors.append("course inventory must define the two factual source sets")
+    if len(lesson_ids) != len(set(lesson_ids)):
+        errors.append("course source record identifiers must be unique")
+
+    ai_engineer = by_id.get("ai-engineer", {})
+    ai_lessons = ai_engineer.get("lessons")
+    if not isinstance(ai_lessons, list) or len(ai_lessons) != 13:
         errors.append("AI Engineer coverage must be exactly 13 lessons")
-    if not isinstance(evals, list) or len(evals) != 8:
+    else:
+        expected_ids = [f"ai-engineer-{number:02d}" for number in range(1, 14)]
+        if [record.get("id") for record in ai_lessons if isinstance(record, dict)] != expected_ids:
+            errors.append("AI Engineer lesson identifiers must preserve order 01 through 13")
+        if not all(
+            isinstance(record, dict)
+            and isinstance(record.get("sha256"), str)
+            and SHA256_HEX.fullmatch(record["sha256"])
+            for record in ai_lessons
+        ):
+            errors.append("every AI Engineer lesson must have an exact SHA-256")
+    ai_supplemental = ai_engineer.get("supplemental")
+    if not isinstance(ai_supplemental, list) or len(ai_supplemental) != 1:
+        errors.append("AI Engineer gateway must be one supplemental source")
+
+    evals = by_id.get("aia-week-5-evals-monitoring", {})
+    eval_lessons = evals.get("lessons")
+    if not isinstance(eval_lessons, list) or len(eval_lessons) != 8:
         errors.append("Evals & Monitoring coverage must be exactly 8 lessons")
+    if source_sets != list(EXPECTED_COURSE_SOURCE_SETS):
+        errors.append("course inventory factual manifest must match the verified record")
+    return errors
 
-    core_lessons = core if isinstance(core, list) else []
-    eval_lessons = evals if isinstance(evals, list) else []
-    lessons = core_lessons + eval_lessons
-    identifiers: list[str] = []
-    for lesson in lessons:
-        if not isinstance(lesson, dict):
-            errors.append("every course lesson must be an object")
+
+def validate_principle_registry(registry: object) -> list[str]:
+    """Validate independently authored AEC principle identities."""
+    if not isinstance(registry, dict):
+        return ["principle registry must be an object"]
+    errors: list[str] = []
+    if set(registry) != {"principles", "schema_version"}:
+        errors.append("principle registry fields do not match the contract")
+    if registry.get("schema_version") != "1.0.0":
+        errors.append("principle registry schema_version must equal 1.0.0")
+    principles = registry.get("principles")
+    if not isinstance(principles, list) or not principles:
+        return errors + ["principle registry must contain principles"]
+    identities: list[str] = []
+    for principle in principles:
+        if not isinstance(principle, dict):
+            errors.append("every AEC principle must be an object")
             continue
-        identifier = lesson.get("id")
-        if not isinstance(identifier, str) or not identifier:
-            errors.append("every course lesson must have a non-empty id")
+        if set(principle) != {"id", "revision", "statement"}:
+            errors.append("AEC principle fields do not match the contract")
+        identity = principle.get("id")
+        if not isinstance(identity, str) or not AEC_PRINCIPLE_ID.fullmatch(identity):
+            errors.append("AEC principle id must match ^aec-[a-z0-9-]+$")
         else:
-            identifiers.append(identifier)
-        for field in ("title", "principle"):
-            if not isinstance(lesson.get(field), str) or not lesson.get(field):
-                errors.append(f"course lesson {identifier or '<unknown>'} needs {field}")
-    if len(identifiers) != len(set(identifiers)):
-        errors.append("course lesson identifiers must be unique")
+            identities.append(identity)
+            if COURSE_RUNTIME_IDENTITY.search(identity):
+                errors.append(
+                    "AEC principle id must not embed a private course identity"
+                )
+        revision = principle.get("revision")
+        if not isinstance(revision, str) or not revision:
+            errors.append(f"AEC principle {identity or '<unknown>'} needs a revision")
+        statement = principle.get("statement")
+        if not isinstance(statement, str) or not statement:
+            errors.append(f"AEC principle {identity or '<unknown>'} needs a statement")
+    if len(identities) != len(set(identities)):
+        errors.append("AEC principle identities must be unique")
+    return errors
 
-    for lesson in core_lessons:
-        if not isinstance(lesson, dict):
+
+def validate_procedure_principles(catalog: object, registry: object) -> list[str]:
+    """Reject procedure authority not owned by the AEC principle registry."""
+    errors = validate_principle_registry(registry)
+    if errors:
+        return errors
+    if not isinstance(catalog, dict) or not isinstance(catalog.get("procedures"), list):
+        return ["procedure catalog must contain procedures"]
+    principles = registry["principles"]
+    known_ids = {item["id"] for item in principles if isinstance(item, dict)}
+    for procedure in catalog["procedures"]:
+        if not isinstance(procedure, dict):
             continue
-        phases = lesson.get("phase")
-        if not isinstance(phases, list) or not phases:
-            errors.append(f"course lesson {lesson.get('id', '<unknown>')} needs phase coverage")
-        elif not all(phase == "All" or phase in EXPECTED_PHASES for phase in phases):
-            errors.append(f"course lesson {lesson.get('id', '<unknown>')} has an invalid phase")
+        procedure_id = procedure.get("identity", "<unknown>")
+        rationale = procedure.get("rationale")
+        if not isinstance(rationale, dict):
+            continue
+        principle_ids = rationale.get("principle_ids")
+        if not isinstance(principle_ids, list):
+            continue
+        for principle_id in principle_ids:
+            if not isinstance(principle_id, str) or not principle_id.startswith("aec-"):
+                errors.append(
+                    f"procedure {procedure_id} references non-AEC principle {principle_id}"
+                )
+            elif principle_id not in known_ids:
+                errors.append(
+                    f"procedure {procedure_id} references unknown AEC principle {principle_id}"
+                )
+    return errors
 
-    expected_core = {f"ai-engineer-{number:02d}" for number in range(1, 14)}
-    expected_evals = {f"evals-monitoring-{number:02d}" for number in range(1, 9)}
-    if {item for item in identifiers if item.startswith("ai-engineer-")} != expected_core:
-        errors.append("AI Engineer lesson identifiers must cover 01 through 13")
-    if {item for item in identifiers if item.startswith("evals-monitoring-")} != expected_evals:
-        errors.append("Evals & Monitoring lesson identifiers must cover 01 through 08")
 
+def validate_runtime_authority(paths: list[Path]) -> list[str]:
+    """Reject private course identities from mapped runtime authority files."""
+    errors: list[str] = []
+    for path in sorted(paths):
+        try:
+            content = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            errors.append(f"runtime authority file is not valid JSON: {path}")
+            continue
+        if any(COURSE_RUNTIME_IDENTITY.search(item) for item in _nested_strings(content)):
+            rendered_path = _render_path(path)
+            errors.append(
+                f"runtime authority references private course identity in {rendered_path}"
+            )
     return errors
 
 
@@ -450,14 +756,34 @@ def report_errors(label: str, errors: list[str]) -> bool:
 
 def main() -> int:
     """Validate the complete foundation bootstrap contract."""
+    course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
+    procedure_catalog = load_json(
+        ROOT / "config" / "procedures" / "ticket-to-pr.json"
+    )
+    principle_registry = load_json(
+        ROOT / "config" / "principles" / "aec-engineering.json"
+    )
+    runtime_authority_paths = sorted((ROOT / "config").rglob("*.json"))
     checks = [
         report_errors(
             "provenance",
             validate_provenance(load_json(ROOT / "provenance" / "upstream-lock.json")),
         ),
         report_errors(
-            "course-guidance",
-            validate_course_guidance(load_json(ROOT / "provenance" / "course-guidance.json")),
+            "course-inventory",
+            validate_course_inventory(course_inventory),
+        ),
+        report_errors(
+            "principle-registry",
+            validate_principle_registry(principle_registry),
+        ),
+        report_errors(
+            "procedure-principles.ticket-to-pr",
+            validate_procedure_principles(procedure_catalog, principle_registry),
+        ),
+        report_errors(
+            "runtime-authority.course-boundary",
+            validate_runtime_authority(runtime_authority_paths),
         ),
         report_errors(
             "workflow.ticket-to-pr",
@@ -465,9 +791,7 @@ def main() -> int:
         ),
         report_errors(
             "procedure-catalog.ticket-to-pr",
-            validate_procedure_catalog(
-                load_json(ROOT / "config" / "procedures" / "ticket-to-pr.json")
-            ),
+            validate_procedure_catalog(procedure_catalog),
         ),
         report_errors(
             "resolution.valid",
@@ -589,6 +913,41 @@ def main() -> int:
             []
             if required_semantic_errors.issubset(set(semantic_errors))
             else ["canary did not detect the semantically tampered decision"],
+        )
+    )
+    expressive_inventory = validate_course_inventory(
+        load_json(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "course-boundary"
+            / "course-inventory-expressive.json"
+        )
+    )
+    checks.append(
+        report_errors(
+            "red-canary.course-expressive-content",
+            []
+            if "course inventory contains forbidden expressive field: principle"
+            in expressive_inventory
+            else ["canary did not detect expressive course content"],
+        )
+    )
+    runtime_course_identity = validate_runtime_authority(
+        [
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "course-boundary"
+            / "runtime-authority-course-id.json"
+        ]
+    )
+    checks.append(
+        report_errors(
+            "red-canary.course-runtime-authority",
+            []
+            if runtime_course_identity
+            else ["canary did not detect course runtime authority"],
         )
     )
     return 0 if all(checks) else 1

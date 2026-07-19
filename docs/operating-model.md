@@ -21,7 +21,7 @@ A complete card reports:
 - current Lane, Stage, Phase, ordinal, and rail;
 - Gate and a concrete blocker when present;
 - one primary local procedure and whether it is available;
-- a reason and course-guidance identifier;
+- a reason and independently authored AEC principle identity;
 - required proof;
 - a good example;
 - the exact finished condition; and

@@ -3,7 +3,7 @@
 AEC separates reusable policy from project-owned authority.
 
 ```text
-Course principles       Upstream capability references
+AEC-owned principles    Upstream capability references
         |                            |
         +------> AEC foundation <----+
                         |
@@ -12,6 +12,8 @@ Consumer record -> deterministic resolver -> mentoring card -> host agent
        ^                                                       |
        |                                                       v
 single consumer writer <- typed observable evidence <- authorized procedure
+
+Private course inventory -> factual provenance audit only
 ```
 
 ## Ownership

@@ -11,7 +11,7 @@
       "identity": "verify-evidence",
       "phase": "Verify",
       "rationale": {
-        "principle_ids": ["ai-engineer-09"],
+        "principle_ids": ["aec-evidence-input-binding"],
         "summary": "Verification evidence is incomplete for the exact revision and environment."
       },
       "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",

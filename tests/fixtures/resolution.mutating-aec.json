@@ -24,7 +24,7 @@
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
-    "principle_ids": ["ai-engineer-09"],
+    "principle_ids": ["aec-evidence-input-binding"],
     "summary": "Verification evidence is complete for the exact revision and environment."
   },
   "reason_code": "ACCEPTANCE_EVIDENCE_COMPLETE",
@@ -33,7 +33,7 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:db0bf7dd453ad4aec45df46c5350622bb9c54b4f6a56852a0d7ba2af36fc6600",
+  "resolution_hash": "sha256:bc4dc5a3f5b9861bc4cdd6e6b2fd81933d87c9aae0dff8799db87903d1f9fe65",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
   "source_identities": {

@@ -1,0 +1,10 @@
+{
+  "principles": [
+    {
+      "id": "aec-evidence-input-binding",
+      "revision": "aec-evidence-input-binding:1.0.0",
+      "statement": "Accepted evidence must declare the same revision and environment as the decision inputs."
+    }
+  ],
+  "schema_version": "1.0.0"
+}

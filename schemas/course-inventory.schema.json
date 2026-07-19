@@ -1,0 +1,82 @@
+{
+  "$id": "https://github.com/jasonewillis/AEC/schemas/course-inventory.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "source_sets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {"minLength": 1, "type": "string"},
+          "lessons": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {"minLength": 1, "type": "string"},
+                "sha256": {
+                  "anyOf": [
+                    {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+                    {"type": "null"}
+                  ]
+                },
+                "source_file": {
+                  "anyOf": [
+                    {"minLength": 1, "type": "string"},
+                    {"type": "null"}
+                  ]
+                },
+                "title": {"minLength": 1, "type": "string"}
+              },
+              "required": ["id", "sha256", "source_file", "title"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "relationship": {"const": "factual-provenance-only"},
+          "supplemental": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "id": {"minLength": 1, "type": "string"},
+                "sha256": {
+                  "anyOf": [
+                    {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+                    {"type": "null"}
+                  ]
+                },
+                "source_file": {
+                  "anyOf": [
+                    {"minLength": 1, "type": "string"},
+                    {"type": "null"}
+                  ]
+                },
+                "title": {"minLength": 1, "type": "string"}
+              },
+              "required": ["id", "sha256", "source_file", "title"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "title": {"minLength": 1, "type": "string"},
+          "visibility": {"const": "private"}
+        },
+        "required": [
+          "id",
+          "lessons",
+          "relationship",
+          "supplemental",
+          "title",
+          "visibility"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": ["schema_version", "source_sets"],
+  "title": "AEC Factual Course Inventory",
+  "type": "object"
+}

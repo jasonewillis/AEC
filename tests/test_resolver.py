@@ -357,7 +357,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:c9a4053e2fe0cad30d304b092ac4f9859e37f0a336ad243e60cf3dd62c6672a0",
+            "sha256:7e294935e78fdb59907a3a58faee0111b3dd43040d58b956910b9432010e448b",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -369,7 +369,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual("Evidence needed", first_payload["gate"])
         self.assertEqual(
             {
-                "principle_ids": ["ai-engineer-09"],
+                "principle_ids": ["aec-evidence-input-binding"],
                 "summary": (
                     "Verification evidence is incomplete for the exact revision "
                     "and environment."
@@ -449,7 +449,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:239971cfa54bf70ecd0693ca24297dd65857b340412fab348cb8ceab04ee8a4d",
+            "sha256:25558d732b94abbb819723b4c97d79f344d28b54bc824b93e17e8959cf212382",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))

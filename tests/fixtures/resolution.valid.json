@@ -24,7 +24,7 @@
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
-    "principle_ids": ["ai-engineer-09"],
+    "principle_ids": ["aec-evidence-input-binding"],
     "summary": "Verification evidence is incomplete for the exact revision and environment."
   },
   "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
@@ -37,7 +37,7 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:5952d9700b5412a1b4f2376e5863b215ae37f87c18da147e225207eb991deb33",
+  "resolution_hash": "sha256:937d72d612ca9ec827ac5266c78643ae9e4e880ae10b835b7c1c04e668c8e0d8",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
   "source_identities": {

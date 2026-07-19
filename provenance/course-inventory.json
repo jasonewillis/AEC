@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0.0",
+  "source_sets": [
+    {
+      "id": "ai-engineer",
+      "lessons": [
+        {"id": "ai-engineer-01", "sha256": "cedad90972f6dff876b5549964bccaa4f5036d2a3c164eca41fc2d5c01e8bb64", "source_file": "1. The Shift To Agentic Engineering.rtf", "title": "The Shift To Agentic Engineering"},
+        {"id": "ai-engineer-02", "sha256": "fa9eee23f8396ea6452850c4c7379816128c5aea85321c094aeffac17d31543a", "source_file": "2. How Coding Agents Work.rtf", "title": "How Coding Agents Work"},
+        {"id": "ai-engineer-03", "sha256": "ea3ece74e598476330b758c06bce300d41361c879f52cd0735cc2da7387ad515", "source_file": "3. The Agent Development Workflow.rtf", "title": "The Agent Development Workflow"},
+        {"id": "ai-engineer-04", "sha256": "3fca81dc82eb2c93125dd259c9b25ce346b0f5e9b87a9c1c62b10fa3667703c6", "source_file": "4. Choose Your Agent.rtf", "title": "Choose Your Agent"},
+        {"id": "ai-engineer-05", "sha256": "36cb20c37f4f51f82294de68deacc9aec94ec403e66230da394f49b098a39b47", "source_file": "5. Project Foundations.rtf", "title": "Project Foundations"},
+        {"id": "ai-engineer-06", "sha256": "840fc9fa2a946cad8692ad6309a7cce299031faab3f948c6867d7a997c92eda6", "source_file": "6. Agent Skills.rtf", "title": "Agent Skills"},
+        {"id": "ai-engineer-07", "sha256": "29bcf2e81764aafb02b773791f3550ee0f7a8d3b7058851c43fea73c0848c748", "source_file": "7. Spec-Driven Development.rtf", "title": "Spec-Driven Development"},
+        {"id": "ai-engineer-08", "sha256": "0df87b9138090380163a9379a89498963005700fbc5c75e8f2e296b0907524ec", "source_file": "8. Task Management.rtf", "title": "Task Management"},
+        {"id": "ai-engineer-09", "sha256": "eaefc642913ee7234b3f99765f54d8cdae76749d9bcbfa6c807a0d689a5d1e05", "source_file": "9. Testing Agent Work.rtf", "title": "Testing Agent Work"},
+        {"id": "ai-engineer-10", "sha256": "58bd76df8c2cc7a6dc0cd0232c761a3420f880d16448dc9108b7e610d8048391", "source_file": "10. Reviewing Agent Work.rtf", "title": "Reviewing Agent Work"},
+        {"id": "ai-engineer-11", "sha256": "ca2d968a390c8682eee559fc86a21a0e7897c3addcbde0a95da5b29257f72ba7", "source_file": "11. Deploy With Agents.rtf", "title": "Deploy With Agents"},
+        {"id": "ai-engineer-12", "sha256": "9837b27ce179b6a123b7fe26a0a565e311c65a1e30c3c5201777618ff3921218", "source_file": "12. Scaling Your Impact.rtf", "title": "Scaling Your Impact"},
+        {"id": "ai-engineer-13", "sha256": "9e09e88233d2502b3fd233a11bad47d14ac5bb685b75fca723d64a9dd856a594", "source_file": "13. BONUS: Agent Loops And Goals.rtf", "title": "BONUS: Agent Loops And Goals"}
+      ],
+      "relationship": "factual-provenance-only",
+      "supplemental": [
+        {"id": "ai-engineer-gateway", "sha256": "9ec5e796ad9ee48e8b46e030f2bbf0cafacc8b7c987950b43bc1acc6c2bd4144", "source_file": "2a. coding-agents-and-the-gateway.md.pdf", "title": "Coding Agents And The Gateway"}
+      ],
+      "title": "AI Engineer",
+      "visibility": "private"
+    },
+    {
+      "id": "aia-week-5-evals-monitoring",
+      "lessons": [
+        {"id": "evals-monitoring-01", "sha256": null, "source_file": null, "title": "Introduction"},
+        {"id": "evals-monitoring-02", "sha256": null, "source_file": null, "title": "Introduction To LangFuse"},
+        {"id": "evals-monitoring-03", "sha256": null, "source_file": null, "title": "LangFuse For Pydantic Agents"},
+        {"id": "evals-monitoring-04", "sha256": null, "source_file": null, "title": "Introduction To Evals"},
+        {"id": "evals-monitoring-05", "sha256": null, "source_file": null, "title": "Unit Tests"},
+        {"id": "evals-monitoring-06", "sha256": null, "source_file": null, "title": "Manual Evals"},
+        {"id": "evals-monitoring-07", "sha256": null, "source_file": null, "title": "LLM-As-A-Judge"},
+        {"id": "evals-monitoring-08", "sha256": null, "source_file": null, "title": "Resources"}
+      ],
+      "relationship": "factual-provenance-only",
+      "supplemental": [],
+      "title": "AIA Week 5 Evals & Monitoring",
+      "visibility": "private"
+    }
+  ]
+}

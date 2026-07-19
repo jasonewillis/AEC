@@ -8,8 +8,8 @@ unpinned revisions and unsafe relationship changes.
 | --- | --- | --- | --- |
 | `owainlewis/workflows` | `ce3ff09e27c501e7689fd069ece3aaab63da7e46` | Pattern source | MIT license verified upstream |
 | `owainlewis/blueprint` | `1787459f5a9dc5f95b04f156b1b0877696fb81c5` | Reference-only capability index | No adoption license verified for this project |
-| AI Engineer course | Private education source | Principle source | No transcripts or lesson bodies distributed |
-| AIA Week 5 Evals & Monitoring | Private education source | Principle source | No transcripts or lesson bodies distributed |
+| AI Engineer course | Private education source | Factual provenance only | Exact source metadata, no protected expression |
+| AIA Week 5 Evals & Monitoring | Private education source | Factual provenance only | Exact source metadata, hashes null until verified |
 
 ## Workflows boundary
 
@@ -26,9 +26,15 @@ skill text as runtime fallback.
 
 ## Course boundary
 
-Course lessons explain why checkpoints exist. AEC stores original operational
-summaries and stable identifiers, not raw RTF files, transcripts, slides, or proprietary
-lesson text. Consumer procedures remain independently authored and testable.
+[`course-inventory.json`](../provenance/course-inventory.json) stores only factual
+source-set identities, stable record identifiers, exact titles, source filenames, and
+SHA-256 values when verified. The gateway PDF is supplemental and is not lesson 14.
+Missing hashes remain `null`; they cannot be replaced with summaries.
+
+AEC does not store or derive lesson principles, summaries, operational effects,
+guidance, prompt text, or lesson-to-policy mappings. Runtime procedures cite only the
+independently authored AEC principle registry. Private storage is not treated as a safe
+harbor for copied, adapted, paraphrased, rewritten, or summarized source expression.
 
 ## Update procedure
 
