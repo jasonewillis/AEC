@@ -69,47 +69,69 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
         for item in request["available_procedures"]
         if isinstance(item, dict)
     }
-    matches = [
+    phase_procedures = [
         procedure
         for procedure in procedures["procedures"]
         if isinstance(procedure, dict)
         and procedure.get("phase") == request["phase"]
-        and (procedure.get("identity"), procedure.get("revision")) in available
     ]
-    if len(matches) != 1:
+    matches = [
+        procedure
+        for procedure in phase_procedures
+        if (procedure.get("identity"), procedure.get("revision")) in available
+    ]
+    if len(matches) > 1 or (not matches and len(phase_procedures) != 1):
         raise ValueError("normalized request must resolve exactly one procedure")
 
-    procedure = matches[0]
+    skill_unavailable = not matches
+    procedure = phase_procedures[0] if skill_unavailable else matches[0]
     accepted_evidence = _accepted_evidence(request)
     required_evidence = [
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
     ]
+    allowed = True
+    anti_example = procedure["anti_example"]
+    finished = procedure["finished"]
     gate = "Evidence needed" if required_evidence else "Ready"
+    good = procedure["good"]
+    rationale = procedure["rationale"]
     reason_code = (
         procedure["reason_code"]
         if required_evidence
         else "ACCEPTANCE_EVIDENCE_COMPLETE"
     )
+    if skill_unavailable:
+        allowed = False
+        anti_example = "Another available procedure is silently substituted."
+        finished = ["The required procedure is available at its pinned revision."]
+        gate = "Blocked"
+        good = ["The required procedure is available before it is recommended."]
+        rationale = {
+            "principle_ids": procedure["rationale"]["principle_ids"],
+            "summary": "The required procedure is unavailable for the requested phase.",
+        }
+        reason_code = "SKILL_UNAVAILABLE"
+        required_evidence = []
     workflow = request["workflow"]
     capability_profile = request["capability_profile"]
     consumer_profile = request["consumer_profile"]
     policy = request["policy"]
     payload = {
-        "allowed": True,
-        "anti_example": procedure["anti_example"],
+        "allowed": allowed,
+        "anti_example": anti_example,
         "capability_profile_version": capability_profile["version"],
         "environment": request["environment"],
         "executes": False,
-        "finished": procedure["finished"],
+        "finished": finished,
         "gate": gate,
-        "good": procedure["good"],
+        "good": good,
         "lane": request["lane"],
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],
         "primary_procedure": procedure["identity"],
         "project_profile_version": consumer_profile["version"],
-        "rationale": procedure["rationale"],
+        "rationale": rationale,
         "reason_code": reason_code,
         "required_evidence": required_evidence,
         "revision": request["revision"],

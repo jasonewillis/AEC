@@ -99,6 +99,32 @@ class ResolverTracerTests(unittest.TestCase):
         first_payload["gate"] = "Ready"
         self.assertEqual("Evidence needed", first.to_dict()["gate"])
 
+    def test_unavailable_skill_returns_one_stable_blocked_decision(self) -> None:
+        request = load_json(
+            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
+        )
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+
+        first = resolve(request, procedures)
+        second = resolve(request, procedures)
+        payload = first.to_dict()
+
+        self.assertEqual(first.canonical_bytes, second.canonical_bytes)
+        self.assertEqual(first.resolution_hash, second.resolution_hash)
+        self.assertEqual(
+            "sha256:ec3d32a815c5c293ccc28e3363c917d2cb638e13bb3cb9c008819660fc9719ef",
+            first.resolution_hash,
+        )
+        self.assertEqual([], validate_resolution(payload))
+        self.assertEqual("Blocked", payload["gate"])
+        self.assertFalse(payload["allowed"])
+        self.assertEqual("SKILL_UNAVAILABLE", payload["reason_code"])
+        self.assertEqual("verify-evidence", payload["primary_procedure"])
+        self.assertEqual(
+            "verify-evidence",
+            payload["source_identities"]["procedure"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
