@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "source_sets": [
+    {
+      "principle": "This synthetic field must fail factual-only validation."
+    }
+  ]
+}

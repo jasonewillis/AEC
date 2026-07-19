@@ -24,7 +24,7 @@
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
-    "principle_ids": ["ai-engineer-09"],
+    "principle_ids": ["aec-evidence-input-binding"],
     "summary": "Verification evidence is incomplete for the exact revision and environment."
   },
   "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",

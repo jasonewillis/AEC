@@ -18,7 +18,7 @@ here.
 | executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json:9,12` (`const false`), `tools/validate_foundation.py:107-110` |
 | Workflows MIT pin | Satisfied | `provenance/upstream-lock.json:4-10`, `docs/provenance.md:9,16-18` |
 | Blueprint reference-only pin | Satisfied | `provenance/upstream-lock.json:11-17`, `docs/provenance.md:10,20-25` |
-| Course provenance (13 + 8 lessons) | Satisfied | `provenance/course-guidance.json`, `docs/course-traceability/README.md:6-8` |
+| Factual course provenance (13 + 8 lessons) | Satisfied | `provenance/course-inventory.json`, `docs/course-traceability/README.md` |
 | Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml:16-38` |
 
 Note: Slice 1 now ships **no consumer profile**. The single bundled profile

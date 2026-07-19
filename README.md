@@ -34,7 +34,9 @@ This repository currently provides:
   canonical SHA-256 contract;
 - a pure Verify-phase resolver tracer with an immutable mentoring-card result;
 - provenance locks for upstream pattern sources;
-- traceability for 13 AI Engineer lessons and eight Evals & Monitoring lessons;
+- factual-only provenance for 13 AI Engineer lessons, one supplemental gateway PDF,
+  and eight Evals & Monitoring lessons with honestly unverified hashes;
+- an independently authored AEC principle registry with no course-to-policy mapping;
 - honest red fixtures for malformed requests, tampered decisions, mutation, and hash
   defects; and
 - standard-library validation that runs without installing dependencies.
@@ -63,7 +65,8 @@ python3 -m unittest discover -s tests -v
 
 AEC is independently authored. `owainlewis/workflows` is a pinned MIT-licensed
 pattern source. `owainlewis/blueprint` is a pinned reference-only capability index
-because this project has not verified an adoption license. Course materials inform
-original operating principles but are not copied into runtime prompts or distributed
-from this repository. AEC ships no populated consumer profile; consumer profiles are
-declared and owned entirely in consumer repositories. See [provenance](docs/provenance.md).
+because this project has not verified an adoption license. Private course records are
+limited to factual identifiers, exact titles, source filenames, and hashes when
+verified. They do not define runtime policy or prompts. AEC ships no populated
+consumer profile; consumer profiles are declared and owned entirely in consumer
+repositories. See [provenance](docs/provenance.md).

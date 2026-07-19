@@ -1,0 +1,26 @@
+{
+  "$id": "https://github.com/jasonewillis/AEC/schemas/principle-registry.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "principles": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {"pattern": "^aec-[a-z0-9-]+$", "type": "string"},
+          "revision": {"minLength": 1, "type": "string"},
+          "statement": {"minLength": 1, "type": "string"}
+        },
+        "required": ["id", "revision", "statement"],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["principles", "schema_version"],
+  "title": "AEC Principle Registry",
+  "type": "object"
+}
