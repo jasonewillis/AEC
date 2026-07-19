@@ -139,20 +139,49 @@ class RegistryContractTests(unittest.TestCase):
             validate_workflow(broken),
         )
 
-    def test_jwtravelscanner_profile_is_read_only_and_consumer_owned(self) -> None:
-        profile = load_json(ROOT / "config" / "projects" / "jwtravelscanner.json")
+    def test_generic_consumer_profile_shape_validates(self) -> None:
+        profile = {
+            "aec_mode": "read-only-mentor",
+            "agent_adapters": ["some-adapter"],
+            "lifecycle_authority": "consumer-owned",
+            "project": "example-owner/example-repo",
+            "profile_version": "example:0.1.0",
+            "schema_version": "1.0.0",
+            "workflow": "ticket-to-pr",
+        }
 
         self.assertEqual([], validate_project_profile(profile))
-        self.assertEqual("jasonewillis/jwTravelScanner", profile["project"])
 
-    def test_aec_cannot_claim_consumer_lifecycle_authority(self) -> None:
-        profile = load_json(ROOT / "config" / "projects" / "jwtravelscanner.json")
-        broken = copy.deepcopy(profile)
-        broken["lifecycle_authority"] = "aec"
+    def test_consumer_profile_cannot_claim_aec_as_lifecycle_writer(self) -> None:
+        profile = {
+            "aec_mode": "read-only-mentor",
+            "agent_adapters": ["some-adapter"],
+            "lifecycle_authority": "aec",
+            "project": "example-owner/example-repo",
+            "profile_version": "example:0.1.0",
+            "schema_version": "1.0.0",
+            "workflow": "ticket-to-pr",
+        }
 
         self.assertIn(
             "consumer must own lifecycle authority",
-            validate_project_profile(broken),
+            validate_project_profile(profile),
+        )
+
+    def test_agent_adapters_rejects_whitespace_only(self) -> None:
+        profile = {
+            "aec_mode": "read-only-mentor",
+            "agent_adapters": ["   "],
+            "lifecycle_authority": "consumer-owned",
+            "project": "example-owner/example-repo",
+            "profile_version": "example:0.1.0",
+            "schema_version": "1.0.0",
+            "workflow": "ticket-to-pr",
+        }
+
+        self.assertIn(
+            "agent_adapters must be a non-empty list of non-whitespace strings",
+            validate_project_profile(profile),
         )
 
 

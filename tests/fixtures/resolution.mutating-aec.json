@@ -9,7 +9,7 @@
   "phase": "Verify",
   "policy_version": "0.1.0",
   "primary_procedure": "aec-verify",
-  "project_profile_version": "jwtravelscanner:0.1.0",
+  "project_profile_version": "reference-profile:0.1.0",
   "reason_code": "READY_TO_ADVANCE",
   "required_evidence": [],
   "resolution_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
