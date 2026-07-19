@@ -33,8 +33,7 @@ This repository currently provides:
 - a deterministic resolver-decision schema and canonical SHA-256 contract;
 - provenance locks for upstream pattern sources;
 - traceability for 13 AI Engineer lessons and eight Evals & Monitoring lessons;
-- honest red fixtures for mutation and hash defects;
-- a consumer profile for `jasonewillis/jwTravelScanner`; and
+- honest red fixtures for mutation and hash defects; and
 - standard-library validation that runs without installing dependencies.
 
 The same commands run in the required `Foundation gate` GitHub Actions workflow.
@@ -62,4 +61,5 @@ AEC is independently authored. `owainlewis/workflows` is a pinned MIT-licensed
 pattern source. `owainlewis/blueprint` is a pinned reference-only capability index
 because this project has not verified an adoption license. Course materials inform
 original operating principles but are not copied into runtime prompts or distributed
-from this repository. See [provenance](docs/provenance.md).
+from this repository. AEC ships no populated consumer profile; consumer profiles are
+declared and owned entirely in consumer repositories. See [provenance](docs/provenance.md).

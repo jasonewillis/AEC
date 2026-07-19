@@ -348,8 +348,10 @@ def validate_project_profile(profile: object) -> list[str]:
         errors.append("AEC consumer mode must be read-only-mentor")
 
     adapters = profile.get("agent_adapters")
-    if adapters != ["claude", "codex"]:
-        errors.append("bootstrap consumer must declare Claude and Codex adapters")
+    if not isinstance(adapters, list) or not adapters or not all(
+        isinstance(item, str) and item.strip() for item in adapters
+    ):
+        errors.append("agent_adapters must be a non-empty list of non-whitespace strings")
     return errors
 
 
@@ -377,12 +379,6 @@ def main() -> int:
         report_errors(
             "workflow.ticket-to-pr",
             validate_workflow(load_json(ROOT / "config" / "workflows" / "ticket-to-pr.json")),
-        ),
-        report_errors(
-            "project.jwtravelscanner",
-            validate_project_profile(
-                load_json(ROOT / "config" / "projects" / "jwtravelscanner.json")
-            ),
         ),
         report_errors(
             "resolution.valid",

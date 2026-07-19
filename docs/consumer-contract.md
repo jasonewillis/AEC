@@ -1,8 +1,8 @@
 # Consumer Contract
 
-AEC is reusable only when consumer-specific state stays in the consumer. The first
-profile is
-[`config/projects/jwtravelscanner.json`](../config/projects/jwtravelscanner.json).
+AEC is reusable only when consumer-specific state stays in the consumer. AEC ships
+no populated consumer profile; a consumer produces its own, shaped to the contract
+validated by `tools/validate_foundation.py`.
 
 ## AEC provides
 
@@ -23,14 +23,17 @@ profile is
 - branch protection, review, merge, deployment, and rollback controls; and
 - telemetry destinations and retention policy.
 
-## jwTravelScanner pilot
+## Reference example
 
-`jasonewillis/jwTravelScanner` is the first consumer, not a copy of AEC. Its adapter
-must pin an AEC release, provide a versioned project and capability profile, and prove
-that Claude and Codex resolve the same decision from the same fixture.
+Consumer profiles live in consumer repositories, not in AEC. A reference
+profile follows the shape validated by `tools/validate_foundation.py`: fields
+`schema_version`, `project`, `profile_version`, `workflow`,
+`lifecycle_authority: consumer-owned`, `aec_mode: read-only-mentor`, and
+`agent_adapters: [...]` (non-empty list). AEC ships no populated profile. A
+consumer produces its own and the AEC contract validates it in-place.
 
-The consumer must not vendor private course sources, copy Blueprint skill text, create
-agent-specific policy forks, or let AEC write its lifecycle state.
+Consumers must not vendor private course sources, copy Blueprint skill text,
+create agent-specific policy forks, or let AEC write their lifecycle state.
 
 ## Conformance exit gate
 
