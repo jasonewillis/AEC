@@ -30,6 +30,9 @@ The normalized input conforms to
 [`resolution-request.schema.json`](../../schemas/resolution-request.schema.json).
 The procedure registry conforms to
 [`procedure-catalog.schema.json`](../../schemas/procedure-catalog.schema.json).
+The schema is the portable structural contract. The Python catalog validator is an
+intentional semantic superset because JSON Schema cannot express uniqueness by a
+compound identity and revision key.
 Malformed input returns the non-decision shape in
 [`resolution-rejection.schema.json`](../../schemas/resolution-rejection.schema.json).
 Accepted resolver output conforms to

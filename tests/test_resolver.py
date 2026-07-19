@@ -88,7 +88,9 @@ class ResolverTracerTests(unittest.TestCase):
     def test_duplicate_required_catalog_procedure_returns_catalog_rejection(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
         catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
-        catalog["procedures"].append(copy.deepcopy(catalog["procedures"][0]))
+        duplicate = copy.deepcopy(catalog["procedures"][0])
+        duplicate["anti_example"] = "Different text with the same pinned identity."
+        catalog["procedures"].append(duplicate)
 
         result = resolve(request, catalog)
 
@@ -132,6 +134,28 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(
             ["procedures[0].required_evidence must be a normalized string list"],
             result.to_dict()["errors"],
+        )
+
+    def test_catalog_cannot_inject_an_arbitrary_uppercase_reason_code(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        catalog["procedures"][0]["reason_code"] = "ARBITRARY_GREEN"
+
+        result = resolve(request, catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": [
+                    (
+                        "procedures[0].reason_code must equal "
+                        "ACCEPTANCE_EVIDENCE_INCOMPLETE"
+                    )
+                ],
+            },
+            result.to_dict(),
         )
 
     def test_malformed_available_procedure_returns_structured_rejection(self) -> None:

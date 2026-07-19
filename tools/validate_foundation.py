@@ -554,6 +554,25 @@ def main() -> int:
             else ["canary did not detect the malformed procedure catalog"],
         )
     )
+    unsupported_reason_catalog = load_json(
+        ROOT / "config" / "procedures" / "ticket-to-pr.json"
+    )
+    unsupported_reason_catalog["procedures"][0]["reason_code"] = "ARBITRARY_GREEN"
+    unsupported_reason_errors = validate_procedure_catalog(unsupported_reason_catalog)
+    checks.append(
+        report_errors(
+            "red-canary.unsupported-catalog-reason",
+            []
+            if unsupported_reason_errors
+            == [
+                (
+                    "procedures[0].reason_code must equal "
+                    "ACCEPTANCE_EVIDENCE_INCOMPLETE"
+                )
+            ]
+            else ["canary did not detect the unsupported catalog reason code"],
+        )
+    )
     tampered_decision = load_json(
         ROOT / "tests" / "fixtures" / "resolution.valid.json"
     )

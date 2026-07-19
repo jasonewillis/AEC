@@ -116,7 +116,7 @@ class SourceContractTests(unittest.TestCase):
             set(schema["properties"]["code"]["enum"]),
         )
 
-    def test_catalog_schema_validator_and_fixture_share_one_contract(self) -> None:
+    def test_catalog_schema_and_validator_share_the_structural_contract(self) -> None:
         schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
         fixture = load_json(ROOT / "config/procedures/ticket-to-pr.json")
 
@@ -125,7 +125,25 @@ class SourceContractTests(unittest.TestCase):
         procedure_schema = schema["properties"]["procedures"]["items"]
         self.assertFalse(procedure_schema["additionalProperties"])
         self.assertEqual(PROCEDURE_FIELDS, set(procedure_schema["required"]))
+        self.assertEqual(
+            "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+            procedure_schema["properties"]["reason_code"]["const"],
+        )
         self.assertEqual([], validate_procedure_catalog(fixture))
+
+    def test_catalog_python_validator_adds_semantic_reference_uniqueness(self) -> None:
+        schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        duplicate = copy.deepcopy(catalog["procedures"][0])
+        duplicate["anti_example"] = "Different text with the same pinned identity."
+        catalog["procedures"].append(duplicate)
+
+        self.assertNotEqual(catalog["procedures"][0], catalog["procedures"][1])
+        self.assertTrue(schema["properties"]["procedures"]["uniqueItems"])
+        self.assertIn(
+            "procedure catalog references must be unique",
+            validate_procedure_catalog(catalog),
+        )
 
     def test_request_schema_validator_and_fixture_share_one_contract(self) -> None:
         schema = load_json(ROOT / "schemas" / "resolution-request.schema.json")

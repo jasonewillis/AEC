@@ -29,7 +29,6 @@ REQUIRED_REQUEST_FIELDS = {
 }
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
-REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
 PROCEDURE_FIELDS = {
     "anti_example",
     "finished",
@@ -399,9 +398,10 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
             phase = procedure.get("phase")
             if not isinstance(phase, str) or phase not in PHASES:
                 errors.append(f"{field}.phase is unsupported")
-            reason_code = procedure.get("reason_code")
-            if not isinstance(reason_code, str) or not REASON_CODE.fullmatch(reason_code):
-                errors.append(f"{field}.reason_code must be uppercase snake case")
+            if procedure.get("reason_code") != "ACCEPTANCE_EVIDENCE_INCOMPLETE":
+                errors.append(
+                    f"{field}.reason_code must equal ACCEPTANCE_EVIDENCE_INCOMPLETE"
+                )
             for name in ("finished", "good", "required_evidence"):
                 values = procedure.get(name)
                 needs_value = name in {"finished", "good"}
