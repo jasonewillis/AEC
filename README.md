@@ -31,6 +31,7 @@ This repository currently provides:
 
 - a versioned ticket-to-PR workflow registry;
 - a deterministic resolver-decision schema and canonical SHA-256 contract;
+- a pure Verify-phase resolver tracer with an immutable mentoring-card result;
 - provenance locks for upstream pattern sources;
 - traceability for 13 AI Engineer lessons and eight Evals & Monitoring lessons;
 - honest red fixtures for mutation and hash defects; and
@@ -48,6 +49,7 @@ python3 -m unittest discover -s tests -v
 ## Documentation
 
 - [Architecture](docs/architecture/overview.md)
+- [Deterministic resolver](docs/architecture/resolver.md)
 - [Operating model](docs/operating-model.md)
 - [Ticket-to-PR workflow](docs/workflows/ticket-to-pr.md)
 - [Course traceability](docs/course-traceability/README.md)

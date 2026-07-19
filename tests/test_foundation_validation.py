@@ -33,8 +33,8 @@ class ResolutionValidationTests(unittest.TestCase):
     def test_wrong_hash_fails_closed(self) -> None:
         resolution = load_json(FIXTURES / "resolution.wrong-hash.json")
 
-        self.assertIn(
-            "resolution_hash does not match canonical payload",
+        self.assertEqual(
+            ["resolution_hash does not match canonical payload"],
             validate_resolution(resolution),
         )
 
@@ -43,8 +43,13 @@ class ResolutionValidationTests(unittest.TestCase):
 
         errors = validate_resolution(resolution)
 
-        self.assertIn("AEC decisions must set executes=false", errors)
-        self.assertIn("AEC decisions must set mutates=false", errors)
+        self.assertEqual(
+            [
+                "AEC decisions must set executes=false",
+                "AEC decisions must set mutates=false",
+            ],
+            errors,
+        )
 
     def test_hash_changes_when_revision_changes(self) -> None:
         resolution = load_json(FIXTURES / "resolution.valid.json")

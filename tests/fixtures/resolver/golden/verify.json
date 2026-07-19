@@ -1,0 +1,45 @@
+{
+  "available_procedures": [
+    {
+      "identity": "verify-evidence",
+      "revision": "verify-evidence:1.0.0"
+    }
+  ],
+  "blockers": [],
+  "capability_profile": {
+    "capabilities": ["test-execution"],
+    "identity": "portable-python",
+    "version": "portable-python:1.0.0"
+  },
+  "consumer_profile": {
+    "identity": "example-consumer",
+    "version": "example-consumer:1.0.0"
+  },
+  "environment": "test",
+  "evidence": [
+    {
+      "accepted": false,
+      "environment": "test",
+      "kind": "focused-test-report",
+      "revision": "0123456789abcdef0123456789abcdef01234567"
+    }
+  ],
+  "lane": "TEST",
+  "phase": "Verify",
+  "policy": {
+    "facts": {
+      "require_exact_environment": true,
+      "require_exact_revision": true
+    },
+    "identity": "default-delivery",
+    "revision": "default-delivery:1.0.0"
+  },
+  "revision": "0123456789abcdef0123456789abcdef01234567",
+  "schema_version": "1.0.0",
+  "task_id": "fixture:verify",
+  "workflow": {
+    "identity": "ticket-to-pr",
+    "revision": "ticket-to-pr:1.0.0",
+    "stage": "Execute"
+  }
+}

@@ -4,42 +4,108 @@
   "additionalProperties": false,
   "properties": {
     "allowed": {"type": "boolean"},
+    "anti_example": {"minLength": 1, "type": "string"},
     "capability_profile_version": {"minLength": 1, "type": "string"},
     "environment": {"minLength": 1, "type": "string"},
     "executes": {"const": false},
+    "finished": {
+      "items": {"minLength": 1, "type": "string"},
+      "minItems": 1,
+      "type": "array"
+    },
     "gate": {"enum": ["Blocked", "Needs review", "Evidence needed", "Ready"]},
+    "good": {
+      "items": {"minLength": 1, "type": "string"},
+      "minItems": 1,
+      "type": "array"
+    },
     "lane": {"minLength": 1, "type": "string"},
     "mutates": {"const": false},
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
     "policy_version": {"minLength": 1, "type": "string"},
     "primary_procedure": {"minLength": 1, "type": "string"},
     "project_profile_version": {"minLength": 1, "type": "string"},
+    "rationale": {
+      "additionalProperties": false,
+      "properties": {
+        "principle_ids": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "summary": {"minLength": 1, "type": "string"}
+      },
+      "required": ["principle_ids", "summary"],
+      "type": "object"
+    },
     "reason_code": {"pattern": "^[A-Z][A-Z0-9_]+$", "type": "string"},
     "required_evidence": {"items": {"minLength": 1, "type": "string"}, "type": "array"},
     "resolution_hash": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
     "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
     "schema_version": {"const": "1.0.0"},
+    "source_identities": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_profile": {"minLength": 1, "type": "string"},
+        "consumer_profile": {"minLength": 1, "type": "string"},
+        "policy": {"minLength": 1, "type": "string"},
+        "procedure": {"minLength": 1, "type": "string"},
+        "workflow": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "capability_profile",
+        "consumer_profile",
+        "policy",
+        "procedure",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "source_revisions": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_profile": {"minLength": 1, "type": "string"},
+        "consumer_profile": {"minLength": 1, "type": "string"},
+        "policy": {"minLength": 1, "type": "string"},
+        "procedure": {"minLength": 1, "type": "string"},
+        "workflow": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "capability_profile",
+        "consumer_profile",
+        "policy",
+        "procedure",
+        "workflow"
+      ],
+      "type": "object"
+    },
     "task_id": {"minLength": 1, "type": "string"},
     "workflow": {"minLength": 1, "type": "string"},
     "workflow_stage": {"enum": ["Understand", "Design", "Execute", "Assure & Release"]}
   },
   "required": [
     "allowed",
+    "anti_example",
     "capability_profile_version",
     "environment",
     "executes",
+    "finished",
     "gate",
+    "good",
     "lane",
     "mutates",
     "phase",
     "policy_version",
     "primary_procedure",
     "project_profile_version",
+    "rationale",
     "reason_code",
     "required_evidence",
     "resolution_hash",
     "revision",
     "schema_version",
+    "source_identities",
+    "source_revisions",
     "task_id",
     "workflow",
     "workflow_stage"

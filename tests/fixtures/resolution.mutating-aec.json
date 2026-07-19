@@ -1,20 +1,45 @@
 {
   "allowed": true,
+  "anti_example": "AEC directly changes lifecycle state after recommending a procedure.",
   "capability_profile_version": "claude-codex-common:0.1.0",
   "environment": "test",
   "executes": true,
+  "finished": [
+    "Every required verification fact is accepted for the exact revision and environment."
+  ],
   "gate": "Ready",
+  "good": [
+    "The consumer separately authorizes any lifecycle movement."
+  ],
   "lane": "TEST",
   "mutates": true,
   "phase": "Verify",
   "policy_version": "0.1.0",
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
+  "rationale": {
+    "principle_ids": ["ai-engineer-09"],
+    "summary": "Verification evidence is complete for the exact revision and environment."
+  },
   "reason_code": "READY_TO_ADVANCE",
   "required_evidence": [],
-  "resolution_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "resolution_hash": "sha256:0868c7fee324e08a68557bb3325def8ffc9cd1f019e408eccd30f30bbab834a9",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
+  "source_identities": {
+    "capability_profile": "claude-codex-common",
+    "consumer_profile": "reference-profile",
+    "policy": "default-delivery",
+    "procedure": "aec-verify",
+    "workflow": "ticket-to-pr"
+  },
+  "source_revisions": {
+    "capability_profile": "claude-codex-common:0.1.0",
+    "consumer_profile": "reference-profile:0.1.0",
+    "policy": "0.1.0",
+    "procedure": "aec-verify:0.1.0",
+    "workflow": "ticket-to-pr:1.0.0"
+  },
   "task_id": "fixture:mutating-aec",
   "workflow": "ticket-to-pr",
   "workflow_stage": "Execute"

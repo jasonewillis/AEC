@@ -14,9 +14,10 @@ The foundation is intentionally delivered in reversible vertical slices.
 
 ## Current position
 
-Slice 1 is the active scope. Later slices may be designed in parallel, but they cannot
-claim readiness until the foundation is merged and pinned. This prevents downstream
-work from inventing a competing contract.
+Slice 1 is merged. Slice 2 is active through one Verify-phase tracer. This tracer does
+not complete Slice 2: the eight remaining lifecycle goldens, blocked and rejected
+results, and the full threat-model canary catalog remain required before its binary
+exit gate can pass.
 
 ## Completion rule
 
