@@ -30,9 +30,10 @@ fully shaped procedures, and the currently supported
 The procedure-catalog JSON Schema is the structural boundary. It rejects malformed
 fields and exact duplicate objects. The standard-library Python validator is the
 documented semantic superset: it also rejects different procedure objects that reuse
-the same identity and revision pair. Tests assert shared structural behavior and this
-additional keyed-uniqueness rule separately; they do not claim full schema-validator
-parity where JSON Schema cannot encode the semantic key.
+the same identity and revision pair, and it requires each revision to begin with its
+procedure identity. Tests assert shared structural behavior and these additional
+semantic rules separately; they do not claim full schema-validator parity where JSON
+Schema cannot encode cross-field identity relationships.
 
 Every normalized request identifies one `required_procedure` by identity and pinned
 revision. `available_procedures` contains the complete caller-observed availability
@@ -43,8 +44,24 @@ The normalized request uses schema version `2.0.0`. This version is intentionall
 breaking change from the first tracer: `consumer_profile` now uses the exact public
 project-profile contract with `project` and `profile_version`. The resolver does not
 accept or translate the former `identity` and `version` aliases. The embedded profile
-keeps its own schema version `1.0.0`, and the output decision schema stays at `1.0.0`
-because its field structure did not change.
+keeps its own schema version `1.0.0`.
+
+The output decision schema is deliberately versioned `2.0.0`. Every accepted decision,
+including a blocked unavailable-procedure decision, contains two SHA-256 input bindings:
+
+- `resolution_request` binds the complete validated request;
+- `procedure_catalog` binds the complete validated procedure catalog.
+
+Both bindings are part of the canonical decision payload and therefore part of the
+decision hash. A material change to either accepted input changes its binding and the
+decision hash, even when the selected mentoring card remains the same.
+
+Collections whose order has no contract meaning are normalized before binding. These
+are request procedure availability, blockers, capabilities, agent adapters, evidence,
+catalog procedures, rationale principle identifiers, and required evidence. Reordering
+only those collections leaves both canonical decision bytes and hash unchanged. Good,
+Finished, and other presentation sequences remain ordered because their sequence can
+carry meaning.
 
 ## Lifecycle golden catalog
 
@@ -70,6 +87,7 @@ Good:
 - exactly one phase, gate, and procedure are selected;
 - evidence is bound to the requested revision and environment;
 - source identities and revisions are copied into the hashed decision; and
+- normalized request and catalog bindings are copied into the hashed decision; and
 - the request, catalog, and stored decision remain unchanged.
 
 Finished for the lifecycle goldens:
