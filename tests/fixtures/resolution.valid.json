@@ -1,6 +1,12 @@
 {
   "allowed": true,
   "anti_example": "A passing test from another revision is treated as proof.",
+  "available_procedures": [
+    {
+      "identity": "aec-verify",
+      "revision": "aec-verify:0.1.0"
+    }
+  ],
   "capability_profile_version": "claude-codex-common:0.1.0",
   "environment": "test",
   "executes": false,
@@ -27,7 +33,11 @@
     "synthetic-e2e-report",
     "manual-eval-report"
   ],
-  "resolution_hash": "sha256:0815157eaa119da43cc9cdd9d6b72feffb58ab2fd00dbc193bdf1f9aa9369e5a",
+  "required_procedure": {
+    "identity": "aec-verify",
+    "revision": "aec-verify:0.1.0"
+  },
+  "resolution_hash": "sha256:5952d9700b5412a1b4f2376e5863b215ae37f87c18da147e225207eb991deb33",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
   "source_identities": {

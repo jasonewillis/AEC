@@ -5,6 +5,19 @@
   "properties": {
     "allowed": {"type": "boolean"},
     "anti_example": {"minLength": 1, "type": "string"},
+    "available_procedures": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "identity": {"minLength": 1, "type": "string"},
+          "revision": {"minLength": 1, "type": "string"}
+        },
+        "required": ["identity", "revision"],
+        "type": "object"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
     "capability_profile_version": {"minLength": 1, "type": "string"},
     "environment": {"minLength": 1, "type": "string"},
     "executes": {"const": false},
@@ -23,7 +36,12 @@
     "mutates": {"const": false},
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
     "policy_version": {"minLength": 1, "type": "string"},
-    "primary_procedure": {"minLength": 1, "type": "string"},
+    "primary_procedure": {
+      "oneOf": [
+        {"minLength": 1, "type": "string"},
+        {"type": "null"}
+      ]
+    },
     "project_profile_version": {"minLength": 1, "type": "string"},
     "rationale": {
       "additionalProperties": false,
@@ -40,6 +58,15 @@
     },
     "reason_code": {"pattern": "^[A-Z][A-Z0-9_]+$", "type": "string"},
     "required_evidence": {"items": {"minLength": 1, "type": "string"}, "type": "array"},
+    "required_procedure": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {"minLength": 1, "type": "string"},
+        "revision": {"minLength": 1, "type": "string"}
+      },
+      "required": ["identity", "revision"],
+      "type": "object"
+    },
     "resolution_hash": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
     "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
     "schema_version": {"const": "1.0.0"},
@@ -86,6 +113,7 @@
   "required": [
     "allowed",
     "anti_example",
+    "available_procedures",
     "capability_profile_version",
     "environment",
     "executes",
@@ -101,6 +129,7 @@
     "rationale",
     "reason_code",
     "required_evidence",
+    "required_procedure",
     "resolution_hash",
     "revision",
     "schema_version",

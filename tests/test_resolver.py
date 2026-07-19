@@ -29,7 +29,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:ec75bdb1f789a96c113f5166679cd7664177138ea7602cf63236d737794a53e2",
+            "sha256:1fccbcc297b7f3a267001d6dcd1cac38f9f69c44bd3f506a8b0124758964c78e",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -98,6 +98,102 @@ class ResolverTracerTests(unittest.TestCase):
             self.assertNotEqual(first.resolution_hash, changed_decision.resolution_hash)
         first_payload["gate"] = "Ready"
         self.assertEqual("Evidence needed", first.to_dict()["gate"])
+
+    def test_unavailable_skill_returns_one_stable_blocked_decision(self) -> None:
+        request = load_json(
+            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
+        )
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+
+        first = resolve(request, procedures)
+        second = resolve(request, procedures)
+        payload = first.to_dict()
+
+        self.assertEqual(first.canonical_bytes, second.canonical_bytes)
+        self.assertEqual(first.resolution_hash, second.resolution_hash)
+        self.assertEqual(
+            "sha256:f844ffcdacd144bf0f7ef7c77a2b335c1e4af3c2ff795150f0904cdd50392284",
+            first.resolution_hash,
+        )
+        self.assertEqual([], validate_resolution(payload))
+        self.assertEqual("Blocked", payload["gate"])
+        self.assertFalse(payload["allowed"])
+        self.assertEqual("SKILL_UNAVAILABLE", payload["reason_code"])
+        self.assertIsNone(payload["primary_procedure"])
+        self.assertEqual(["procedure-availability"], payload["required_evidence"])
+        self.assertEqual(
+            {
+                "identity": "verify-evidence",
+                "revision": "verify-evidence:1.0.0",
+            },
+            payload["required_procedure"],
+        )
+        self.assertEqual(
+            "verify-evidence",
+            payload["source_identities"]["procedure"],
+        )
+
+    def test_unavailable_required_skill_does_not_select_same_phase_substitute(
+        self,
+    ) -> None:
+        request = load_json(
+            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
+        )
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        substitute = copy.deepcopy(procedures["procedures"][0])
+        substitute["identity"] = "silent-substitute"
+        substitute["revision"] = "silent-substitute:1.0.0"
+        procedures["procedures"].append(substitute)
+        request["available_procedures"] = [
+            {
+                "identity": "silent-substitute",
+                "revision": "silent-substitute:1.0.0",
+            }
+        ]
+
+        payload = resolve(request, procedures).to_dict()
+
+        self.assertEqual([], validate_resolution(payload))
+        self.assertEqual("Blocked", payload["gate"])
+        self.assertFalse(payload["allowed"])
+        self.assertEqual("SKILL_UNAVAILABLE", payload["reason_code"])
+        self.assertIsNone(payload["primary_procedure"])
+        self.assertEqual(
+            {
+                "identity": "verify-evidence",
+                "revision": "verify-evidence:1.0.0",
+            },
+            payload["required_procedure"],
+        )
+        self.assertEqual(["procedure-availability"], payload["required_evidence"])
+
+    def test_availability_facts_are_bound_into_blocked_decision_hash(self) -> None:
+        request = load_json(
+            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
+        )
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        changed = copy.deepcopy(request)
+        changed["available_procedures"] = [
+            {
+                "identity": "unrelated-procedure",
+                "revision": "unrelated-procedure:1.0.0",
+            }
+        ]
+
+        empty_availability = resolve(request, procedures).to_dict()
+        unrelated_availability = resolve(changed, procedures).to_dict()
+
+        self.assertEqual([], validate_resolution(empty_availability))
+        self.assertEqual([], validate_resolution(unrelated_availability))
+        self.assertNotEqual(
+            empty_availability["resolution_hash"],
+            unrelated_availability["resolution_hash"],
+        )
+        self.assertEqual([], empty_availability["available_procedures"])
+        self.assertEqual(
+            changed["available_procedures"],
+            unrelated_availability["available_procedures"],
+        )
 
 
 if __name__ == "__main__":

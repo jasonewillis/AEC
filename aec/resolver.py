@@ -64,54 +64,90 @@ def resolve(request: object, procedures: object) -> ResolutionDecision:
     if not isinstance(request, dict) or not isinstance(procedures, dict):
         raise TypeError("request and procedures must be objects")
 
+    available_procedures = sorted(
+        (
+            {"identity": item["identity"], "revision": item["revision"]}
+            for item in request["available_procedures"]
+            if isinstance(item, dict)
+        ),
+        key=lambda item: (item["identity"], item["revision"]),
+    )
     available = {
         (item["identity"], item["revision"])
-        for item in request["available_procedures"]
-        if isinstance(item, dict)
+        for item in available_procedures
     }
+    required_procedure = request["required_procedure"]
+    required_identity = (
+        required_procedure["identity"],
+        required_procedure["revision"],
+    )
     matches = [
         procedure
         for procedure in procedures["procedures"]
         if isinstance(procedure, dict)
         and procedure.get("phase") == request["phase"]
-        and (procedure.get("identity"), procedure.get("revision")) in available
+        and (procedure.get("identity"), procedure.get("revision"))
+        == required_identity
     ]
     if len(matches) != 1:
-        raise ValueError("normalized request must resolve exactly one procedure")
+        raise ValueError("normalized request must identify exactly one required procedure")
 
     procedure = matches[0]
+    skill_unavailable = required_identity not in available
     accepted_evidence = _accepted_evidence(request)
     required_evidence = [
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
     ]
+    allowed = True
+    anti_example = procedure["anti_example"]
+    finished = procedure["finished"]
     gate = "Evidence needed" if required_evidence else "Ready"
+    good = procedure["good"]
+    rationale = procedure["rationale"]
     reason_code = (
         procedure["reason_code"]
         if required_evidence
         else "ACCEPTANCE_EVIDENCE_COMPLETE"
     )
+    if skill_unavailable:
+        allowed = False
+        anti_example = "Another available procedure is silently substituted."
+        finished = ["The required procedure is available at its pinned revision."]
+        gate = "Blocked"
+        good = ["The required procedure is available before it is recommended."]
+        rationale = {
+            "principle_ids": procedure["rationale"]["principle_ids"],
+            "summary": "The required procedure is unavailable for the requested phase.",
+        }
+        reason_code = "SKILL_UNAVAILABLE"
+        required_evidence = ["procedure-availability"]
     workflow = request["workflow"]
     capability_profile = request["capability_profile"]
     consumer_profile = request["consumer_profile"]
     policy = request["policy"]
     payload = {
-        "allowed": True,
-        "anti_example": procedure["anti_example"],
+        "allowed": allowed,
+        "anti_example": anti_example,
+        "available_procedures": available_procedures,
         "capability_profile_version": capability_profile["version"],
         "environment": request["environment"],
         "executes": False,
-        "finished": procedure["finished"],
+        "finished": finished,
         "gate": gate,
-        "good": procedure["good"],
+        "good": good,
         "lane": request["lane"],
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],
-        "primary_procedure": procedure["identity"],
+        "primary_procedure": None if skill_unavailable else procedure["identity"],
         "project_profile_version": consumer_profile["version"],
-        "rationale": procedure["rationale"],
+        "rationale": rationale,
         "reason_code": reason_code,
         "required_evidence": required_evidence,
+        "required_procedure": {
+            "identity": required_procedure["identity"],
+            "revision": required_procedure["revision"],
+        },
         "revision": request["revision"],
         "schema_version": "1.0.0",
         "source_identities": {
