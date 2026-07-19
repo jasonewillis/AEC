@@ -11,7 +11,7 @@ here.
 
 | Section | Status | Evidence (file:line) |
 | --- | --- | --- |
-| Lifecycle (nine-phase rail) | Satisfied | `README.md:17-20`, `docs/architecture/overview.md:5-15` |
+| Lifecycle (nine-phase rail) | Satisfied | `README.md:17-20`, `config/workflows/ticket-to-pr.json:10-15` |
 | Gate precedence (fail-closed) | Satisfied | `README.md:22-26`, `config/workflows/ticket-to-pr.json:2-7`, `tools/validate_foundation.py:20,309-315` |
 | Resolver schema | Satisfied | `schemas/resolution-decision.schema.json:1-49` |
 | Canonical hash contract | Satisfied | `tools/validate_foundation.py:69-86` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
@@ -95,7 +95,7 @@ binary exit gate in `docs/delivery/roadmap.md` is met on the exact PR head.
 
 Handoff canary coverage in merged `main`: **1 of 9**
 (`test_consumer_profile_cannot_claim_aec_as_lifecycle_writer` maps to handoff
-canary #9, unauthorized lifecycle write). The other 15 tests in
+canary #9, unauthorized lifecycle write). The other 16 tests in
 `tests/test_foundation_validation.py` exercise schema, provenance, and
 workflow drift -- honest red canaries for those surfaces, but not the
 handoff's threat-model list. Closing that gap is Slice 2 gap #13 above.
