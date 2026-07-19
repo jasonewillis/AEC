@@ -8,11 +8,35 @@ from aec.resolver import (
     canonical_resolution_bytes,
     compute_resolution_hash,
     resolve,
+    validate_procedure_catalog,
+    validate_resolution_request,
 )
 from tools.validate_foundation import validate_resolution
 
 
 ROOT = Path(__file__).resolve().parents[1]
+GOLDEN_PHASES = {
+    "Intake": ("Understand", "intake-outcome"),
+    "Framing": ("Understand", "frame-delivery-context"),
+    "Spec": ("Design", "specify-behavior-contract"),
+    "Plan": ("Design", "plan-vertical-delivery"),
+    "Build": ("Execute", "build-coherent-slice"),
+    "Verify": ("Execute", "verify-evidence"),
+    "Review": ("Assure & Release", "review-exact-change"),
+    "PR": ("Assure & Release", "prepare-merge-candidate"),
+    "Deploy": ("Assure & Release", "prove-live-revision"),
+}
+GOLDEN_HASHES = {
+    "Intake": "sha256:d1df6384d4131a9fade210684a7fcc3642f2327100021b91aebd2fd844d192e4",
+    "Framing": "sha256:248e07da4ced43b1deefead2e750a96fdbad17f320abf247b9b209f6b138c613",
+    "Spec": "sha256:79bc1d783664c1c9299204640f2ee3ea441493441fb212e25acc053604671858",
+    "Plan": "sha256:f963b6d4d61aa095343f382b66d928d0f779fe2f98caad0b9b2b774e0a4bd684",
+    "Build": "sha256:3a87d7e51d4bf79567313a47b66ef70c980ca217c93a7fba21293c9db2b33cd0",
+    "Verify": "sha256:0fd76f0fa361664b0144c5417561fc9a1c7b56d9f76a32b7a1c0c8958c012f36",
+    "Review": "sha256:52677479a0520d3d27ba562c044c1ecbfdf1be55d9b1f89e011a6333566b5308",
+    "PR": "sha256:ddd99bdfbea222bdfbeb73c9e10cd2d2d7eea23f4feb7fda1e91feb19a4290ca",
+    "Deploy": "sha256:e9ff2242673f4ef7f28eed5fa615102f8d4f6c81d9059741ed35db0ee641b9c7",
+}
 
 
 def load_json(path: Path) -> object:
@@ -20,7 +44,156 @@ def load_json(path: Path) -> object:
         return json.load(stream)
 
 
+def golden_common_facts(request: object) -> object:
+    """Return caller facts that every lifecycle golden must share."""
+    if not isinstance(request, dict):
+        raise TypeError("golden request must be an object")
+    common_facts = copy.deepcopy(request)
+    for field in (
+        "available_procedures",
+        "phase",
+        "required_procedure",
+        "task_id",
+    ):
+        common_facts.pop(field)
+    workflow = common_facts.get("workflow")
+    if not isinstance(workflow, dict):
+        raise TypeError("golden request workflow must be an object")
+    workflow.pop("stage")
+    return common_facts
+
+
+def matching_golden_procedures(catalog: object, request: object) -> list[object]:
+    """Return catalog entries matching the request's exact phase and pin."""
+    if not isinstance(catalog, dict) or not isinstance(request, dict):
+        return []
+    required = request.get("required_procedure")
+    procedures = catalog.get("procedures")
+    if not isinstance(required, dict) or not isinstance(procedures, list):
+        return []
+    return [
+        procedure
+        for procedure in procedures
+        if isinstance(procedure, dict)
+        and procedure.get("phase") == request.get("phase")
+        and procedure.get("identity") == required.get("identity")
+        and procedure.get("revision") == required.get("revision")
+    ]
+
+
 class ResolverTracerTests(unittest.TestCase):
+    def test_each_phase_resolves_one_complete_deterministic_golden_card(self) -> None:
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        self.assertEqual([], validate_procedure_catalog(procedures))
+        self.assertEqual(
+            {"build", "deploy", "framing", "intake", "plan", "pr", "review", "spec", "verify"},
+            {
+                path.stem
+                for path in (ROOT / "tests/fixtures/resolver/golden").glob("*.json")
+            },
+        )
+
+        shared_common_facts = None
+        for phase, (stage, identity) in GOLDEN_PHASES.items():
+            with self.subTest(phase=phase):
+                fixture_name = "pr" if phase == "PR" else phase.lower()
+                request = load_json(
+                    ROOT / f"tests/fixtures/resolver/golden/{fixture_name}.json"
+                )
+                common_facts = golden_common_facts(request)
+                if shared_common_facts is None:
+                    shared_common_facts = common_facts
+                self.assertEqual(shared_common_facts, common_facts)
+                first = resolve(request, procedures)
+                second = resolve(request, procedures)
+
+                self.assertNotIsInstance(first, ResolutionRejection)
+                self.assertNotIsInstance(second, ResolutionRejection)
+                payload = first.to_dict()
+                self.assertEqual([], validate_resolution_request(request))
+                self.assertEqual(
+                    [request["required_procedure"]],
+                    request["available_procedures"],
+                )
+                matching_procedures = matching_golden_procedures(
+                    procedures,
+                    request,
+                )
+                self.assertEqual(1, len(matching_procedures))
+                self.assertEqual(
+                    request["required_procedure"],
+                    {
+                        "identity": matching_procedures[0]["identity"],
+                        "revision": matching_procedures[0]["revision"],
+                    },
+                )
+                self.assertEqual(first.canonical_bytes, second.canonical_bytes)
+                self.assertEqual(first.resolution_hash, second.resolution_hash)
+                self.assertEqual(GOLDEN_HASHES[phase], first.resolution_hash)
+                self.assertEqual([], validate_resolution(payload))
+                self.assertEqual(phase, payload["phase"])
+                self.assertEqual(stage, payload["workflow_stage"])
+                self.assertEqual(identity, payload["primary_procedure"])
+                self.assertEqual("Evidence needed", payload["gate"])
+                self.assertTrue(payload["rationale"]["principle_ids"])
+                self.assertTrue(payload["rationale"]["summary"])
+                self.assertTrue(payload["required_evidence"])
+                self.assertTrue(payload["good"])
+                self.assertTrue(payload["finished"])
+                self.assertTrue(payload["anti_example"])
+                if phase != "Verify":
+                    self.assertEqual(
+                        [f"aec-ticket-to-pr-{phase.lower()}"],
+                        payload["rationale"]["principle_ids"],
+                    )
+
+    def test_unapproved_golden_request_drift_is_not_normalized_away(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        baseline = golden_common_facts(request)
+        mutations = []
+
+        changed = copy.deepcopy(request)
+        changed["lane"] = "OTHER"
+        mutations.append(changed)
+
+        changed = copy.deepcopy(request)
+        changed["capability_profile"]["capabilities"].append("browser")
+        mutations.append(changed)
+
+        changed = copy.deepcopy(request)
+        changed["evidence"] = [
+            {
+                "accepted": False,
+                "environment": "test",
+                "kind": "unexpected-evidence",
+                "revision": "0123456789abcdef0123456789abcdef01234567",
+            }
+        ]
+        mutations.append(changed)
+
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index):
+                self.assertNotEqual(baseline, golden_common_facts(mutation))
+
+    def test_golden_pin_allows_future_same_phase_procedures(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        intake_procedure = next(
+            procedure
+            for procedure in procedures["procedures"]
+            if procedure["identity"] == "intake-outcome"
+        )
+        future_procedure = copy.deepcopy(intake_procedure)
+        future_procedure["identity"] = "future-intake-procedure"
+        future_procedure["revision"] = "future-intake-procedure:1.0.0"
+        procedures["procedures"].append(future_procedure)
+
+        self.assertEqual([], validate_procedure_catalog(procedures))
+        self.assertEqual(1, len(matching_golden_procedures(procedures, request)))
+        decision = resolve(request, procedures)
+        self.assertNotIsInstance(decision, ResolutionRejection)
+        self.assertEqual("intake-outcome", decision.to_dict()["primary_procedure"])
+
     def test_missing_procedure_catalog_fields_return_catalog_rejection(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
 
@@ -357,7 +530,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:7e294935e78fdb59907a3a58faee0111b3dd43040d58b956910b9432010e448b",
+            "sha256:0fd76f0fa361664b0144c5417561fc9a1c7b56d9f76a32b7a1c0c8958c012f36",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)

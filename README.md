@@ -32,7 +32,7 @@ This repository currently provides:
 - a versioned ticket-to-PR workflow registry;
 - deterministic request, procedure-catalog, rejection, and decision schemas plus a
   canonical SHA-256 contract;
-- a pure Verify-phase resolver tracer with an immutable mentoring-card result;
+- a pure nine-phase resolver catalog with immutable mentoring-card results;
 - provenance locks for upstream pattern sources;
 - factual-only provenance for 13 AI Engineer lessons, one supplemental gateway PDF,
   and eight Evals & Monitoring lessons with honestly unverified hashes;

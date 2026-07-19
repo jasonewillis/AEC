@@ -1,8 +1,8 @@
 {
   "available_procedures": [
     {
-      "identity": "verify-evidence",
-      "revision": "verify-evidence:1.0.0"
+      "identity": "prepare-merge-candidate",
+      "revision": "prepare-merge-candidate:1.0.0"
     }
   ],
   "blockers": [],
@@ -23,7 +23,7 @@
   "environment": "test",
   "evidence": [],
   "lane": "GENERAL",
-  "phase": "Verify",
+  "phase": "PR",
   "policy": {
     "facts": {
       "require_exact_environment": true,
@@ -33,15 +33,15 @@
     "revision": "default-delivery:1.0.0"
   },
   "required_procedure": {
-    "identity": "verify-evidence",
-    "revision": "verify-evidence:1.0.0"
+    "identity": "prepare-merge-candidate",
+    "revision": "prepare-merge-candidate:1.0.0"
   },
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "2.0.0",
-  "task_id": "fixture:verify",
+  "task_id": "fixture:pr",
   "workflow": {
     "identity": "ticket-to-pr",
     "revision": "ticket-to-pr:1.0.0",
-    "stage": "Execute"
+    "stage": "Assure & Release"
   }
 }
