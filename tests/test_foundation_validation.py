@@ -1,10 +1,20 @@
 import copy
 import json
+import re
 import unittest
 from pathlib import Path
 
+from aec.contracts import PROJECT_PROFILE_FIELDS
+from aec.resolver import (
+    PROCEDURE_FIELDS,
+    REQUIRED_CATALOG_FIELDS,
+    REQUIRED_REQUEST_FIELDS,
+    validate_procedure_catalog,
+    validate_resolution_request,
+)
 from tools.validate_foundation import (
     REQUIRED_RESOLUTION_FIELDS,
+    SUPPORTED_REASON_CODES,
     compute_resolution_hash,
     validate_course_guidance,
     validate_project_profile,
@@ -63,10 +73,97 @@ class ResolutionValidationTests(unittest.TestCase):
 
 
 class SourceContractTests(unittest.TestCase):
+    def test_request_schema_and_validator_reject_stage_phase_mismatch(self) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-request.schema.json")
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        request["workflow"]["stage"] = "Design"
+
+        self.assertIn(
+            "phase does not belong to workflow.stage",
+            validate_resolution_request(request),
+        )
+        required_stage = next(
+            rule["then"]["properties"]["workflow"]["properties"]["stage"]["const"]
+            for rule in schema["allOf"]
+            if request["phase"] in rule["if"]["properties"]["phase"]["enum"]
+        )
+        self.assertNotEqual(request["workflow"]["stage"], required_stage)
+
+    def test_request_schema_and_validator_reject_trailing_newline_in_project(
+        self,
+    ) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-request.schema.json")
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        request["consumer_profile"]["project"] = "owner/repository\n"
+
+        self.assertIn(
+            "consumer_profile: consumer project must use owner/repository format",
+            validate_resolution_request(request),
+        )
+        pattern = schema["properties"]["consumer_profile"]["properties"]["project"][
+            "pattern"
+        ]
+        self.assertIsNone(re.search(pattern, request["consumer_profile"]["project"]))
+
+    def test_rejection_schema_matches_the_public_rejection_shape(self) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-rejection.schema.json")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual({"accepted", "code", "errors"}, set(schema["required"]))
+        self.assertFalse(schema["properties"]["accepted"]["const"])
+        self.assertEqual(
+            {"PROCEDURE_CATALOG_INVALID", "RESOLUTION_REQUEST_INVALID"},
+            set(schema["properties"]["code"]["enum"]),
+        )
+
+    def test_catalog_schema_and_validator_share_the_structural_contract(self) -> None:
+        schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
+        fixture = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(REQUIRED_CATALOG_FIELDS, set(schema["required"]))
+        procedure_schema = schema["properties"]["procedures"]["items"]
+        self.assertFalse(procedure_schema["additionalProperties"])
+        self.assertEqual(PROCEDURE_FIELDS, set(procedure_schema["required"]))
+        self.assertEqual(
+            "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+            procedure_schema["properties"]["reason_code"]["const"],
+        )
+        self.assertEqual([], validate_procedure_catalog(fixture))
+
+    def test_catalog_python_validator_adds_semantic_reference_uniqueness(self) -> None:
+        schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        duplicate = copy.deepcopy(catalog["procedures"][0])
+        duplicate["anti_example"] = "Different text with the same pinned identity."
+        catalog["procedures"].append(duplicate)
+
+        self.assertNotEqual(catalog["procedures"][0], catalog["procedures"][1])
+        self.assertTrue(schema["properties"]["procedures"]["uniqueItems"])
+        self.assertIn(
+            "procedure catalog references must be unique",
+            validate_procedure_catalog(catalog),
+        )
+
+    def test_request_schema_validator_and_fixture_share_one_contract(self) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-request.schema.json")
+        fixture = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(REQUIRED_REQUEST_FIELDS, set(schema["required"]))
+        consumer_schema = schema["properties"]["consumer_profile"]
+        self.assertFalse(consumer_schema["additionalProperties"])
+        self.assertEqual(PROJECT_PROFILE_FIELDS, set(consumer_schema["required"]))
+        self.assertEqual([], validate_resolution_request(fixture))
+
     def test_schema_and_validator_require_the_same_resolution_fields(self) -> None:
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 
         self.assertEqual(REQUIRED_RESOLUTION_FIELDS, set(schema["required"]))
+        self.assertEqual(
+            SUPPORTED_REASON_CODES,
+            set(schema["properties"]["reason_code"]["enum"]),
+        )
 
     def test_course_guidance_has_complete_source_coverage(self) -> None:
         guidance = load_json(ROOT / "provenance" / "course-guidance.json")

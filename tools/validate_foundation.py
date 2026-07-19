@@ -13,13 +13,22 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from aec.resolver import compute_resolution_hash  # noqa: E402
+from aec.contracts import validate_project_profile  # noqa: E402, F401
+from aec.resolver import (  # noqa: E402
+    compute_resolution_hash,
+    validate_procedure_catalog,
+    validate_resolution_request,
+)
 
 
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 HASH_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
 REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
-GITHUB_REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+SUPPORTED_REASON_CODES = {
+    "ACCEPTANCE_EVIDENCE_COMPLETE",
+    "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+    "SKILL_UNAVAILABLE",
+}
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
 
@@ -107,6 +116,8 @@ def validate_resolution(resolution: object) -> list[str]:
     reason_code = resolution.get("reason_code")
     if not isinstance(reason_code, str) or not REASON_CODE.fullmatch(reason_code):
         errors.append("reason_code must be uppercase snake case")
+    elif reason_code not in SUPPORTED_REASON_CODES:
+        errors.append("reason_code is unsupported")
 
     stage = resolution.get("workflow_stage")
     phase = resolution.get("phase")
@@ -153,12 +164,36 @@ def validate_resolution(resolution: object) -> list[str]:
         and resolution.get("reason_code") == "SKILL_UNAVAILABLE"
     )
     if unavailable:
+        if resolution.get("allowed") is not False:
+            errors.append("SKILL_UNAVAILABLE decisions must set allowed=false")
         if primary_procedure is not None:
             errors.append("unavailable required procedure cannot be selected")
-        if isinstance(required_evidence, list) and "procedure-availability" not in required_evidence:
-            errors.append("unavailable required procedure needs availability evidence")
+        if required_evidence != ["procedure-availability"]:
+            errors.append(
+                "unavailable required procedure needs exactly procedure-availability evidence"
+            )
     elif not isinstance(primary_procedure, str) or not primary_procedure:
         errors.append("primary_procedure must identify the selected procedure")
+
+    gate = resolution.get("gate")
+    if gate == "Ready":
+        if resolution.get("allowed") is not True:
+            errors.append("Ready decisions must set allowed=true")
+        if reason_code != "ACCEPTANCE_EVIDENCE_COMPLETE":
+            errors.append("Ready decisions must use ACCEPTANCE_EVIDENCE_COMPLETE")
+        if required_evidence != []:
+            errors.append("Ready decisions must not require evidence")
+    elif gate == "Evidence needed":
+        if resolution.get("allowed") is not True:
+            errors.append("Evidence needed decisions must set allowed=true")
+        if reason_code != "ACCEPTANCE_EVIDENCE_INCOMPLETE":
+            errors.append(
+                "Evidence needed decisions must use ACCEPTANCE_EVIDENCE_INCOMPLETE"
+            )
+        if not isinstance(required_evidence, list) or not required_evidence:
+            errors.append("Evidence needed decisions must require evidence")
+    elif gate == "Blocked" and reason_code != "SKILL_UNAVAILABLE":
+        errors.append("Blocked decisions currently support only SKILL_UNAVAILABLE")
 
     if valid_required_procedure and valid_available_procedures:
         required_reference = (
@@ -403,45 +438,6 @@ def validate_workflow(workflow: object) -> list[str]:
     return errors
 
 
-def validate_project_profile(profile: object) -> list[str]:
-    """Validate a consumer profile without importing consumer-owned state."""
-    if not isinstance(profile, dict):
-        return ["project profile must be an object"]
-
-    errors: list[str] = []
-    if set(profile) != {
-        "aec_mode",
-        "agent_adapters",
-        "lifecycle_authority",
-        "profile_version",
-        "project",
-        "schema_version",
-        "workflow",
-    }:
-        errors.append("project profile fields do not match the contract")
-    if profile.get("schema_version") != "1.0.0":
-        errors.append("project profile schema_version must equal 1.0.0")
-    project = profile.get("project")
-    if not isinstance(project, str) or not GITHUB_REPOSITORY.fullmatch(project):
-        errors.append("consumer project must use owner/repository format")
-    profile_version = profile.get("profile_version")
-    if not isinstance(profile_version, str) or not profile_version:
-        errors.append("consumer profile_version must be a non-empty string")
-    if profile.get("workflow") != "ticket-to-pr":
-        errors.append("consumer workflow must be ticket-to-pr")
-    if profile.get("lifecycle_authority") != "consumer-owned":
-        errors.append("consumer must own lifecycle authority")
-    if profile.get("aec_mode") != "read-only-mentor":
-        errors.append("AEC consumer mode must be read-only-mentor")
-
-    adapters = profile.get("agent_adapters")
-    if not isinstance(adapters, list) or not adapters or not all(
-        isinstance(item, str) and item.strip() for item in adapters
-    ):
-        errors.append("agent_adapters must be a non-empty list of non-whitespace strings")
-    return errors
-
-
 def report_errors(label: str, errors: list[str]) -> bool:
     """Print one validation result and return whether it passed."""
     if not errors:
@@ -468,8 +464,27 @@ def main() -> int:
             validate_workflow(load_json(ROOT / "config" / "workflows" / "ticket-to-pr.json")),
         ),
         report_errors(
+            "procedure-catalog.ticket-to-pr",
+            validate_procedure_catalog(
+                load_json(ROOT / "config" / "procedures" / "ticket-to-pr.json")
+            ),
+        ),
+        report_errors(
             "resolution.valid",
             validate_resolution(load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")),
+        ),
+        report_errors(
+            "resolution-request.verify",
+            validate_resolution_request(
+                load_json(
+                    ROOT
+                    / "tests"
+                    / "fixtures"
+                    / "resolver"
+                    / "golden"
+                    / "verify.json"
+                )
+            ),
         ),
     ]
 
@@ -498,6 +513,82 @@ def main() -> int:
             []
             if required_mutation_errors.issubset(set(mutating))
             else ["canary passed unexpectedly"],
+        )
+    )
+    malformed_request = validate_resolution_request(
+        load_json(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "resolver"
+            / "red"
+            / "malformed-available-procedure.json"
+        )
+    )
+    checks.append(
+        report_errors(
+            "red-canary.malformed-available-procedure",
+            []
+            if malformed_request
+            == [
+                "available_procedures[0] must contain exactly identity and revision"
+            ]
+            else ["canary did not detect the malformed procedure reference"],
+        )
+    )
+    malformed_catalog = validate_procedure_catalog(
+        load_json(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "resolver"
+            / "red"
+            / "malformed-procedure-catalog.json"
+        )
+    )
+    checks.append(
+        report_errors(
+            "red-canary.malformed-procedure-catalog",
+            []
+            if malformed_catalog == ["procedures[0] fields do not match the contract"]
+            else ["canary did not detect the malformed procedure catalog"],
+        )
+    )
+    unsupported_reason_catalog = load_json(
+        ROOT / "config" / "procedures" / "ticket-to-pr.json"
+    )
+    unsupported_reason_catalog["procedures"][0]["reason_code"] = "ARBITRARY_GREEN"
+    unsupported_reason_errors = validate_procedure_catalog(unsupported_reason_catalog)
+    checks.append(
+        report_errors(
+            "red-canary.unsupported-catalog-reason",
+            []
+            if unsupported_reason_errors
+            == [
+                (
+                    "procedures[0].reason_code must equal "
+                    "ACCEPTANCE_EVIDENCE_INCOMPLETE"
+                )
+            ]
+            else ["canary did not detect the unsupported catalog reason code"],
+        )
+    )
+    tampered_decision = load_json(
+        ROOT / "tests" / "fixtures" / "resolution.valid.json"
+    )
+    tampered_decision["gate"] = "Ready"
+    tampered_decision["resolution_hash"] = compute_resolution_hash(tampered_decision)
+    semantic_errors = validate_resolution(tampered_decision)
+    required_semantic_errors = {
+        "Ready decisions must use ACCEPTANCE_EVIDENCE_COMPLETE",
+        "Ready decisions must not require evidence",
+    }
+    checks.append(
+        report_errors(
+            "red-canary.semantic-decision-tamper",
+            []
+            if required_semantic_errors.issubset(set(semantic_errors))
+            else ["canary did not detect the semantically tampered decision"],
         )
     )
     return 0 if all(checks) else 1

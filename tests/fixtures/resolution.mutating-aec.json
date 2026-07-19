@@ -27,13 +27,13 @@
     "principle_ids": ["ai-engineer-09"],
     "summary": "Verification evidence is complete for the exact revision and environment."
   },
-  "reason_code": "READY_TO_ADVANCE",
+  "reason_code": "ACCEPTANCE_EVIDENCE_COMPLETE",
   "required_evidence": [],
   "required_procedure": {
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:dd4eedd62e110ec54d0404017e93a0778d3cff9b76349c120f8669d6ee05c29a",
+  "resolution_hash": "sha256:db0bf7dd453ad4aec45df46c5350622bb9c54b4f6a56852a0d7ba2af36fc6600",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
   "source_identities": {

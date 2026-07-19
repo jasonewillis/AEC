@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jasonewillis/AEC/schemas/resolution-rejection.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "accepted": {"const": false},
+    "code": {
+      "enum": ["RESOLUTION_REQUEST_INVALID", "PROCEDURE_CATALOG_INVALID"]
+    },
+    "errors": {
+      "items": {"minLength": 1, "type": "string"},
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": ["accepted", "code", "errors"],
+  "title": "AEC Resolution Request Rejection",
+  "type": "object"
+}

@@ -32,6 +32,11 @@ profile follows the shape validated by `tools/validate_foundation.py`: fields
 `agent_adapters: [...]` (non-empty list). AEC ships no populated profile. A
 consumer produces its own and the AEC contract validates it in-place.
 
+The resolver consumes that same profile object directly under `consumer_profile`.
+Consumers must not translate it to an alternate `identity` and `version` shape.
+The project value is the hashed consumer-profile identity, and `profile_version` is
+the hashed consumer-profile revision.
+
 Consumers must not vendor private course sources, copy Blueprint skill text,
 create agent-specific policy forks, or let AEC write their lifecycle state.
 
