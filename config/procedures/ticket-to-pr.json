@@ -1,0 +1,26 @@
+{
+  "procedures": [
+    {
+      "anti_example": "A passing test from another revision is treated as proof.",
+      "finished": [
+        "Every required verification fact is accepted for the exact revision and environment."
+      ],
+      "good": [
+        "Focused and integration evidence bind the exact revision and environment."
+      ],
+      "identity": "verify-evidence",
+      "phase": "Verify",
+      "rationale": {
+        "principle_ids": ["ai-engineer-09"],
+        "summary": "Verification evidence is incomplete for the exact revision and environment."
+      },
+      "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+      "required_evidence": [
+        "focused-test-report",
+        "integration-test-report"
+      ],
+      "revision": "verify-evidence:1.0.0"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

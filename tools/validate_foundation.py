@@ -3,15 +3,19 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from aec.resolver import compute_resolution_hash  # noqa: E402
+
+
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 HASH_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
 REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
@@ -21,21 +25,27 @@ GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
 
 REQUIRED_RESOLUTION_FIELDS = {
     "allowed",
+    "anti_example",
     "capability_profile_version",
     "environment",
     "executes",
+    "finished",
     "gate",
+    "good",
     "lane",
     "mutates",
     "phase",
     "policy_version",
     "primary_procedure",
     "project_profile_version",
+    "rationale",
     "reason_code",
     "required_evidence",
     "resolution_hash",
     "revision",
     "schema_version",
+    "source_identities",
+    "source_revisions",
     "task_id",
     "workflow",
     "workflow_stage",
@@ -64,26 +74,6 @@ def load_json(path: Path) -> Any:
     """Load JSON from a UTF-8 file."""
     with path.open(encoding="utf-8") as stream:
         return json.load(stream)
-
-
-def canonical_resolution_bytes(resolution: object) -> bytes:
-    """Return the canonical UTF-8 bytes covered by a decision hash."""
-    if not isinstance(resolution, dict):
-        raise TypeError("resolution must be an object")
-    payload = {key: value for key, value in resolution.items() if key != "resolution_hash"}
-    serialized = json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    )
-    return serialized.encode("utf-8")
-
-
-def compute_resolution_hash(resolution: object) -> str:
-    """Compute the SHA-256 identifier for a normalized resolver decision."""
-    digest = hashlib.sha256(canonical_resolution_bytes(resolution)).hexdigest()
-    return f"sha256:{digest}"
 
 
 def validate_resolution(resolution: object) -> list[str]:
@@ -128,6 +118,48 @@ def validate_resolution(resolution: object) -> list[str]:
         isinstance(item, str) and item for item in required_evidence
     ):
         errors.append("required_evidence must be a list of non-empty strings")
+
+    for field in ("finished", "good"):
+        value = resolution.get(field)
+        if not isinstance(value, list) or not value or not all(
+            isinstance(item, str) and item for item in value
+        ):
+            errors.append(f"{field} must be a non-empty list of non-empty strings")
+
+    anti_example = resolution.get("anti_example")
+    if not isinstance(anti_example, str) or not anti_example:
+        errors.append("anti_example must be a non-empty string")
+
+    rationale = resolution.get("rationale")
+    if not isinstance(rationale, dict) or set(rationale) != {"principle_ids", "summary"}:
+        errors.append("rationale fields do not match the contract")
+    else:
+        principle_ids = rationale.get("principle_ids")
+        if not isinstance(principle_ids, list) or not principle_ids or not all(
+            isinstance(item, str) and item for item in principle_ids
+        ):
+            errors.append("rationale principle_ids must be a non-empty string list")
+        if not isinstance(rationale.get("summary"), str) or not rationale.get("summary"):
+            errors.append("rationale summary must be a non-empty string")
+
+    expected_source_keys = {
+        "capability_profile",
+        "consumer_profile",
+        "policy",
+        "procedure",
+        "workflow",
+    }
+    source_identities = resolution.get("source_identities")
+    if not isinstance(source_identities, dict) or set(source_identities) != expected_source_keys:
+        errors.append("source_identities fields do not match the contract")
+    elif not all(isinstance(item, str) and item for item in source_identities.values()):
+        errors.append("source_identities values must be non-empty strings")
+
+    source_revisions = resolution.get("source_revisions")
+    if not isinstance(source_revisions, dict) or set(source_revisions) != expected_source_keys:
+        errors.append("source_revisions fields do not match the contract")
+    elif not all(isinstance(item, str) and item for item in source_revisions.values()):
+        errors.append("source_revisions values must be non-empty strings")
 
     for field in (
         "capability_profile_version",

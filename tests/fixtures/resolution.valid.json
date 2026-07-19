@@ -1,24 +1,49 @@
 {
   "allowed": true,
+  "anti_example": "A passing test from another revision is treated as proof.",
   "capability_profile_version": "claude-codex-common:0.1.0",
   "environment": "test",
   "executes": false,
+  "finished": [
+    "Every required verification fact is accepted for the exact revision and environment."
+  ],
   "gate": "Evidence needed",
+  "good": [
+    "Focused and integration evidence bind the exact revision and environment."
+  ],
   "lane": "TEST",
   "mutates": false,
   "phase": "Verify",
   "policy_version": "0.1.0",
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
+  "rationale": {
+    "principle_ids": ["ai-engineer-09"],
+    "summary": "Verification evidence is incomplete for the exact revision and environment."
+  },
   "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
   "required_evidence": [
     "focused-test-report",
     "synthetic-e2e-report",
     "manual-eval-report"
   ],
-  "resolution_hash": "sha256:f5d0eb6ae6d9425f2acf386557da174ed1e3c5ac6c29fd500ca87201ca96b56f",
+  "resolution_hash": "sha256:0815157eaa119da43cc9cdd9d6b72feffb58ab2fd00dbc193bdf1f9aa9369e5a",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "1.0.0",
+  "source_identities": {
+    "capability_profile": "claude-codex-common",
+    "consumer_profile": "reference-profile",
+    "policy": "default-delivery",
+    "procedure": "aec-verify",
+    "workflow": "ticket-to-pr"
+  },
+  "source_revisions": {
+    "capability_profile": "claude-codex-common:0.1.0",
+    "consumer_profile": "reference-profile:0.1.0",
+    "policy": "0.1.0",
+    "procedure": "aec-verify:0.1.0",
+    "workflow": "ticket-to-pr:1.0.0"
+  },
   "task_id": "fixture:ticket-to-pr",
   "workflow": "ticket-to-pr",
   "workflow_stage": "Execute"
