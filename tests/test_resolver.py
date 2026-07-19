@@ -27,15 +27,15 @@ GOLDEN_PHASES = {
     "Deploy": ("Assure & Release", "prove-live-revision"),
 }
 GOLDEN_HASHES = {
-    "Intake": "sha256:7ab48b2e334ce87c253d46f1f56d0a73d505fabad6beff7b2265f412b4d2d517",
-    "Framing": "sha256:f9b1a17342d98f09979d91ce74350b97cb9d0bb2fbc202bdbfe3e775cf236fc4",
-    "Spec": "sha256:6b568c434eb1d77b5471558710c80e6432fa793ea359620f71eae02e6251cac3",
-    "Plan": "sha256:95f3d45c80f94e21c9c6f9d1b55a5522ba576540b1da9131ba27a8d03878d49a",
-    "Build": "sha256:371ce14e199078ef3ccda2c05cb43c09e2a1d55be55d979a9bc355fb261164c7",
-    "Verify": "sha256:b08f7a178a505a649bf384e27e6d7a1ff7356a0a2eff04a716fdd180a5c5a5d0",
-    "Review": "sha256:77817cc44a03837a6d40537f4b5236d1e49c5b164b61fbc15e64020ab8531224",
-    "PR": "sha256:1ffb1a9e51136e733097bc19b0ce20574178e0aad7bc875c3a1072db9ec8ae8f",
-    "Deploy": "sha256:74f967f6e2084c135b24e92b0cd7be27a76df05b98436d6c259e35de25fd34a9",
+    "Intake": "sha256:b290df71ba34362fa43a3c994912d4ac8069ae7d2902b91802674caf30e04319",
+    "Framing": "sha256:67aa9d06662d190962358e74f66412a70d053d5a86838a1bd042e37cfb65e23f",
+    "Spec": "sha256:f1790d95a17fcdb8ac6c4bbed9ba26cd849b028ec6d3b9033aec24a9f5cbafe2",
+    "Plan": "sha256:738301624bb2df321eee8f541071a9498b1a1f043fddb6a96b6f59da555c313b",
+    "Build": "sha256:405fab94155c404c01323cdde74422c6600e296e0fe6a8a29aea79a25d360672",
+    "Verify": "sha256:c67e019fe21a6ffd815f8732c86639b6b98c2b8857aac8336a6cd6c6f4eede23",
+    "Review": "sha256:76dbb682605816fa23e89b03b4b17308e9ed5552b0c6c60f51c09e1b6fab9712",
+    "PR": "sha256:a2868094ab4eda780808398dc2f11086c4517ca72502cb074693495871019741",
+    "Deploy": "sha256:766aaf24a6bf499f8320c9df3ef3244284dadb8cea7d036f47699efdf9478f50",
 }
 
 
@@ -230,7 +230,7 @@ class ResolverTracerTests(unittest.TestCase):
             baseline_first.canonical_bytes, baseline_second.canonical_bytes
         )
         self.assertEqual(changed_first.canonical_bytes, changed_second.canonical_bytes)
-        self.assertEqual("2.0.0", baseline["schema_version"])
+        self.assertEqual("3.0.0", baseline["schema_version"])
         self.assertNotEqual(
             baseline["input_bindings"]["resolution_request"],
             changed_payload["input_bindings"]["resolution_request"],
@@ -810,6 +810,44 @@ class ResolverTracerTests(unittest.TestCase):
             validate_resolution(tampered),
         )
 
+    def test_decision_rejects_both_primary_subjects_after_hash_recompute(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        tampered = result.to_dict()
+        tampered["primary_procedure"] = request["required_procedure"]["identity"]
+        tampered["resolution_hash"] = compute_resolution_hash(tampered)
+
+        self.assertEqual(
+            [
+                "decision must contain exactly one primary procedure or blocker",
+                "unavailable required procedure cannot be selected",
+            ],
+            validate_resolution(tampered),
+        )
+
+    def test_decision_rejects_neither_primary_subject_after_hash_recompute(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        tampered = result.to_dict()
+        tampered["primary_procedure"] = None
+        tampered["primary_blocker"] = None
+        tampered["resolution_hash"] = compute_resolution_hash(tampered)
+
+        self.assertEqual(
+            [
+                "decision must contain exactly one primary procedure or blocker",
+                "primary_procedure must identify the selected procedure",
+                "selected procedure must equal the required procedure",
+            ],
+            validate_resolution(tampered),
+        )
+
     def test_tampered_evidence_needed_decision_cannot_claim_ready(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
@@ -857,7 +895,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:b08f7a178a505a649bf384e27e6d7a1ff7356a0a2eff04a716fdd180a5c5a5d0",
+            "sha256:c67e019fe21a6ffd815f8732c86639b6b98c2b8857aac8336a6cd6c6f4eede23",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -866,6 +904,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual([], validate_resolution(first_payload))
         self.assertEqual("Verify", first_payload["phase"])
         self.assertEqual("verify-evidence", first_payload["primary_procedure"])
+        self.assertIsNone(first_payload["primary_blocker"])
         self.assertEqual("Evidence needed", first_payload["gate"])
         self.assertEqual(
             {
@@ -947,7 +986,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:2577f7012c06d44ae9dd89e0bd54b04a369c748a4d45c58a0133a88e5170028b",
+            "sha256:4fe9279e0d376bb7ebc4ed67b9035ac4966f78244953022d75722bb1d01da637",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))
@@ -955,6 +994,13 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertFalse(payload["allowed"])
         self.assertEqual("SKILL_UNAVAILABLE", payload["reason_code"])
         self.assertIsNone(payload["primary_procedure"])
+        self.assertEqual(
+            {
+                "identity": "verify-evidence",
+                "reason_code": "SKILL_UNAVAILABLE",
+            },
+            payload["primary_blocker"],
+        )
         self.assertEqual(["procedure-availability"], payload["required_evidence"])
         self.assertEqual(
             {
@@ -966,6 +1012,108 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(
             "verify-evidence",
             payload["source_identities"]["procedure"],
+        )
+
+    def test_complete_primary_subject_matrix_covers_goldens_and_blocked(self) -> None:
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        requests = [
+            load_json(
+                ROOT
+                / "tests/fixtures/resolver/golden"
+                / ("pr.json" if phase == "PR" else f"{phase.lower()}.json")
+            )
+            for phase in GOLDEN_PHASES
+        ]
+        requests.append(
+            load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
+        )
+
+        self.assertEqual(10, len(requests))
+        for request in requests:
+            with self.subTest(task_id=request["task_id"]):
+                result = resolve(request, procedures)
+                self.assertNotIsInstance(result, ResolutionRejection)
+                payload = result.to_dict()
+
+                self.assertEqual("3.0.0", payload["schema_version"])
+                self.assertEqual([], validate_resolution(payload))
+                self.assertTrue(payload["rationale"]["principle_ids"])
+                self.assertTrue(payload["rationale"]["summary"])
+                self.assertIsInstance(payload["required_evidence"], list)
+                self.assertTrue(payload["good"])
+                self.assertTrue(payload["finished"])
+                self.assertTrue(payload["anti_example"])
+                self.assertNotEqual(
+                    payload["primary_procedure"] is None,
+                    payload["primary_blocker"] is None,
+                )
+                if payload["gate"] == "Blocked":
+                    self.assertEqual(
+                        {
+                            "identity": request["required_procedure"]["identity"],
+                            "reason_code": "SKILL_UNAVAILABLE",
+                        },
+                        payload["primary_blocker"],
+                    )
+                    self.assertIsNone(payload["primary_procedure"])
+                else:
+                    self.assertEqual(
+                        request["required_procedure"]["identity"],
+                        payload["primary_procedure"],
+                    )
+                    self.assertIsNone(payload["primary_blocker"])
+
+    def test_ready_decision_has_exact_procedure_and_null_blocker(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        required_kinds = next(
+            procedure["required_evidence"]
+            for procedure in procedures["procedures"]
+            if procedure["identity"] == request["required_procedure"]["identity"]
+        )
+        request["evidence"] = [
+            {
+                "accepted": True,
+                "environment": request["environment"],
+                "kind": kind,
+                "revision": request["revision"],
+            }
+            for kind in required_kinds
+        ]
+
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        payload = result.to_dict()
+
+        self.assertEqual([], validate_resolution(payload))
+        self.assertEqual("Ready", payload["gate"])
+        self.assertTrue(payload["allowed"])
+        self.assertEqual(
+            request["required_procedure"]["identity"],
+            payload["primary_procedure"],
+        )
+        self.assertIsNone(payload["primary_blocker"])
+        self.assertEqual([], payload["required_evidence"])
+        self.assertTrue(payload["rationale"]["principle_ids"])
+        self.assertTrue(payload["rationale"]["summary"])
+        self.assertTrue(payload["good"])
+        self.assertTrue(payload["finished"])
+        self.assertTrue(payload["anti_example"])
+
+    def test_primary_blocker_participates_in_canonical_hash(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        baseline = result.to_dict()
+        changed = copy.deepcopy(baseline)
+        changed["primary_blocker"]["identity"] = "other-procedure"
+        changed["resolution_hash"] = compute_resolution_hash(changed)
+
+        self.assertNotEqual(baseline["resolution_hash"], changed["resolution_hash"])
+        self.assertIn(
+            "primary_blocker.identity must equal required_procedure.identity",
+            validate_resolution(changed),
         )
 
     def test_unavailable_required_skill_does_not_select_same_phase_substitute(

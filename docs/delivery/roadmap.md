@@ -19,8 +19,11 @@ an unavailable-procedure blocked tracer, malformed-request rejection, and versio
 decision bindings for the complete normalized request and procedure catalog. The
 bindings cover revision, environment, profile version, evidence validity, procedure
 selection, capability, catalog, and policy inputs while ignoring collection order that
-has no semantic meaning. These tracers do not complete Slice 2: the completeness matrix
-and static purity scans still must pass its binary exit gate.
+has no semantic meaning. A ten-case completeness matrix now proves that the nine phase
+goldens select one procedure and the unavailable tracer returns one structured blocker,
+while every decision retains rationale, evidence, Good, Finished, and an anti-example.
+These tracers do not complete Slice 2: the static purity scans still must pass its binary
+exit gate.
 
 ## Completion rule
 

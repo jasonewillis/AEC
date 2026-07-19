@@ -180,7 +180,7 @@ class SourceContractTests(unittest.TestCase):
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 
         self.assertEqual(REQUIRED_RESOLUTION_FIELDS, set(schema["required"]))
-        self.assertEqual("2.0.0", schema["properties"]["schema_version"]["const"])
+        self.assertEqual("3.0.0", schema["properties"]["schema_version"]["const"])
         binding_schema = schema["properties"]["input_bindings"]
         self.assertFalse(binding_schema["additionalProperties"])
         self.assertEqual(
@@ -192,9 +192,36 @@ class SourceContractTests(unittest.TestCase):
                 "^sha256:[0-9a-f]{64}$",
                 binding_schema["properties"][field]["pattern"],
             )
+        blocker_schema = schema["properties"]["primary_blocker"]["oneOf"][0]
+        self.assertFalse(blocker_schema["additionalProperties"])
+        self.assertEqual(
+            {"identity", "reason_code"},
+            set(blocker_schema["required"]),
+        )
+        self.assertEqual(
+            "SKILL_UNAVAILABLE",
+            blocker_schema["properties"]["reason_code"]["const"],
+        )
         self.assertEqual(
             SUPPORTED_REASON_CODES,
             set(schema["properties"]["reason_code"]["enum"]),
+        )
+        self.assertEqual(
+            [
+                {
+                    "properties": {
+                        "primary_blocker": {"type": "null"},
+                        "primary_procedure": {"minLength": 1, "type": "string"},
+                    }
+                },
+                {
+                    "properties": {
+                        "primary_blocker": {"type": "object"},
+                        "primary_procedure": {"type": "null"},
+                    }
+                },
+            ],
+            schema["oneOf"],
         )
 
     def test_course_inventory_has_complete_source_coverage(self) -> None:

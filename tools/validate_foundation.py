@@ -175,6 +175,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "mutates",
     "phase",
     "policy_version",
+    "primary_blocker",
     "primary_procedure",
     "project_profile_version",
     "rationale",
@@ -230,8 +231,8 @@ def validate_resolution(resolution: object) -> list[str]:
     if unknown:
         errors.append(f"unknown resolution fields: {', '.join(unknown)}")
 
-    if resolution.get("schema_version") != "2.0.0":
-        errors.append("schema_version must equal 2.0.0")
+    if resolution.get("schema_version") != "3.0.0":
+        errors.append("schema_version must equal 3.0.0")
     if not isinstance(resolution.get("allowed"), bool):
         errors.append("allowed must be a boolean")
     if resolution.get("executes") is not False:
@@ -302,6 +303,23 @@ def validate_resolution(resolution: object) -> list[str]:
         errors.append("required_procedure must identify one pinned procedure")
 
     primary_procedure = resolution.get("primary_procedure")
+    primary_blocker = resolution.get("primary_blocker")
+    procedure_is_populated = isinstance(primary_procedure, str) and bool(
+        primary_procedure
+    )
+    blocker_is_populated = primary_blocker is not None
+    if procedure_is_populated == blocker_is_populated:
+        errors.append("decision must contain exactly one primary procedure or blocker")
+
+    valid_primary_blocker = (
+        isinstance(primary_blocker, dict)
+        and set(primary_blocker) == {"identity", "reason_code"}
+        and all(isinstance(value, str) and value for value in primary_blocker.values())
+    )
+    if primary_blocker is not None and not valid_primary_blocker:
+        errors.append(
+            "primary_blocker must be null or contain identity and reason_code"
+        )
     unavailable = (
         resolution.get("gate") == "Blocked"
         and resolution.get("reason_code") == "SKILL_UNAVAILABLE"
@@ -311,12 +329,18 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append("SKILL_UNAVAILABLE decisions must set allowed=false")
         if primary_procedure is not None:
             errors.append("unavailable required procedure cannot be selected")
+        if not valid_primary_blocker:
+            errors.append("SKILL_UNAVAILABLE decisions require a primary blocker")
+        elif primary_blocker["reason_code"] != "SKILL_UNAVAILABLE":
+            errors.append("primary_blocker.reason_code must equal SKILL_UNAVAILABLE")
         if required_evidence != ["procedure-availability"]:
             errors.append(
                 "unavailable required procedure needs exactly procedure-availability evidence"
             )
     elif not isinstance(primary_procedure, str) or not primary_procedure:
         errors.append("primary_procedure must identify the selected procedure")
+    elif primary_blocker is not None:
+        errors.append("non-blocked decisions must set primary_blocker=null")
 
     gate = resolution.get("gate")
     if gate == "Ready":
@@ -354,6 +378,14 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append("selected procedure is absent from availability facts")
         if not unavailable and primary_procedure != required_procedure["identity"]:
             errors.append("selected procedure must equal the required procedure")
+        if (
+            unavailable
+            and valid_primary_blocker
+            and primary_blocker["identity"] != required_procedure["identity"]
+        ):
+            errors.append(
+                "primary_blocker.identity must equal required_procedure.identity"
+            )
 
     for field in ("finished", "good"):
         value = resolution.get(field)

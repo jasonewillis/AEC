@@ -51,6 +51,20 @@
     "mutates": {"const": false},
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
     "policy_version": {"minLength": 1, "type": "string"},
+    "primary_blocker": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "identity": {"minLength": 1, "type": "string"},
+            "reason_code": {"const": "SKILL_UNAVAILABLE"}
+          },
+          "required": ["identity", "reason_code"],
+          "type": "object"
+        },
+        {"type": "null"}
+      ]
+    },
     "primary_procedure": {
       "oneOf": [
         {"minLength": 1, "type": "string"},
@@ -91,7 +105,7 @@
     },
     "resolution_hash": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
     "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-    "schema_version": {"const": "2.0.0"},
+    "schema_version": {"const": "3.0.0"},
     "source_identities": {
       "additionalProperties": false,
       "properties": {
@@ -147,6 +161,7 @@
     "mutates",
     "phase",
     "policy_version",
+    "primary_blocker",
     "primary_procedure",
     "project_profile_version",
     "rationale",
@@ -162,12 +177,27 @@
     "workflow",
     "workflow_stage"
   ],
+  "oneOf": [
+    {
+      "properties": {
+        "primary_blocker": {"type": "null"},
+        "primary_procedure": {"minLength": 1, "type": "string"}
+      }
+    },
+    {
+      "properties": {
+        "primary_blocker": {"type": "object"},
+        "primary_procedure": {"type": "null"}
+      }
+    }
+  ],
   "allOf": [
     {
       "if": {"properties": {"gate": {"const": "Ready"}}},
       "then": {
         "properties": {
           "allowed": {"const": true},
+          "primary_blocker": {"type": "null"},
           "primary_procedure": {"minLength": 1, "type": "string"},
           "reason_code": {"const": "ACCEPTANCE_EVIDENCE_COMPLETE"},
           "required_evidence": {"maxItems": 0}
@@ -179,6 +209,7 @@
       "then": {
         "properties": {
           "allowed": {"const": true},
+          "primary_blocker": {"type": "null"},
           "primary_procedure": {"minLength": 1, "type": "string"},
           "reason_code": {"const": "ACCEPTANCE_EVIDENCE_INCOMPLETE"},
           "required_evidence": {"minItems": 1}
@@ -190,6 +221,12 @@
       "then": {
         "properties": {
           "allowed": {"const": false},
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "SKILL_UNAVAILABLE"}
+            },
+            "type": "object"
+          },
           "primary_procedure": {"type": "null"},
           "reason_code": {"const": "SKILL_UNAVAILABLE"},
           "required_evidence": {

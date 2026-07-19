@@ -25,6 +25,7 @@
   "mutates": false,
   "phase": "Verify",
   "policy_version": "0.1.0",
+  "primary_blocker": null,
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
@@ -41,9 +42,9 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:497af2622b66e94786059f198fdceb50972cb28d3304541d1811e5d4acb6fd6b",
+  "resolution_hash": "sha256:fd143902d7065d097cfb451fe66eb9a7d5fb91ab5f49fd0031eb20181f815adb",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",

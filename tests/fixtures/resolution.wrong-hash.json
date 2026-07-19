@@ -25,6 +25,7 @@
   "mutates": false,
   "phase": "Verify",
   "policy_version": "0.1.0",
+  "primary_blocker": null,
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
@@ -41,7 +42,7 @@
   },
   "resolution_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "2.0.0",
+  "schema_version": "3.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",
