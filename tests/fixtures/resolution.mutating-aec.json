@@ -1,0 +1,21 @@
+{
+  "allowed": true,
+  "capability_profile_version": "claude-codex-common:0.1.0",
+  "environment": "test",
+  "executes": true,
+  "gate": "Ready",
+  "lane": "TEST",
+  "mutates": true,
+  "phase": "Verify",
+  "policy_version": "0.1.0",
+  "primary_procedure": "aec-verify",
+  "project_profile_version": "jwtravelscanner:0.1.0",
+  "reason_code": "READY_TO_ADVANCE",
+  "required_evidence": [],
+  "resolution_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "revision": "0123456789abcdef0123456789abcdef01234567",
+  "schema_version": "1.0.0",
+  "task_id": "fixture:mutating-aec",
+  "workflow": "ticket-to-pr",
+  "workflow_stage": "Execute"
+}

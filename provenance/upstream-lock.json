@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "upstreams": [
+    {
+      "license": "MIT",
+      "name": "workflows",
+      "repository": "https://github.com/owainlewis/workflows",
+      "relationship": "pattern-source",
+      "revision": "ce3ff09e27c501e7689fd069ece3aaab63da7e46"
+    },
+    {
+      "license": null,
+      "name": "blueprint",
+      "repository": "https://github.com/owainlewis/blueprint",
+      "relationship": "reference-only",
+      "revision": "1787459f5a9dc5f95b04f156b1b0877696fb81c5"
+    }
+  ]
+}
