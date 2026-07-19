@@ -7,8 +7,13 @@
     "version": "portable-python:1.0.0"
   },
   "consumer_profile": {
-    "identity": "example-consumer",
-    "version": "example-consumer:1.0.0"
+    "aec_mode": "read-only-mentor",
+    "agent_adapters": ["example-adapter"],
+    "lifecycle_authority": "consumer-owned",
+    "profile_version": "example:1.0.0",
+    "project": "example-owner/example-repo",
+    "schema_version": "1.0.0",
+    "workflow": "ticket-to-pr"
   },
   "environment": "test",
   "evidence": [
@@ -34,7 +39,7 @@
     "revision": "verify-evidence:1.0.0"
   },
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "task_id": "fixture:unavailable-skill",
   "workflow": {
     "identity": "ticket-to-pr",

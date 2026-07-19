@@ -3,6 +3,8 @@ import json
 import unittest
 from pathlib import Path
 
+from aec.contracts import PROJECT_PROFILE_FIELDS
+from aec.resolver import REQUIRED_REQUEST_FIELDS, validate_resolution_request
 from tools.validate_foundation import (
     REQUIRED_RESOLUTION_FIELDS,
     compute_resolution_hash,
@@ -63,6 +65,28 @@ class ResolutionValidationTests(unittest.TestCase):
 
 
 class SourceContractTests(unittest.TestCase):
+    def test_rejection_schema_matches_the_public_rejection_shape(self) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-rejection.schema.json")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual({"accepted", "code", "errors"}, set(schema["required"]))
+        self.assertFalse(schema["properties"]["accepted"]["const"])
+        self.assertEqual(
+            "RESOLUTION_REQUEST_INVALID",
+            schema["properties"]["code"]["const"],
+        )
+
+    def test_request_schema_validator_and_fixture_share_one_contract(self) -> None:
+        schema = load_json(ROOT / "schemas" / "resolution-request.schema.json")
+        fixture = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+
+        self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(REQUIRED_REQUEST_FIELDS, set(schema["required"]))
+        consumer_schema = schema["properties"]["consumer_profile"]
+        self.assertFalse(consumer_schema["additionalProperties"])
+        self.assertEqual(PROJECT_PROFILE_FIELDS, set(consumer_schema["required"]))
+        self.assertEqual([], validate_resolution_request(fixture))
+
     def test_schema_and_validator_require_the_same_resolution_fields(self) -> None:
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 

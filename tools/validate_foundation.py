@@ -13,13 +13,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from aec.resolver import compute_resolution_hash  # noqa: E402
+from aec.contracts import validate_project_profile  # noqa: E402, F401
+from aec.resolver import compute_resolution_hash, validate_resolution_request  # noqa: E402
 
 
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 HASH_VALUE = re.compile(r"^sha256:[0-9a-f]{64}$")
 REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
-GITHUB_REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
 
@@ -153,6 +153,8 @@ def validate_resolution(resolution: object) -> list[str]:
         and resolution.get("reason_code") == "SKILL_UNAVAILABLE"
     )
     if unavailable:
+        if resolution.get("allowed") is not False:
+            errors.append("SKILL_UNAVAILABLE decisions must set allowed=false")
         if primary_procedure is not None:
             errors.append("unavailable required procedure cannot be selected")
         if isinstance(required_evidence, list) and "procedure-availability" not in required_evidence:
@@ -403,45 +405,6 @@ def validate_workflow(workflow: object) -> list[str]:
     return errors
 
 
-def validate_project_profile(profile: object) -> list[str]:
-    """Validate a consumer profile without importing consumer-owned state."""
-    if not isinstance(profile, dict):
-        return ["project profile must be an object"]
-
-    errors: list[str] = []
-    if set(profile) != {
-        "aec_mode",
-        "agent_adapters",
-        "lifecycle_authority",
-        "profile_version",
-        "project",
-        "schema_version",
-        "workflow",
-    }:
-        errors.append("project profile fields do not match the contract")
-    if profile.get("schema_version") != "1.0.0":
-        errors.append("project profile schema_version must equal 1.0.0")
-    project = profile.get("project")
-    if not isinstance(project, str) or not GITHUB_REPOSITORY.fullmatch(project):
-        errors.append("consumer project must use owner/repository format")
-    profile_version = profile.get("profile_version")
-    if not isinstance(profile_version, str) or not profile_version:
-        errors.append("consumer profile_version must be a non-empty string")
-    if profile.get("workflow") != "ticket-to-pr":
-        errors.append("consumer workflow must be ticket-to-pr")
-    if profile.get("lifecycle_authority") != "consumer-owned":
-        errors.append("consumer must own lifecycle authority")
-    if profile.get("aec_mode") != "read-only-mentor":
-        errors.append("AEC consumer mode must be read-only-mentor")
-
-    adapters = profile.get("agent_adapters")
-    if not isinstance(adapters, list) or not adapters or not all(
-        isinstance(item, str) and item.strip() for item in adapters
-    ):
-        errors.append("agent_adapters must be a non-empty list of non-whitespace strings")
-    return errors
-
-
 def report_errors(label: str, errors: list[str]) -> bool:
     """Print one validation result and return whether it passed."""
     if not errors:
@@ -471,6 +434,19 @@ def main() -> int:
             "resolution.valid",
             validate_resolution(load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")),
         ),
+        report_errors(
+            "resolution-request.verify",
+            validate_resolution_request(
+                load_json(
+                    ROOT
+                    / "tests"
+                    / "fixtures"
+                    / "resolver"
+                    / "golden"
+                    / "verify.json"
+                )
+            ),
+        ),
     ]
 
     wrong_hash = validate_resolution(
@@ -498,6 +474,27 @@ def main() -> int:
             []
             if required_mutation_errors.issubset(set(mutating))
             else ["canary passed unexpectedly"],
+        )
+    )
+    malformed_request = validate_resolution_request(
+        load_json(
+            ROOT
+            / "tests"
+            / "fixtures"
+            / "resolver"
+            / "red"
+            / "malformed-available-procedure.json"
+        )
+    )
+    checks.append(
+        report_errors(
+            "red-canary.malformed-available-procedure",
+            []
+            if malformed_request
+            == [
+                "available_procedures[0] must contain exactly identity and revision"
+            ]
+            else ["canary did not detect the malformed procedure reference"],
         )
     )
     return 0 if all(checks) else 1

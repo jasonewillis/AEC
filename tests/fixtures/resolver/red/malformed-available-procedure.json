@@ -1,8 +1,7 @@
 {
   "available_procedures": [
     {
-      "identity": "verify-evidence",
-      "revision": "verify-evidence:1.0.0"
+      "identity": "verify-evidence"
     }
   ],
   "blockers": [],
@@ -45,7 +44,7 @@
   },
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "2.0.0",
-  "task_id": "fixture:verify",
+  "task_id": "fixture:malformed-available-procedure",
   "workflow": {
     "identity": "ticket-to-pr",
     "revision": "ticket-to-pr:1.0.0",

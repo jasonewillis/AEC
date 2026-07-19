@@ -30,11 +30,13 @@ Blocked > Needs review > Evidence needed > Ready
 This repository currently provides:
 
 - a versioned ticket-to-PR workflow registry;
-- a deterministic resolver-decision schema and canonical SHA-256 contract;
+- deterministic request, rejection, and decision schemas plus a canonical SHA-256
+  contract;
 - a pure Verify-phase resolver tracer with an immutable mentoring-card result;
 - provenance locks for upstream pattern sources;
 - traceability for 13 AI Engineer lessons and eight Evals & Monitoring lessons;
-- honest red fixtures for mutation and hash defects; and
+- honest red fixtures for malformed requests, tampered decisions, mutation, and hash
+  defects; and
 - standard-library validation that runs without installing dependencies.
 
 The same commands run in the required `Foundation gate` GitHub Actions workflow.

@@ -6,10 +6,13 @@ from a normalized request and procedure catalog to one immutable mentoring decis
 ## Public interface
 
 ```python
-from aec.resolver import resolve
+from aec.resolver import ResolutionRejection, resolve
 
-decision = resolve(normalized_request, procedure_catalog)
-payload = decision.to_dict()
+result = resolve(normalized_request, procedure_catalog)
+if isinstance(result, ResolutionRejection):
+    rejection = result.to_dict()
+else:
+    decision = result.to_dict()
 ```
 
 The caller owns loading, discovery, normalization, and consumer policy. The resolver
@@ -21,6 +24,13 @@ Every normalized request identifies one `required_procedure` by identity and pin
 revision. `available_procedures` contains the complete caller-observed availability
 set. The resolver sorts that set before including it in the hashed decision. It never
 infers a required procedure from phase alone and never selects a same-phase substitute.
+
+The normalized request uses schema version `2.0.0`. This version is intentionally a
+breaking change from the first tracer: `consumer_profile` now uses the exact public
+project-profile contract with `project` and `profile_version`. The resolver does not
+accept or translate the former `identity` and `version` aliases. The embedded profile
+keeps its own schema version `1.0.0`, and the output decision schema stays at `1.0.0`
+because its field structure did not change.
 
 ## First tracer
 
@@ -58,6 +68,18 @@ revision, while `primary_procedure` is null because nothing was selected. The de
 requests `procedure-availability` evidence and includes the normalized availability
 set in its hash. Adding an unrelated procedure therefore changes the decision hash but
 cannot satisfy the requirement or become a silent substitute.
+
+## Invalid request and tampered decision tracer
+
+Missing fields, unknown fields, malformed nested values, and partial procedure
+references return one immutable `ResolutionRejection`. Its schema has exactly
+`accepted=false`, code `RESOLUTION_REQUEST_INVALID`, and an ordered non-empty error
+list. No accepted mentoring decision is returned, and untrusted normalized request
+data cannot leak `KeyError`, `TypeError`, or `ValueError` from the public resolver.
+
+This rejection is distinct from the hashed `SKILL_UNAVAILABLE` blocked decision.
+A recomputed hash does not legitimize a tampered blocked decision: the decision
+validator rejects `SKILL_UNAVAILABLE` whenever `allowed` is not false.
 
 ## Verification
 

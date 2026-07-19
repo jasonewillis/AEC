@@ -26,7 +26,11 @@ single consumer writer <- typed observable evidence <- authorized procedure
 
 ## Deterministic decision
 
-The resolver output conforms to
+The normalized input conforms to
+[`resolution-request.schema.json`](../../schemas/resolution-request.schema.json).
+Malformed input returns the non-decision shape in
+[`resolution-rejection.schema.json`](../../schemas/resolution-rejection.schema.json).
+Accepted resolver output conforms to
 [`resolution-decision.schema.json`](../../schemas/resolution-decision.schema.json).
 Its `resolution_hash` is SHA-256 over UTF-8 JSON with sorted keys and compact
 separators, excluding only `resolution_hash`. This binds the recommendation to the
@@ -39,6 +43,8 @@ a contract failure.
 ## Failure behavior
 
 AEC fails closed when input is missing, stale, malformed, unpinned, inconsistent, or
-effectful. It reports an unavailable procedure rather than silently substituting an
-upstream role or guessing from chat. A blocker must name a concrete reason and the
-evidence needed to resolve it.
+effectful. Malformed normalized requests return `RESOLUTION_REQUEST_INVALID`, an
+ordered error list, and `accepted=false`. They never return a decision. A trusted
+request whose pinned procedure is unavailable returns a hashed blocked decision
+instead of silently substituting an upstream role or guessing from chat. A blocker
+must name a concrete reason and the evidence needed to resolve it.
