@@ -42,7 +42,9 @@ class ResolutionValidationTests(unittest.TestCase):
         resolution = load_json(FIXTURES / "resolution.valid.json")
 
         self.assertEqual([], validate_resolution(resolution))
-        self.assertEqual(resolution["resolution_hash"], compute_resolution_hash(resolution))
+        self.assertEqual(
+            resolution["resolution_hash"], compute_resolution_hash(resolution)
+        )
 
     def test_wrong_hash_fails_closed(self) -> None:
         resolution = load_json(FIXTURES / "resolution.wrong-hash.json")
@@ -135,6 +137,20 @@ class SourceContractTests(unittest.TestCase):
         )
         self.assertEqual([], validate_procedure_catalog(fixture))
 
+    def test_catalog_revision_schema_and_validator_reject_malformed_pins(self) -> None:
+        schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        catalog["procedures"][0]["revision"] = "not-pinned"
+
+        pattern = schema["properties"]["procedures"]["items"]["properties"]["revision"][
+            "pattern"
+        ]
+        self.assertIsNone(re.fullmatch(pattern, "not-pinned"))
+        self.assertIn(
+            "procedures[0].revision must pin its identity and version",
+            validate_procedure_catalog(catalog),
+        )
+
     def test_catalog_python_validator_adds_semantic_reference_uniqueness(self) -> None:
         schema = load_json(ROOT / "schemas" / "procedure-catalog.schema.json")
         catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
@@ -164,6 +180,18 @@ class SourceContractTests(unittest.TestCase):
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 
         self.assertEqual(REQUIRED_RESOLUTION_FIELDS, set(schema["required"]))
+        self.assertEqual("2.0.0", schema["properties"]["schema_version"]["const"])
+        binding_schema = schema["properties"]["input_bindings"]
+        self.assertFalse(binding_schema["additionalProperties"])
+        self.assertEqual(
+            {"procedure_catalog", "resolution_request"},
+            set(binding_schema["required"]),
+        )
+        for field in binding_schema["required"]:
+            self.assertEqual(
+                "^sha256:[0-9a-f]{64}$",
+                binding_schema["properties"][field]["pattern"],
+            )
         self.assertEqual(
             SUPPORTED_REASON_CODES,
             set(schema["properties"]["reason_code"]["enum"]),
@@ -353,9 +381,7 @@ class SourceContractTests(unittest.TestCase):
             if procedure["identity"] == "verify-evidence"
         )
         verify_procedure["rationale"]["principle_ids"] = ["ai-engineer-09"]
-        principle_registry = load_json(
-            ROOT / "config/principles/aec-engineering.json"
-        )
+        principle_registry = load_json(ROOT / "config/principles/aec-engineering.json")
 
         self.assertIn(
             "procedure verify-evidence references non-AEC principle ai-engineer-09",
@@ -390,7 +416,9 @@ class SourceContractTests(unittest.TestCase):
             set(principle_schema["required"]),
         )
 
-    def test_principle_registry_validator_enforces_schema_identity_pattern(self) -> None:
+    def test_principle_registry_validator_enforces_schema_identity_pattern(
+        self,
+    ) -> None:
         registry = load_json(ROOT / "config/principles/aec-engineering.json")
 
         for identity in ("aec-", "aec-INVALID", "aec-with space"):
@@ -409,9 +437,7 @@ class SourceContractTests(unittest.TestCase):
         laundered_identity = "aec-ai-engineer-09"
         registry["principles"][0]["id"] = laundered_identity
         registry["principles"][0]["revision"] = f"{laundered_identity}:1.0.0"
-        catalog["procedures"][0]["rationale"]["principle_ids"] = [
-            laundered_identity
-        ]
+        catalog["procedures"][0]["rationale"]["principle_ids"] = [laundered_identity]
 
         expected = "AEC principle id must not embed a private course identity"
         self.assertIn(expected, validate_principle_registry(registry))
@@ -509,7 +535,9 @@ class SourceContractTests(unittest.TestCase):
     def test_blueprint_adoption_mode_is_rejected_without_license(self) -> None:
         provenance = load_json(ROOT / "provenance" / "upstream-lock.json")
         broken = copy.deepcopy(provenance)
-        blueprint = next(item for item in broken["upstreams"] if item["name"] == "blueprint")
+        blueprint = next(
+            item for item in broken["upstreams"] if item["name"] == "blueprint"
+        )
         blueprint["relationship"] = "adopted"
 
         self.assertIn(

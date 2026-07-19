@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -29,6 +30,10 @@ REQUIRED_REQUEST_FIELDS = {
 }
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
+PROCEDURE_REVISION = re.compile(
+    r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$"
+)
+PROCEDURE_VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROCEDURE_FIELDS = {
     "anti_example",
     "finished",
@@ -79,6 +84,56 @@ def compute_resolution_hash(resolution: object) -> str:
     """Compute the SHA-256 identifier for a normalized mentoring decision."""
     digest = hashlib.sha256(canonical_resolution_bytes(resolution)).hexdigest()
     return f"sha256:{digest}"
+
+
+def _canonical_json_bytes(value: object) -> bytes:
+    """Return deterministic UTF-8 JSON bytes for a normalized input value."""
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+
+def _input_binding(value: object) -> str:
+    """Return a SHA-256 binding for one normalized resolver input."""
+    digest = hashlib.sha256(_canonical_json_bytes(value)).hexdigest()
+    return f"sha256:{digest}"
+
+
+def _sorted_json_items(values: list[Any]) -> list[Any]:
+    """Sort semantically unordered JSON values by their canonical bytes."""
+    return sorted(values, key=_canonical_json_bytes)
+
+
+def _normalized_request_binding(request: dict[str, Any]) -> dict[str, Any]:
+    """Normalize semantically unordered request collections for binding."""
+    normalized = copy.deepcopy(request)
+    normalized["available_procedures"] = _sorted_json_items(
+        normalized["available_procedures"]
+    )
+    normalized["blockers"] = _sorted_json_items(normalized["blockers"])
+    normalized["capability_profile"]["capabilities"] = sorted(
+        normalized["capability_profile"]["capabilities"]
+    )
+    normalized["consumer_profile"]["agent_adapters"] = sorted(
+        normalized["consumer_profile"]["agent_adapters"]
+    )
+    normalized["evidence"] = _sorted_json_items(normalized["evidence"])
+    return normalized
+
+
+def _normalized_catalog_binding(catalog: dict[str, Any]) -> dict[str, Any]:
+    """Normalize semantically unordered catalog collections for binding."""
+    normalized = copy.deepcopy(catalog)
+    for procedure in normalized["procedures"]:
+        procedure["rationale"]["principle_ids"] = sorted(
+            procedure["rationale"]["principle_ids"]
+        )
+        procedure["required_evidence"] = sorted(procedure["required_evidence"])
+    normalized["procedures"] = _sorted_json_items(normalized["procedures"])
+    return normalized
 
 
 @dataclass(frozen=True)
@@ -308,7 +363,9 @@ def _validate_workflow(value: object, phase: object) -> list[str]:
     stage = workflow.get("stage")
     if not isinstance(stage, str) or stage not in STAGE_PHASES:
         errors.append("workflow.stage is unsupported")
-    elif isinstance(phase, str) and phase in PHASES and phase not in STAGE_PHASES[stage]:
+    elif (
+        isinstance(phase, str) and phase in PHASES and phase not in STAGE_PHASES[stage]
+    ):
         errors.append("phase does not belong to workflow.stage")
     return errors
 
@@ -419,18 +476,37 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
                 errors.append(f"{field}.rationale fields do not match the contract")
             else:
                 principle_ids = rationale.get("principle_ids")
-                if not isinstance(principle_ids, list) or not principle_ids or not all(
-                    isinstance(value, str) and value for value in principle_ids
+                if (
+                    not isinstance(principle_ids, list)
+                    or not principle_ids
+                    or not all(
+                        isinstance(value, str) and value for value in principle_ids
+                    )
                 ):
                     errors.append(
                         f"{field}.rationale.principle_ids must be a normalized string list"
                     )
                 summary = rationale.get("summary")
                 if not isinstance(summary, str) or not summary:
-                    errors.append(f"{field}.rationale.summary must be a non-empty string")
+                    errors.append(
+                        f"{field}.rationale.summary must be a non-empty string"
+                    )
             identity = procedure.get("identity")
             revision = procedure.get("revision")
-            if isinstance(identity, str) and identity and isinstance(revision, str) and revision:
+            if (
+                isinstance(identity, str)
+                and identity
+                and isinstance(revision, str)
+                and revision
+            ):
+                prefix = f"{identity}:"
+                version = revision[len(prefix) :] if revision.startswith(prefix) else ""
+                if (
+                    not PROCEDURE_REVISION.fullmatch(revision)
+                    or not version
+                    or not PROCEDURE_VERSION.fullmatch(version)
+                ):
+                    errors.append(f"{field}.revision must pin its identity and version")
                 references.append((identity, revision))
         if len(references) != len(set(references)):
             errors.append("procedure catalog references must be unique")
@@ -467,6 +543,11 @@ def resolve(
     assert isinstance(request, dict)
     assert isinstance(procedures, dict)
 
+    input_bindings = {
+        "procedure_catalog": _input_binding(_normalized_catalog_binding(procedures)),
+        "resolution_request": _input_binding(_normalized_request_binding(request)),
+    }
+
     available_procedures = sorted(
         (
             {"identity": item["identity"], "revision": item["revision"]}
@@ -475,10 +556,7 @@ def resolve(
         ),
         key=lambda item: (item["identity"], item["revision"]),
     )
-    available = {
-        (item["identity"], item["revision"])
-        for item in available_procedures
-    }
+    available = {(item["identity"], item["revision"]) for item in available_procedures}
     required_procedure = request["required_procedure"]
     required_identity = (
         required_procedure["identity"],
@@ -489,8 +567,7 @@ def resolve(
         for procedure in procedures["procedures"]
         if isinstance(procedure, dict)
         and procedure.get("phase") == request["phase"]
-        and (procedure.get("identity"), procedure.get("revision"))
-        == required_identity
+        and (procedure.get("identity"), procedure.get("revision")) == required_identity
     ]
     if len(matches) != 1:
         return ResolutionRejection(
@@ -500,15 +577,18 @@ def resolve(
     procedure = matches[0]
     skill_unavailable = required_identity not in available
     accepted_evidence = _accepted_evidence(request)
-    required_evidence = [
+    required_evidence = sorted(
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
-    ]
+    )
     allowed = True
     anti_example = procedure["anti_example"]
     finished = procedure["finished"]
     gate = "Evidence needed" if required_evidence else "Ready"
     good = procedure["good"]
-    rationale = procedure["rationale"]
+    rationale = {
+        "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
+        "summary": procedure["rationale"]["summary"],
+    }
     reason_code = (
         procedure["reason_code"]
         if required_evidence
@@ -521,7 +601,7 @@ def resolve(
         gate = "Blocked"
         good = ["The required procedure is available before it is recommended."]
         rationale = {
-            "principle_ids": procedure["rationale"]["principle_ids"],
+            "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
             "summary": "The required procedure is unavailable for the requested phase.",
         }
         reason_code = "SKILL_UNAVAILABLE"
@@ -540,6 +620,7 @@ def resolve(
         "finished": finished,
         "gate": gate,
         "good": good,
+        "input_bindings": input_bindings,
         "lane": request["lane"],
         "mutates": False,
         "phase": request["phase"],
@@ -554,7 +635,7 @@ def resolve(
             "revision": required_procedure["revision"],
         },
         "revision": request["revision"],
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
         "source_identities": {
             "capability_profile": capability_profile["identity"],
             "consumer_profile": consumer_profile["project"],

@@ -32,6 +32,21 @@
       "minItems": 1,
       "type": "array"
     },
+    "input_bindings": {
+      "additionalProperties": false,
+      "properties": {
+        "procedure_catalog": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "resolution_request": {
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": ["procedure_catalog", "resolution_request"],
+      "type": "object"
+    },
     "lane": {"minLength": 1, "type": "string"},
     "mutates": {"const": false},
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
@@ -76,7 +91,7 @@
     },
     "resolution_hash": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
     "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"const": "2.0.0"},
     "source_identities": {
       "additionalProperties": false,
       "properties": {
@@ -127,6 +142,7 @@
     "finished",
     "gate",
     "good",
+    "input_bindings",
     "lane",
     "mutates",
     "phase",

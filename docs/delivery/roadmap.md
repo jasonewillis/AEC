@@ -15,9 +15,12 @@ The foundation is intentionally delivered in reversible vertical slices.
 ## Current position
 
 Slice 1 is merged. Slice 2 now has deterministic goldens for all nine lifecycle phases,
-an unavailable-procedure blocked tracer, and malformed-request rejection. These
-tracers do not complete Slice 2: the full threat-model canary catalog and remaining
-hash-sensitivity and decision-completeness outcomes still must pass its binary exit gate.
+an unavailable-procedure blocked tracer, malformed-request rejection, and versioned
+decision bindings for the complete normalized request and procedure catalog. The
+bindings cover revision, environment, profile version, evidence validity, procedure
+selection, capability, catalog, and policy inputs while ignoring collection order that
+has no semantic meaning. These tracers do not complete Slice 2: the completeness matrix
+and static purity scans still must pass its binary exit gate.
 
 ## Completion rule
 

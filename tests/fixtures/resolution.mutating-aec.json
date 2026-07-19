@@ -17,6 +17,10 @@
   "good": [
     "The consumer separately authorizes any lifecycle movement."
   ],
+  "input_bindings": {
+    "procedure_catalog": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "resolution_request": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
   "lane": "TEST",
   "mutates": true,
   "phase": "Verify",
@@ -33,9 +37,9 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:bc4dc5a3f5b9861bc4cdd6e6b2fd81933d87c9aae0dff8799db87903d1f9fe65",
+  "resolution_hash": "sha256:6b2828c508b314008d091984b6832da050a2092d20217ace5212556d16598ccd",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",

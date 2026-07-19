@@ -27,15 +27,15 @@ GOLDEN_PHASES = {
     "Deploy": ("Assure & Release", "prove-live-revision"),
 }
 GOLDEN_HASHES = {
-    "Intake": "sha256:d1df6384d4131a9fade210684a7fcc3642f2327100021b91aebd2fd844d192e4",
-    "Framing": "sha256:248e07da4ced43b1deefead2e750a96fdbad17f320abf247b9b209f6b138c613",
-    "Spec": "sha256:79bc1d783664c1c9299204640f2ee3ea441493441fb212e25acc053604671858",
-    "Plan": "sha256:f963b6d4d61aa095343f382b66d928d0f779fe2f98caad0b9b2b774e0a4bd684",
-    "Build": "sha256:3a87d7e51d4bf79567313a47b66ef70c980ca217c93a7fba21293c9db2b33cd0",
-    "Verify": "sha256:0fd76f0fa361664b0144c5417561fc9a1c7b56d9f76a32b7a1c0c8958c012f36",
-    "Review": "sha256:52677479a0520d3d27ba562c044c1ecbfdf1be55d9b1f89e011a6333566b5308",
-    "PR": "sha256:ddd99bdfbea222bdfbeb73c9e10cd2d2d7eea23f4feb7fda1e91feb19a4290ca",
-    "Deploy": "sha256:e9ff2242673f4ef7f28eed5fa615102f8d4f6c81d9059741ed35db0ee641b9c7",
+    "Intake": "sha256:7ab48b2e334ce87c253d46f1f56d0a73d505fabad6beff7b2265f412b4d2d517",
+    "Framing": "sha256:f9b1a17342d98f09979d91ce74350b97cb9d0bb2fbc202bdbfe3e775cf236fc4",
+    "Spec": "sha256:6b568c434eb1d77b5471558710c80e6432fa793ea359620f71eae02e6251cac3",
+    "Plan": "sha256:95f3d45c80f94e21c9c6f9d1b55a5522ba576540b1da9131ba27a8d03878d49a",
+    "Build": "sha256:371ce14e199078ef3ccda2c05cb43c09e2a1d55be55d979a9bc355fb261164c7",
+    "Verify": "sha256:b08f7a178a505a649bf384e27e6d7a1ff7356a0a2eff04a716fdd180a5c5a5d0",
+    "Review": "sha256:77817cc44a03837a6d40537f4b5236d1e49c5b164b61fbc15e64020ab8531224",
+    "PR": "sha256:1ffb1a9e51136e733097bc19b0ce20574178e0aad7bc875c3a1072db9ec8ae8f",
+    "Deploy": "sha256:74f967f6e2084c135b24e92b0cd7be27a76df05b98436d6c259e35de25fd34a9",
 }
 
 
@@ -86,7 +86,17 @@ class ResolverTracerTests(unittest.TestCase):
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         self.assertEqual([], validate_procedure_catalog(procedures))
         self.assertEqual(
-            {"build", "deploy", "framing", "intake", "plan", "pr", "review", "spec", "verify"},
+            {
+                "build",
+                "deploy",
+                "framing",
+                "intake",
+                "plan",
+                "pr",
+                "review",
+                "spec",
+                "verify",
+            },
             {
                 path.stem
                 for path in (ROOT / "tests/fixtures/resolver/golden").glob("*.json")
@@ -194,6 +204,321 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertNotIsInstance(decision, ResolutionRejection)
         self.assertEqual("intake-outcome", decision.to_dict()["primary_procedure"])
 
+    def test_rejected_evidence_changes_stable_request_binding_and_decision(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        changed = copy.deepcopy(request)
+        changed["evidence"] = [
+            {
+                "accepted": False,
+                "environment": request["environment"],
+                "kind": "focused-test-report",
+                "revision": request["revision"],
+            }
+        ]
+
+        baseline_first = resolve(request, procedures)
+        baseline_second = resolve(request, procedures)
+        changed_first = resolve(changed, procedures)
+        changed_second = resolve(changed, procedures)
+        baseline = baseline_first.to_dict()
+        changed_payload = changed_first.to_dict()
+
+        self.assertEqual(
+            baseline_first.canonical_bytes, baseline_second.canonical_bytes
+        )
+        self.assertEqual(changed_first.canonical_bytes, changed_second.canonical_bytes)
+        self.assertEqual("2.0.0", baseline["schema_version"])
+        self.assertNotEqual(
+            baseline["input_bindings"]["resolution_request"],
+            changed_payload["input_bindings"]["resolution_request"],
+        )
+        self.assertEqual(
+            baseline["input_bindings"]["procedure_catalog"],
+            changed_payload["input_bindings"]["procedure_catalog"],
+        )
+        self.assertNotEqual(
+            baseline["resolution_hash"],
+            changed_payload["resolution_hash"],
+        )
+        self.assertEqual(baseline["gate"], changed_payload["gate"])
+        self.assertEqual(
+            baseline["required_evidence"],
+            changed_payload["required_evidence"],
+        )
+
+    def test_malformed_unrelated_catalog_revision_is_rejected_twice(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        procedures["procedures"][0]["revision"] = "not-pinned"
+
+        first = resolve(request, procedures)
+        second = resolve(request, procedures)
+
+        self.assertIsInstance(first, ResolutionRejection)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["procedures[0].revision must pin its identity and version"],
+            },
+            first.to_dict(),
+        )
+
+    def test_catalog_revision_rejects_schema_invalid_identity_prefixes(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+
+        for identity in ("bad identity", "bad:identity"):
+            with self.subTest(identity=identity):
+                procedures = load_json(
+                    ROOT / "config/procedures/ticket-to-pr.json"
+                )
+                procedures["procedures"][0]["identity"] = identity
+                procedures["procedures"][0]["revision"] = f"{identity}:1.0.0"
+
+                result = resolve(request, procedures)
+
+                self.assertIsInstance(result, ResolutionRejection)
+                self.assertEqual(
+                    {
+                        "accepted": False,
+                        "code": "PROCEDURE_CATALOG_INVALID",
+                        "errors": [
+                            "procedures[0].revision must pin its identity and version"
+                        ],
+                    },
+                    result.to_dict(),
+                )
+
+    def test_material_request_axes_change_stable_binding_and_hash(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+
+        baseline_first = resolve(request, procedures)
+        baseline_second = resolve(request, procedures)
+        self.assertNotIsInstance(baseline_first, ResolutionRejection)
+        self.assertEqual(
+            baseline_first.canonical_bytes, baseline_second.canonical_bytes
+        )
+        baseline = baseline_first.to_dict()
+
+        mutations = []
+        changed = copy.deepcopy(request)
+        changed["revision"] = "fedcba9876543210fedcba9876543210fedcba98"
+        mutations.append(("revision", changed))
+
+        changed = copy.deepcopy(request)
+        changed["environment"] = "staging"
+        mutations.append(("environment", changed))
+
+        changed = copy.deepcopy(request)
+        changed["consumer_profile"]["profile_version"] = "example:2.0.0"
+        mutations.append(("profile-version", changed))
+
+        changed = copy.deepcopy(request)
+        changed["evidence"] = [
+            {
+                "accepted": False,
+                "environment": request["environment"],
+                "kind": "focused-test-report",
+                "revision": request["revision"],
+            }
+        ]
+        mutations.append(("rejected-evidence", changed))
+
+        changed = copy.deepcopy(request)
+        changed["evidence"] = [
+            {
+                "accepted": True,
+                "environment": request["environment"],
+                "kind": "focused-test-report",
+                "revision": "fedcba9876543210fedcba9876543210fedcba98",
+            }
+        ]
+        mutations.append(("wrong-revision-evidence", changed))
+
+        changed = copy.deepcopy(request)
+        changed["evidence"] = [
+            {
+                "accepted": True,
+                "environment": "staging",
+                "kind": "focused-test-report",
+                "revision": request["revision"],
+            }
+        ]
+        mutations.append(("cross-environment-evidence", changed))
+
+        changed = copy.deepcopy(request)
+        changed["capability_profile"]["capabilities"].append("browser")
+        mutations.append(("capability-set", changed))
+
+        changed = copy.deepcopy(request)
+        changed["policy"]["facts"]["require_exact_environment"] = False
+        mutations.append(("policy-facts", changed))
+
+        for axis, mutation in mutations:
+            with self.subTest(axis=axis):
+                first = resolve(mutation, procedures)
+                second = resolve(mutation, procedures)
+                self.assertNotIsInstance(first, ResolutionRejection)
+                self.assertEqual(first.canonical_bytes, second.canonical_bytes)
+                payload = first.to_dict()
+                self.assertNotEqual(
+                    baseline["input_bindings"]["resolution_request"],
+                    payload["input_bindings"]["resolution_request"],
+                )
+                self.assertEqual(
+                    baseline["input_bindings"]["procedure_catalog"],
+                    payload["input_bindings"]["procedure_catalog"],
+                )
+                self.assertNotEqual(
+                    baseline["resolution_hash"],
+                    payload["resolution_hash"],
+                )
+                self.assertEqual(baseline["gate"], payload["gate"])
+                self.assertEqual(
+                    baseline["required_evidence"],
+                    payload["required_evidence"],
+                )
+
+    def test_unrelated_catalog_change_changes_only_catalog_binding_and_hash(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        changed = copy.deepcopy(procedures)
+        intake = next(
+            procedure
+            for procedure in changed["procedures"]
+            if procedure["identity"] == "intake-outcome"
+        )
+        intake["anti_example"] = "A changed but still valid unrelated anti-example."
+
+        baseline_first = resolve(request, procedures)
+        baseline_second = resolve(request, procedures)
+        changed_first = resolve(request, changed)
+        changed_second = resolve(request, changed)
+        self.assertNotIsInstance(baseline_first, ResolutionRejection)
+        self.assertNotIsInstance(changed_first, ResolutionRejection)
+        self.assertEqual(
+            baseline_first.canonical_bytes, baseline_second.canonical_bytes
+        )
+        self.assertEqual(changed_first.canonical_bytes, changed_second.canonical_bytes)
+        baseline = baseline_first.to_dict()
+        changed_payload = changed_first.to_dict()
+
+        self.assertEqual(
+            baseline["input_bindings"]["resolution_request"],
+            changed_payload["input_bindings"]["resolution_request"],
+        )
+        self.assertNotEqual(
+            baseline["input_bindings"]["procedure_catalog"],
+            changed_payload["input_bindings"]["procedure_catalog"],
+        )
+        self.assertNotEqual(
+            baseline["resolution_hash"],
+            changed_payload["resolution_hash"],
+        )
+        for field in (
+            "gate",
+            "phase",
+            "primary_procedure",
+            "rationale",
+            "required_evidence",
+        ):
+            self.assertEqual(baseline[field], changed_payload[field])
+
+    def test_phase_and_procedure_mismatch_is_rejected_twice(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        request["phase"] = "Build"
+
+        first = resolve(request, procedures)
+        second = resolve(request, procedures)
+
+        self.assertIsInstance(first, ResolutionRejection)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "RESOLUTION_REQUEST_INVALID",
+                "errors": [
+                    "required_procedure must identify exactly one catalog procedure"
+                ],
+            },
+            first.to_dict(),
+        )
+
+    def test_semantically_unordered_input_collections_have_stable_decision(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        request["available_procedures"].append(
+            {
+                "identity": "intake-outcome",
+                "revision": "intake-outcome:1.0.0",
+            }
+        )
+        request["blockers"] = [
+            {"active": False, "identity": "second", "reason_code": "SECOND"},
+            {"active": False, "identity": "first", "reason_code": "FIRST"},
+        ]
+        request["capability_profile"]["capabilities"].append("browser")
+        request["consumer_profile"]["agent_adapters"].append("other-adapter")
+        request["evidence"] = [
+            {
+                "accepted": False,
+                "environment": "staging",
+                "kind": "integration-test-report",
+                "revision": request["revision"],
+            },
+            {
+                "accepted": False,
+                "environment": "test",
+                "kind": "focused-test-report",
+                "revision": "fedcba9876543210fedcba9876543210fedcba98",
+            },
+        ]
+
+        reordered_request = copy.deepcopy(request)
+        for field in ("available_procedures", "blockers", "evidence"):
+            reordered_request[field].reverse()
+        reordered_request["capability_profile"]["capabilities"].reverse()
+        reordered_request["consumer_profile"]["agent_adapters"].reverse()
+
+        reordered_catalog = copy.deepcopy(procedures)
+        reordered_catalog["procedures"].reverse()
+        verify = next(
+            procedure
+            for procedure in reordered_catalog["procedures"]
+            if procedure["identity"] == "verify-evidence"
+        )
+        verify["required_evidence"].reverse()
+
+        first = resolve(request, procedures)
+        first_repeat = resolve(request, procedures)
+        second = resolve(reordered_request, reordered_catalog)
+        second_repeat = resolve(reordered_request, reordered_catalog)
+
+        self.assertNotIsInstance(first, ResolutionRejection)
+        self.assertNotIsInstance(first_repeat, ResolutionRejection)
+        self.assertNotIsInstance(second, ResolutionRejection)
+        self.assertNotIsInstance(second_repeat, ResolutionRejection)
+        self.assertEqual(first.canonical_bytes, first_repeat.canonical_bytes)
+        self.assertEqual(first.resolution_hash, first_repeat.resolution_hash)
+        self.assertEqual(second.canonical_bytes, second_repeat.canonical_bytes)
+        self.assertEqual(second.resolution_hash, second_repeat.resolution_hash)
+        self.assertEqual(first.canonical_bytes, second.canonical_bytes)
+        self.assertEqual(first.resolution_hash, second.resolution_hash)
+        self.assertEqual(
+            first.to_dict()["input_bindings"],
+            second.to_dict()["input_bindings"],
+        )
+
     def test_missing_procedure_catalog_fields_return_catalog_rejection(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
 
@@ -204,7 +529,9 @@ class ResolverTracerTests(unittest.TestCase):
             {
                 "accepted": False,
                 "code": "PROCEDURE_CATALOG_INVALID",
-                "errors": ["missing procedure catalog fields: procedures, schema_version"],
+                "errors": [
+                    "missing procedure catalog fields: procedures, schema_version"
+                ],
             },
             result.to_dict(),
         )
@@ -258,7 +585,9 @@ class ResolverTracerTests(unittest.TestCase):
             result.to_dict(),
         )
 
-    def test_duplicate_required_catalog_procedure_returns_catalog_rejection(self) -> None:
+    def test_duplicate_required_catalog_procedure_returns_catalog_rejection(
+        self,
+    ) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
         catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         duplicate = copy.deepcopy(catalog["procedures"][0])
@@ -333,8 +662,7 @@ class ResolverTracerTests(unittest.TestCase):
 
     def test_malformed_available_procedure_returns_structured_rejection(self) -> None:
         request = load_json(
-            ROOT
-            / "tests/fixtures/resolver/red/malformed-available-procedure.json"
+            ROOT / "tests/fixtures/resolver/red/malformed-available-procedure.json"
         )
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
 
@@ -414,7 +742,9 @@ class ResolverTracerTests(unittest.TestCase):
             payload["project_profile_version"],
         )
 
-    def test_invalid_untrusted_request_data_never_leaks_builtin_exceptions(self) -> None:
+    def test_invalid_untrusted_request_data_never_leaks_builtin_exceptions(
+        self,
+    ) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         missing_workflow_stage = copy.deepcopy(request)
@@ -464,10 +794,10 @@ class ResolverTracerTests(unittest.TestCase):
                 self.assertEqual("RESOLUTION_REQUEST_INVALID", first.to_dict()["code"])
                 self.assertFalse(first.to_dict()["accepted"])
 
-    def test_tampered_unavailable_decision_is_rejected_after_hash_recompute(self) -> None:
-        request = load_json(
-            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
-        )
+    def test_tampered_unavailable_decision_is_rejected_after_hash_recompute(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         result = resolve(request, procedures)
         self.assertNotIsInstance(result, ResolutionRejection)
@@ -509,10 +839,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(
             [
                 "reason_code is unsupported",
-                (
-                    "Evidence needed decisions must use "
-                    "ACCEPTANCE_EVIDENCE_INCOMPLETE"
-                ),
+                ("Evidence needed decisions must use ACCEPTANCE_EVIDENCE_INCOMPLETE"),
             ],
             validate_resolution(tampered),
         )
@@ -530,7 +857,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:0fd76f0fa361664b0144c5417561fc9a1c7b56d9f76a32b7a1c0c8958c012f36",
+            "sha256:b08f7a178a505a649bf384e27e6d7a1ff7356a0a2eff04a716fdd180a5c5a5d0",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -610,9 +937,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual("Evidence needed", first.to_dict()["gate"])
 
     def test_unavailable_skill_returns_one_stable_blocked_decision(self) -> None:
-        request = load_json(
-            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
-        )
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
 
         first = resolve(request, procedures)
@@ -622,7 +947,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:25558d732b94abbb819723b4c97d79f344d28b54bc824b93e17e8959cf212382",
+            "sha256:2577f7012c06d44ae9dd89e0bd54b04a369c748a4d45c58a0133a88e5170028b",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))
@@ -646,9 +971,7 @@ class ResolverTracerTests(unittest.TestCase):
     def test_unavailable_required_skill_does_not_select_same_phase_substitute(
         self,
     ) -> None:
-        request = load_json(
-            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
-        )
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         substitute = copy.deepcopy(procedures["procedures"][0])
         substitute["identity"] = "silent-substitute"
@@ -678,9 +1001,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(["procedure-availability"], payload["required_evidence"])
 
     def test_availability_facts_are_bound_into_blocked_decision_hash(self) -> None:
-        request = load_json(
-            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
-        )
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
         changed = copy.deepcopy(request)
         changed["available_procedures"] = [

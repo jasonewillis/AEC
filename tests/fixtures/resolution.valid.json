@@ -17,6 +17,10 @@
   "good": [
     "Focused and integration evidence bind the exact revision and environment."
   ],
+  "input_bindings": {
+    "procedure_catalog": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "resolution_request": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
   "lane": "TEST",
   "mutates": false,
   "phase": "Verify",
@@ -37,9 +41,9 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:937d72d612ca9ec827ac5266c78643ae9e4e880ae10b835b7c1c04e668c8e0d8",
+  "resolution_hash": "sha256:497af2622b66e94786059f198fdceb50972cb28d3304541d1811e5d4acb6fd6b",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",

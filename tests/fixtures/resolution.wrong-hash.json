@@ -17,6 +17,10 @@
   "good": [
     "Focused evidence binds the exact revision and environment."
   ],
+  "input_bindings": {
+    "procedure_catalog": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "resolution_request": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
   "lane": "TEST",
   "mutates": false,
   "phase": "Verify",
@@ -37,7 +41,7 @@
   },
   "resolution_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",

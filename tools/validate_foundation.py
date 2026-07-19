@@ -170,6 +170,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "finished",
     "gate",
     "good",
+    "input_bindings",
     "lane",
     "mutates",
     "phase",
@@ -229,14 +230,26 @@ def validate_resolution(resolution: object) -> list[str]:
     if unknown:
         errors.append(f"unknown resolution fields: {', '.join(unknown)}")
 
-    if resolution.get("schema_version") != "1.0.0":
-        errors.append("schema_version must equal 1.0.0")
+    if resolution.get("schema_version") != "2.0.0":
+        errors.append("schema_version must equal 2.0.0")
     if not isinstance(resolution.get("allowed"), bool):
         errors.append("allowed must be a boolean")
     if resolution.get("executes") is not False:
         errors.append("AEC decisions must set executes=false")
     if resolution.get("mutates") is not False:
         errors.append("AEC decisions must set mutates=false")
+
+    input_bindings = resolution.get("input_bindings")
+    if not isinstance(input_bindings, dict) or set(input_bindings) != {
+        "procedure_catalog",
+        "resolution_request",
+    }:
+        errors.append("input_bindings fields do not match the contract")
+    elif not all(
+        isinstance(value, str) and HASH_VALUE.fullmatch(value)
+        for value in input_bindings.values()
+    ):
+        errors.append("input_bindings values must be SHA-256 bindings")
 
     if resolution.get("gate") not in GATES:
         errors.append("gate is unsupported")
@@ -281,7 +294,9 @@ def validate_resolution(resolution: object) -> list[str]:
     valid_required_procedure = (
         isinstance(required_procedure, dict)
         and set(required_procedure) == {"identity", "revision"}
-        and all(isinstance(value, str) and value for value in required_procedure.values())
+        and all(
+            isinstance(value, str) and value for value in required_procedure.values()
+        )
     )
     if not valid_required_procedure:
         errors.append("required_procedure must identify one pinned procedure")
@@ -332,7 +347,9 @@ def validate_resolution(resolution: object) -> list[str]:
             (item["identity"], item["revision"]) for item in available_procedures
         }
         if unavailable and required_reference in available_references:
-            errors.append("unavailable required procedure is present in availability facts")
+            errors.append(
+                "unavailable required procedure is present in availability facts"
+            )
         if not unavailable and required_reference not in available_references:
             errors.append("selected procedure is absent from availability facts")
         if not unavailable and primary_procedure != required_procedure["identity"]:
@@ -340,8 +357,10 @@ def validate_resolution(resolution: object) -> list[str]:
 
     for field in ("finished", "good"):
         value = resolution.get(field)
-        if not isinstance(value, list) or not value or not all(
-            isinstance(item, str) and item for item in value
+        if (
+            not isinstance(value, list)
+            or not value
+            or not all(isinstance(item, str) and item for item in value)
         ):
             errors.append(f"{field} must be a non-empty list of non-empty strings")
 
@@ -350,15 +369,22 @@ def validate_resolution(resolution: object) -> list[str]:
         errors.append("anti_example must be a non-empty string")
 
     rationale = resolution.get("rationale")
-    if not isinstance(rationale, dict) or set(rationale) != {"principle_ids", "summary"}:
+    if not isinstance(rationale, dict) or set(rationale) != {
+        "principle_ids",
+        "summary",
+    }:
         errors.append("rationale fields do not match the contract")
     else:
         principle_ids = rationale.get("principle_ids")
-        if not isinstance(principle_ids, list) or not principle_ids or not all(
-            isinstance(item, str) and item for item in principle_ids
+        if (
+            not isinstance(principle_ids, list)
+            or not principle_ids
+            or not all(isinstance(item, str) and item for item in principle_ids)
         ):
             errors.append("rationale principle_ids must be a non-empty string list")
-        if not isinstance(rationale.get("summary"), str) or not rationale.get("summary"):
+        if not isinstance(rationale.get("summary"), str) or not rationale.get(
+            "summary"
+        ):
             errors.append("rationale summary must be a non-empty string")
 
     expected_source_keys = {
@@ -369,13 +395,19 @@ def validate_resolution(resolution: object) -> list[str]:
         "workflow",
     }
     source_identities = resolution.get("source_identities")
-    if not isinstance(source_identities, dict) or set(source_identities) != expected_source_keys:
+    if (
+        not isinstance(source_identities, dict)
+        or set(source_identities) != expected_source_keys
+    ):
         errors.append("source_identities fields do not match the contract")
     elif not all(isinstance(item, str) and item for item in source_identities.values()):
         errors.append("source_identities values must be non-empty strings")
 
     source_revisions = resolution.get("source_revisions")
-    if not isinstance(source_revisions, dict) or set(source_revisions) != expected_source_keys:
+    if (
+        not isinstance(source_revisions, dict)
+        or set(source_revisions) != expected_source_keys
+    ):
         errors.append("source_revisions fields do not match the contract")
     elif not all(isinstance(item, str) and item for item in source_revisions.values()):
         errors.append("source_revisions values must be non-empty strings")
@@ -397,8 +429,12 @@ def validate_resolution(resolution: object) -> list[str]:
         errors.append("revision must be a lowercase 40-character Git commit")
 
     resolution_hash = resolution.get("resolution_hash")
-    if not isinstance(resolution_hash, str) or not HASH_VALUE.fullmatch(resolution_hash):
-        errors.append("resolution_hash must be sha256 followed by 64 lowercase hex characters")
+    if not isinstance(resolution_hash, str) or not HASH_VALUE.fullmatch(
+        resolution_hash
+    ):
+        errors.append(
+            "resolution_hash must be sha256 followed by 64 lowercase hex characters"
+        )
     elif resolution_hash != compute_resolution_hash(resolution):
         errors.append("resolution_hash does not match canonical payload")
 
@@ -441,17 +477,30 @@ def validate_provenance(provenance: object) -> list[str]:
         errors.append("Workflows relationship must be pattern-source")
 
     blueprint = by_name.get("blueprint", {})
-    if not blueprint.get("license") and blueprint.get("relationship") != "reference-only":
-        errors.append("Blueprint must remain reference-only without a verified adoption license")
+    if (
+        not blueprint.get("license")
+        and blueprint.get("relationship") != "reference-only"
+    ):
+        errors.append(
+            "Blueprint must remain reference-only without a verified adoption license"
+        )
 
     for name, upstream in by_name.items():
-        if set(upstream) != {"license", "name", "relationship", "repository", "revision"}:
+        if set(upstream) != {
+            "license",
+            "name",
+            "relationship",
+            "repository",
+            "revision",
+        }:
             errors.append(f"{name} fields do not match the upstream contract")
         revision = upstream.get("revision")
         if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
             errors.append(f"{name} revision must be a pinned 40-character Git commit")
         repository = upstream.get("repository")
-        if not isinstance(repository, str) or not repository.startswith("https://github.com/"):
+        if not isinstance(repository, str) or not repository.startswith(
+            "https://github.com/"
+        ):
             errors.append(f"{name} repository must be an HTTPS GitHub URL")
 
     return errors
@@ -497,9 +546,7 @@ def validate_course_inventory(inventory: object) -> list[str]:
 
     errors: list[str] = []
     for field in sorted(_nested_keys(inventory) & COURSE_EXPRESSIVE_FIELDS):
-        errors.append(
-            f"course inventory contains forbidden expressive field: {field}"
-        )
+        errors.append(f"course inventory contains forbidden expressive field: {field}")
     if set(inventory) != {"schema_version", "source_sets"}:
         errors.append("course inventory fields do not match the contract")
     if inventory.get("schema_version") != "1.0.0":
@@ -551,20 +598,25 @@ def validate_course_inventory(inventory: object) -> list[str]:
                     errors.append("every course source record must be an object")
                     continue
                 if set(record) != {"id", "sha256", "source_file", "title"}:
-                    errors.append("course source record fields do not match the contract")
+                    errors.append(
+                        "course source record fields do not match the contract"
+                    )
                 record_id = record.get("id")
                 if not isinstance(record_id, str) or not record_id:
                     errors.append("every course source record must have a non-empty id")
                 else:
                     lesson_ids.append(record_id)
                 if not isinstance(record.get("title"), str) or not record.get("title"):
-                    errors.append(f"course source record {record_id or '<unknown>'} needs a title")
+                    errors.append(
+                        f"course source record {record_id or '<unknown>'} needs a title"
+                    )
                 source_file = record.get("source_file")
                 if source_file is not None and (
                     not isinstance(source_file, str) or not source_file
                 ):
                     errors.append(
-                        f"course source record {record_id or '<unknown>'} has an invalid source_file"
+                        "course source record "
+                        f"{record_id or '<unknown>'} has an invalid source_file"
                     )
                 sha256 = record.get("sha256")
                 if sha256 is not None and (
@@ -585,8 +637,12 @@ def validate_course_inventory(inventory: object) -> list[str]:
         errors.append("AI Engineer coverage must be exactly 13 lessons")
     else:
         expected_ids = [f"ai-engineer-{number:02d}" for number in range(1, 14)]
-        if [record.get("id") for record in ai_lessons if isinstance(record, dict)] != expected_ids:
-            errors.append("AI Engineer lesson identifiers must preserve order 01 through 13")
+        if [
+            record.get("id") for record in ai_lessons if isinstance(record, dict)
+        ] != expected_ids:
+            errors.append(
+                "AI Engineer lesson identifiers must preserve order 01 through 13"
+            )
         if not all(
             isinstance(record, dict)
             and isinstance(record.get("sha256"), str)
@@ -603,7 +659,9 @@ def validate_course_inventory(inventory: object) -> list[str]:
     if not isinstance(eval_lessons, list) or len(eval_lessons) != 8:
         errors.append("Evals & Monitoring coverage must be exactly 8 lessons")
     if source_sets != list(EXPECTED_COURSE_SOURCE_SETS):
-        errors.append("course inventory factual manifest must match the verified record")
+        errors.append(
+            "course inventory factual manifest must match the verified record"
+        )
     return errors
 
 
@@ -686,7 +744,9 @@ def validate_runtime_authority(paths: list[Path]) -> list[str]:
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             errors.append(f"runtime authority file is not valid JSON: {path}")
             continue
-        if any(COURSE_RUNTIME_IDENTITY.search(item) for item in _nested_strings(content)):
+        if any(
+            COURSE_RUNTIME_IDENTITY.search(item) for item in _nested_strings(content)
+        ):
             rendered_path = _render_path(path)
             errors.append(
                 f"runtime authority references private course identity in {rendered_path}"
@@ -733,7 +793,9 @@ def validate_workflow(workflow: object) -> list[str]:
     if actual_phases != EXPECTED_PHASES:
         errors.append("workflow phases must preserve the canonical nine-phase order")
     if actual_mapping != STAGE_PHASES:
-        errors.append("workflow stage-to-phase mapping must match the canonical lifecycle")
+        errors.append(
+            "workflow stage-to-phase mapping must match the canonical lifecycle"
+        )
     if workflow.get("gate_precedence") != [
         "Blocked",
         "Needs review",
@@ -757,9 +819,7 @@ def report_errors(label: str, errors: list[str]) -> bool:
 def main() -> int:
     """Validate the complete foundation bootstrap contract."""
     course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
-    procedure_catalog = load_json(
-        ROOT / "config" / "procedures" / "ticket-to-pr.json"
-    )
+    procedure_catalog = load_json(ROOT / "config" / "procedures" / "ticket-to-pr.json")
     principle_registry = load_json(
         ROOT / "config" / "principles" / "aec-engineering.json"
     )
@@ -790,7 +850,9 @@ def main() -> int:
         ),
         report_errors(
             "workflow.ticket-to-pr",
-            validate_workflow(load_json(ROOT / "config" / "workflows" / "ticket-to-pr.json")),
+            validate_workflow(
+                load_json(ROOT / "config" / "workflows" / "ticket-to-pr.json")
+            ),
         ),
         report_errors(
             "procedure-catalog.ticket-to-pr",
@@ -798,7 +860,9 @@ def main() -> int:
         ),
         report_errors(
             "resolution.valid",
-            validate_resolution(load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")),
+            validate_resolution(
+                load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")
+            ),
         ),
     ]
     checks.extend(
@@ -851,9 +915,7 @@ def main() -> int:
             "red-canary.malformed-available-procedure",
             []
             if malformed_request
-            == [
-                "available_procedures[0] must contain exactly identity and revision"
-            ]
+            == ["available_procedures[0] must contain exactly identity and revision"]
             else ["canary did not detect the malformed procedure reference"],
         )
     )
@@ -885,18 +947,11 @@ def main() -> int:
             "red-canary.unsupported-catalog-reason",
             []
             if unsupported_reason_errors
-            == [
-                (
-                    "procedures[0].reason_code must equal "
-                    "ACCEPTANCE_EVIDENCE_INCOMPLETE"
-                )
-            ]
+            == [("procedures[0].reason_code must equal ACCEPTANCE_EVIDENCE_INCOMPLETE")]
             else ["canary did not detect the unsupported catalog reason code"],
         )
     )
-    tampered_decision = load_json(
-        ROOT / "tests" / "fixtures" / "resolution.valid.json"
-    )
+    tampered_decision = load_json(ROOT / "tests" / "fixtures" / "resolution.valid.json")
     tampered_decision["gate"] = "Ready"
     tampered_decision["resolution_hash"] = compute_resolution_hash(tampered_decision)
     semantic_errors = validate_resolution(tampered_decision)
