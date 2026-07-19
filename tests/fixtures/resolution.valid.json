@@ -1,0 +1,25 @@
+{
+  "allowed": true,
+  "capability_profile_version": "claude-codex-common:0.1.0",
+  "environment": "test",
+  "executes": false,
+  "gate": "Evidence needed",
+  "lane": "TEST",
+  "mutates": false,
+  "phase": "Verify",
+  "policy_version": "0.1.0",
+  "primary_procedure": "aec-verify",
+  "project_profile_version": "jwtravelscanner:0.1.0",
+  "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+  "required_evidence": [
+    "focused-test-report",
+    "synthetic-e2e-report",
+    "manual-eval-report"
+  ],
+  "resolution_hash": "sha256:9cdf355b8ae8bedf3448df1b61563d32dace5d6b51d39214818b118abbafa37f",
+  "revision": "0123456789abcdef0123456789abcdef01234567",
+  "schema_version": "1.0.0",
+  "task_id": "fixture:ticket-to-pr",
+  "workflow": "ticket-to-pr",
+  "workflow_stage": "Execute"
+}

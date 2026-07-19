@@ -1,0 +1,28 @@
+{
+  "ai_engineer_lessons": [
+    {"id": "ai-engineer-01", "phase": ["Intake", "Framing"], "principle": "The operator owns goals, workflow, quality, and results.", "title": "The Shift To Agentic Engineering"},
+    {"id": "ai-engineer-02", "phase": ["All"], "principle": "Record context, tools, permissions, and observed results.", "title": "How Coding Agents Work"},
+    {"id": "ai-engineer-03", "phase": ["All"], "principle": "Use explicit checkpoints from idea through deploy.", "title": "The Agent Development Workflow"},
+    {"id": "ai-engineer-04", "phase": ["Framing"], "principle": "Choose an agent from risk, capability, context, and authority.", "title": "Choose Your Agent"},
+    {"id": "ai-engineer-05", "phase": ["Framing", "Build"], "principle": "Load repository truth and isolate reversible work.", "title": "Project Foundations"},
+    {"id": "ai-engineer-06", "phase": ["All"], "principle": "Encode repeated methods as small validated procedures.", "title": "Agent Skills"},
+    {"id": "ai-engineer-07", "phase": ["Spec"], "principle": "Resolve behavior, assumptions, interfaces, proof, and non-goals before code.", "title": "Spec-Driven Development"},
+    {"id": "ai-engineer-08", "phase": ["Plan"], "principle": "Create fresh-agent-ready vertical tasks with ownership and stop rules.", "title": "Task Management"},
+    {"id": "ai-engineer-09", "phase": ["Build", "Verify"], "principle": "Treat implementation and proof as one job.", "title": "Testing Agent Work"},
+    {"id": "ai-engineer-10", "phase": ["Review", "PR"], "principle": "Review from the task and spec with independent exact-head evidence.", "title": "Reviewing Agent Work"},
+    {"id": "ai-engineer-11", "phase": ["Deploy"], "principle": "Bind the intended revision to live deployment proof.", "title": "Deploy With Agents"},
+    {"id": "ai-engineer-12", "phase": ["Plan", "Build", "Review"], "principle": "Parallelize independent work and serialize shared mutation.", "title": "Scaling Your Impact"},
+    {"id": "ai-engineer-13", "phase": ["All"], "principle": "Define trigger, goal, evidence, evaluator, budget, stop rule, and verdict.", "title": "Agent Loops And Goals"}
+  ],
+  "evals_monitoring_lessons": [
+    {"id": "evals-monitoring-01", "principle": "Instrument, observe, evaluate, improve, and repeat.", "title": "Introduction"},
+    {"id": "evals-monitoring-02", "principle": "Capture structured traces, latency, errors, and cost when applicable.", "title": "Introduction To LangFuse"},
+    {"id": "evals-monitoring-03", "principle": "Instrument agent calls at an explicit application boundary.", "title": "LangFuse For Pydantic Agents"},
+    {"id": "evals-monitoring-04", "principle": "Evaluate probabilistic behavior systematically.", "title": "Introduction To Evals"},
+    {"id": "evals-monitoring-05", "principle": "Test schemas, ranges, categories, constraints, and deterministic boundaries.", "title": "Unit Tests"},
+    {"id": "evals-monitoring-06", "principle": "Human judgment defines usefulness and contextual quality.", "title": "Manual Evals"},
+    {"id": "evals-monitoring-07", "principle": "Use an LLM judge only after measuring alignment with human judgment.", "title": "LLM-As-A-Judge"},
+    {"id": "evals-monitoring-08", "principle": "Keep evaluation evidence portable across tools.", "title": "Resources"}
+  ],
+  "schema_version": "1.0.0"
+}

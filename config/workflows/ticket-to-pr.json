@@ -1,0 +1,16 @@
+{
+  "gate_precedence": [
+    "Blocked",
+    "Needs review",
+    "Evidence needed",
+    "Ready"
+  ],
+  "id": "ticket-to-pr",
+  "schema_version": "1.0.0",
+  "stages": [
+    {"name": "Understand", "phases": ["Intake", "Framing"]},
+    {"name": "Design", "phases": ["Spec", "Plan"]},
+    {"name": "Execute", "phases": ["Build", "Verify"]},
+    {"name": "Assure & Release", "phases": ["Review", "PR", "Deploy"]}
+  ]
+}
