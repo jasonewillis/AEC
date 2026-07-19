@@ -20,6 +20,11 @@ accepts only in-memory objects. It does not read files, call GitHub, discover ag
 skills, execute a procedure, or mutate lifecycle state. `to_dict()` returns a detached
 copy so callers cannot mutate the stored canonical decision.
 
+Both public inputs are validated before resolution. Normalized requests conform to
+`resolution-request.schema.json`, and procedure catalogs conform to
+`procedure-catalog.schema.json`. Catalogs require schema version `1.0.0`, one or more
+fully shaped procedures, and unique procedure identity and revision pairs.
+
 Every normalized request identifies one `required_procedure` by identity and pinned
 revision. `available_procedures` contains the complete caller-observed availability
 set. The resolver sorts that set before including it in the hashed decision. It never
@@ -69,17 +74,33 @@ requests `procedure-availability` evidence and includes the normalized availabil
 set in its hash. Adding an unrelated procedure therefore changes the decision hash but
 cannot satisfy the requirement or become a silent substitute.
 
-## Invalid request and tampered decision tracer
+## Invalid input and tampered decision tracer
 
 Missing fields, unknown fields, malformed nested values, and partial procedure
 references return one immutable `ResolutionRejection`. Its schema has exactly
-`accepted=false`, code `RESOLUTION_REQUEST_INVALID`, and an ordered non-empty error
-list. No accepted mentoring decision is returned, and untrusted normalized request
-data cannot leak `KeyError`, `TypeError`, or `ValueError` from the public resolver.
+`accepted=false`, one exact rejection code, and an ordered non-empty error list.
+Malformed requests use `RESOLUTION_REQUEST_INVALID`; malformed catalogs use
+`PROCEDURE_CATALOG_INVALID`. Missing catalogs, non-list procedure collections,
+malformed entries, and duplicate procedure references all fail before selection. No
+accepted mentoring decision is returned, and untrusted public input data cannot leak
+`KeyError`, `TypeError`, or `ValueError` from the public resolver.
 
 This rejection is distinct from the hashed `SKILL_UNAVAILABLE` blocked decision.
 A recomputed hash does not legitimize a tampered blocked decision: the decision
 validator rejects `SKILL_UNAVAILABLE` whenever `allowed` is not false.
+
+The current decision contract also enforces these cross-field invariants after hash
+verification:
+
+- `Ready` requires `allowed=true`, `ACCEPTANCE_EVIDENCE_COMPLETE`, and no required
+  evidence;
+- `Evidence needed` requires `allowed=true`, `ACCEPTANCE_EVIDENCE_INCOMPLETE`, and at
+  least one required evidence kind; and
+- `Blocked` currently permits only `SKILL_UNAVAILABLE`, `allowed=false`, no selected
+  procedure, and exactly `procedure-availability` evidence.
+
+Reason codes are a closed schema enum. Callers cannot turn a valid decision green by
+changing the gate or inventing an uppercase reason code and recomputing the hash.
 
 ## Verification
 

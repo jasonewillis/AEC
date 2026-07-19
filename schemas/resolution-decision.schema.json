@@ -56,7 +56,14 @@
       "required": ["principle_ids", "summary"],
       "type": "object"
     },
-    "reason_code": {"pattern": "^[A-Z][A-Z0-9_]+$", "type": "string"},
+    "reason_code": {
+      "enum": [
+        "ACCEPTANCE_EVIDENCE_COMPLETE",
+        "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+        "SKILL_UNAVAILABLE"
+      ],
+      "type": "string"
+    },
     "required_evidence": {"items": {"minLength": 1, "type": "string"}, "type": "array"},
     "required_procedure": {
       "additionalProperties": false,
@@ -138,6 +145,45 @@
     "task_id",
     "workflow",
     "workflow_stage"
+  ],
+  "allOf": [
+    {
+      "if": {"properties": {"gate": {"const": "Ready"}}},
+      "then": {
+        "properties": {
+          "allowed": {"const": true},
+          "primary_procedure": {"minLength": 1, "type": "string"},
+          "reason_code": {"const": "ACCEPTANCE_EVIDENCE_COMPLETE"},
+          "required_evidence": {"maxItems": 0}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"gate": {"const": "Evidence needed"}}},
+      "then": {
+        "properties": {
+          "allowed": {"const": true},
+          "primary_procedure": {"minLength": 1, "type": "string"},
+          "reason_code": {"const": "ACCEPTANCE_EVIDENCE_INCOMPLETE"},
+          "required_evidence": {"minItems": 1}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"gate": {"const": "Blocked"}}},
+      "then": {
+        "properties": {
+          "allowed": {"const": false},
+          "primary_procedure": {"type": "null"},
+          "reason_code": {"const": "SKILL_UNAVAILABLE"},
+          "required_evidence": {
+            "items": {"const": "procedure-availability"},
+            "maxItems": 1,
+            "minItems": 1
+          }
+        }
+      }
+    }
   ],
   "title": "AEC Resolver Decision",
   "type": "object"

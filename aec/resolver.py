@@ -27,7 +27,20 @@ REQUIRED_REQUEST_FIELDS = {
     "task_id",
     "workflow",
 }
+REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
+REASON_CODE = re.compile(r"^[A-Z][A-Z0-9_]+$")
+PROCEDURE_FIELDS = {
+    "anti_example",
+    "finished",
+    "good",
+    "identity",
+    "phase",
+    "rationale",
+    "reason_code",
+    "required_evidence",
+    "revision",
+}
 PHASES = {
     "Build",
     "Deploy",
@@ -347,6 +360,83 @@ def validate_resolution_request(request: object) -> list[str]:
     return errors
 
 
+def validate_procedure_catalog(catalog: object) -> list[str]:
+    """Return fail-closed validation errors for a procedure catalog."""
+    if not isinstance(catalog, dict):
+        return ["procedure catalog must be an object"]
+    if not all(isinstance(key, str) for key in catalog):
+        return ["procedure catalog field names must be strings"]
+
+    keys = set(catalog)
+    missing = sorted(REQUIRED_CATALOG_FIELDS - keys)
+    unknown = sorted(keys - REQUIRED_CATALOG_FIELDS)
+    errors: list[str] = []
+    if missing:
+        errors.append(f"missing procedure catalog fields: {', '.join(missing)}")
+    if unknown:
+        errors.append(f"unknown procedure catalog fields: {', '.join(unknown)}")
+    if "schema_version" in catalog and catalog.get("schema_version") != "1.0.0":
+        errors.append("procedure catalog schema_version must equal 1.0.0")
+    procedures = catalog.get("procedures")
+    if "procedures" in catalog and not isinstance(procedures, list):
+        errors.append("procedure catalog procedures must be a list")
+    elif isinstance(procedures, list):
+        if not procedures:
+            errors.append("procedure catalog procedures must not be empty")
+        references: list[tuple[str, str]] = []
+        for index, procedure in enumerate(procedures):
+            field = f"procedures[{index}]"
+            if not isinstance(procedure, dict) or set(procedure) != PROCEDURE_FIELDS:
+                errors.append(f"{field} fields do not match the contract")
+                continue
+            errors.extend(
+                _validate_non_empty_string_fields(
+                    procedure,
+                    field,
+                    ("anti_example", "identity", "revision"),
+                )
+            )
+            phase = procedure.get("phase")
+            if not isinstance(phase, str) or phase not in PHASES:
+                errors.append(f"{field}.phase is unsupported")
+            reason_code = procedure.get("reason_code")
+            if not isinstance(reason_code, str) or not REASON_CODE.fullmatch(reason_code):
+                errors.append(f"{field}.reason_code must be uppercase snake case")
+            for name in ("finished", "good", "required_evidence"):
+                values = procedure.get(name)
+                needs_value = name in {"finished", "good"}
+                if (
+                    not isinstance(values, list)
+                    or (needs_value and not values)
+                    or not all(isinstance(value, str) and value for value in values)
+                ):
+                    errors.append(f"{field}.{name} must be a normalized string list")
+            rationale = procedure.get("rationale")
+            if not isinstance(rationale, dict) or set(rationale) != {
+                "principle_ids",
+                "summary",
+            }:
+                errors.append(f"{field}.rationale fields do not match the contract")
+            else:
+                principle_ids = rationale.get("principle_ids")
+                if not isinstance(principle_ids, list) or not principle_ids or not all(
+                    isinstance(value, str) and value for value in principle_ids
+                ):
+                    errors.append(
+                        f"{field}.rationale.principle_ids must be a normalized string list"
+                    )
+                summary = rationale.get("summary")
+                if not isinstance(summary, str) or not summary:
+                    errors.append(f"{field}.rationale.summary must be a non-empty string")
+            identity = procedure.get("identity")
+            revision = procedure.get("revision")
+            if isinstance(identity, str) and identity and isinstance(revision, str) and revision:
+                references.append((identity, revision))
+        if len(references) != len(set(references)):
+            errors.append("procedure catalog references must be unique")
+    return errors
+
+
 def _accepted_evidence(request: dict[str, Any]) -> set[str]:
     """Return evidence kinds accepted for the request revision and environment."""
     revision = request["revision"]
@@ -367,10 +457,15 @@ def resolve(
     request_errors = validate_resolution_request(request)
     if request_errors:
         return ResolutionRejection(tuple(request_errors))
-    if not isinstance(procedures, dict):
-        return ResolutionRejection(("procedure catalog must be an object",))
+    catalog_errors = validate_procedure_catalog(procedures)
+    if catalog_errors:
+        return ResolutionRejection(
+            tuple(catalog_errors),
+            code="PROCEDURE_CATALOG_INVALID",
+        )
 
     assert isinstance(request, dict)
+    assert isinstance(procedures, dict)
 
     available_procedures = sorted(
         (

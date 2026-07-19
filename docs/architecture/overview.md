@@ -28,6 +28,8 @@ single consumer writer <- typed observable evidence <- authorized procedure
 
 The normalized input conforms to
 [`resolution-request.schema.json`](../../schemas/resolution-request.schema.json).
+The procedure registry conforms to
+[`procedure-catalog.schema.json`](../../schemas/procedure-catalog.schema.json).
 Malformed input returns the non-decision shape in
 [`resolution-rejection.schema.json`](../../schemas/resolution-rejection.schema.json).
 Accepted resolver output conforms to
@@ -43,8 +45,9 @@ a contract failure.
 ## Failure behavior
 
 AEC fails closed when input is missing, stale, malformed, unpinned, inconsistent, or
-effectful. Malformed normalized requests return `RESOLUTION_REQUEST_INVALID`, an
-ordered error list, and `accepted=false`. They never return a decision. A trusted
-request whose pinned procedure is unavailable returns a hashed blocked decision
+effectful. Malformed normalized requests return `RESOLUTION_REQUEST_INVALID`, while
+malformed procedure catalogs return `PROCEDURE_CATALOG_INVALID`. Both include an
+ordered error list and `accepted=false`, and neither returns a decision. A trusted
+request and catalog whose pinned procedure is unavailable return a hashed blocked decision
 instead of silently substituting an upstream role or guessing from chat. A blocker
 must name a concrete reason and the evidence needed to resolve it.

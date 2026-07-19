@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jasonewillis/AEC/schemas/procedure-catalog.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "procedures": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "anti_example": {"minLength": 1, "type": "string"},
+          "finished": {
+            "items": {"minLength": 1, "type": "string"},
+            "minItems": 1,
+            "type": "array"
+          },
+          "good": {
+            "items": {"minLength": 1, "type": "string"},
+            "minItems": 1,
+            "type": "array"
+          },
+          "identity": {"minLength": 1, "type": "string"},
+          "phase": {
+            "enum": [
+              "Intake",
+              "Framing",
+              "Spec",
+              "Plan",
+              "Build",
+              "Verify",
+              "Review",
+              "PR",
+              "Deploy"
+            ]
+          },
+          "rationale": {
+            "additionalProperties": false,
+            "properties": {
+              "principle_ids": {
+                "items": {"minLength": 1, "type": "string"},
+                "minItems": 1,
+                "type": "array"
+              },
+              "summary": {"minLength": 1, "type": "string"}
+            },
+            "required": ["principle_ids", "summary"],
+            "type": "object"
+          },
+          "reason_code": {
+            "pattern": "^[A-Z][A-Z0-9_]+$",
+            "type": "string"
+          },
+          "required_evidence": {
+            "items": {"minLength": 1, "type": "string"},
+            "type": "array"
+          },
+          "revision": {"minLength": 1, "type": "string"}
+        },
+        "required": [
+          "anti_example",
+          "finished",
+          "good",
+          "identity",
+          "phase",
+          "rationale",
+          "reason_code",
+          "required_evidence",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["procedures", "schema_version"],
+  "title": "AEC Procedure Catalog",
+  "type": "object"
+}

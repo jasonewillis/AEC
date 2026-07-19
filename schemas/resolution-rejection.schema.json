@@ -4,7 +4,9 @@
   "additionalProperties": false,
   "properties": {
     "accepted": {"const": false},
-    "code": {"const": "RESOLUTION_REQUEST_INVALID"},
+    "code": {
+      "enum": ["RESOLUTION_REQUEST_INVALID", "PROCEDURE_CATALOG_INVALID"]
+    },
     "errors": {
       "items": {"minLength": 1, "type": "string"},
       "minItems": 1,

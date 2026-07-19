@@ -55,7 +55,7 @@
         "lifecycle_authority": {"const": "consumer-owned"},
         "profile_version": {"minLength": 1, "type": "string"},
         "project": {
-          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$(?![\\s\\S])",
           "type": "string"
         },
         "schema_version": {"const": "1.0.0"},
@@ -159,6 +159,56 @@
     "schema_version",
     "task_id",
     "workflow"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {"phase": {"enum": ["Intake", "Framing"]}},
+        "required": ["phase"]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {"stage": {"const": "Understand"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"phase": {"enum": ["Spec", "Plan"]}},
+        "required": ["phase"]
+      },
+      "then": {
+        "properties": {
+          "workflow": {"properties": {"stage": {"const": "Design"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"phase": {"enum": ["Build", "Verify"]}},
+        "required": ["phase"]
+      },
+      "then": {
+        "properties": {
+          "workflow": {"properties": {"stage": {"const": "Execute"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"phase": {"enum": ["Review", "PR", "Deploy"]}},
+        "required": ["phase"]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {"stage": {"const": "Assure & Release"}}
+          }
+        }
+      }
+    }
   ],
   "title": "AEC Normalized Resolution Request",
   "type": "object"

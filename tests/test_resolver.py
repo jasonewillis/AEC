@@ -21,6 +21,119 @@ def load_json(path: Path) -> object:
 
 
 class ResolverTracerTests(unittest.TestCase):
+    def test_missing_procedure_catalog_fields_return_catalog_rejection(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+
+        result = resolve(request, {})
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["missing procedure catalog fields: procedures, schema_version"],
+            },
+            result.to_dict(),
+        )
+
+    def test_string_procedure_catalog_returns_catalog_rejection(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+
+        result = resolve(request, "not-a-catalog")
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["procedure catalog must be an object"],
+            },
+            result.to_dict(),
+        )
+
+    def test_non_list_procedure_catalog_returns_catalog_rejection(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        invalid_catalog = {"procedures": None, "schema_version": "1.0.0"}
+
+        result = resolve(request, invalid_catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["procedure catalog procedures must be a list"],
+            },
+            result.to_dict(),
+        )
+
+    def test_malformed_catalog_entry_returns_catalog_rejection(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        invalid_catalog = load_json(
+            ROOT / "tests/fixtures/resolver/red/malformed-procedure-catalog.json"
+        )
+
+        result = resolve(request, invalid_catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["procedures[0] fields do not match the contract"],
+            },
+            result.to_dict(),
+        )
+
+    def test_duplicate_required_catalog_procedure_returns_catalog_rejection(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        catalog["procedures"].append(copy.deepcopy(catalog["procedures"][0]))
+
+        result = resolve(request, catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual(
+            {
+                "accepted": False,
+                "code": "PROCEDURE_CATALOG_INVALID",
+                "errors": ["procedure catalog references must be unique"],
+            },
+            result.to_dict(),
+        )
+
+    def test_matched_procedure_missing_required_fields_returns_catalog_rejection(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        del catalog["procedures"][0]["required_evidence"]
+
+        result = resolve(request, catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual("PROCEDURE_CATALOG_INVALID", result.to_dict()["code"])
+        self.assertEqual(
+            ["procedures[0] fields do not match the contract"],
+            result.to_dict()["errors"],
+        )
+
+    def test_matched_procedure_invalid_required_evidence_returns_catalog_rejection(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        catalog = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        catalog["procedures"][0]["required_evidence"] = None
+
+        result = resolve(request, catalog)
+
+        self.assertIsInstance(result, ResolutionRejection)
+        self.assertEqual("PROCEDURE_CATALOG_INVALID", result.to_dict()["code"])
+        self.assertEqual(
+            ["procedures[0].required_evidence must be a normalized string list"],
+            result.to_dict()["errors"],
+        )
+
     def test_malformed_available_procedure_returns_structured_rejection(self) -> None:
         request = load_json(
             ROOT
@@ -167,6 +280,43 @@ class ResolverTracerTests(unittest.TestCase):
 
         self.assertEqual(
             ["SKILL_UNAVAILABLE decisions must set allowed=false"],
+            validate_resolution(tampered),
+        )
+
+    def test_tampered_evidence_needed_decision_cannot_claim_ready(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        tampered = result.to_dict()
+        tampered["gate"] = "Ready"
+        tampered["resolution_hash"] = compute_resolution_hash(tampered)
+
+        self.assertEqual(
+            [
+                "Ready decisions must use ACCEPTANCE_EVIDENCE_COMPLETE",
+                "Ready decisions must not require evidence",
+            ],
+            validate_resolution(tampered),
+        )
+
+    def test_tampered_decision_cannot_invent_an_uppercase_reason_code(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        tampered = result.to_dict()
+        tampered["reason_code"] = "ARBITRARY_GREEN"
+        tampered["resolution_hash"] = compute_resolution_hash(tampered)
+
+        self.assertEqual(
+            [
+                "reason_code is unsupported",
+                (
+                    "Evidence needed decisions must use "
+                    "ACCEPTANCE_EVIDENCE_INCOMPLETE"
+                ),
+            ],
             validate_resolution(tampered),
         )
 
