@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "nonEmptyStringList": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "$id": "https://aec.local/schemas/resolver-program.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "decision_schema_version": {
+      "const": "3.0.0"
+    },
+    "outcomes": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_complete": {
+          "additionalProperties": false,
+          "properties": {
+            "allowed": {
+              "const": true
+            },
+            "gate": {
+              "const": "Ready"
+            },
+            "reason_code": {
+              "const": "ACCEPTANCE_EVIDENCE_COMPLETE"
+            }
+          },
+          "required": [
+            "allowed",
+            "gate",
+            "reason_code"
+          ],
+          "type": "object"
+        },
+        "evidence_incomplete": {
+          "additionalProperties": false,
+          "properties": {
+            "allowed": {
+              "const": true
+            },
+            "gate": {
+              "const": "Evidence needed"
+            },
+            "reason_code": {
+              "const": null
+            }
+          },
+          "required": [
+            "allowed",
+            "gate",
+            "reason_code"
+          ],
+          "type": "object"
+        },
+        "skill_unavailable": {
+          "additionalProperties": false,
+          "properties": {
+            "allowed": {
+              "const": false
+            },
+            "anti_example": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "finished": {
+              "$ref": "#/$defs/nonEmptyStringList"
+            },
+            "gate": {
+              "const": "Blocked"
+            },
+            "good": {
+              "$ref": "#/$defs/nonEmptyStringList"
+            },
+            "rationale_summary": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "reason_code": {
+              "const": "SKILL_UNAVAILABLE"
+            },
+            "required_evidence": {
+              "$ref": "#/$defs/nonEmptyStringList"
+            }
+          },
+          "required": [
+            "allowed",
+            "anti_example",
+            "finished",
+            "gate",
+            "good",
+            "rationale_summary",
+            "reason_code",
+            "required_evidence"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "evidence_complete",
+        "evidence_incomplete",
+        "skill_unavailable"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    }
+  },
+  "required": [
+    "decision_schema_version",
+    "outcomes",
+    "schema_version"
+  ],
+  "title": "AEC deterministic resolver program",
+  "type": "object"
+}
