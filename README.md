@@ -57,6 +57,7 @@ python3 -m unittest discover -s tests -v
 - [Deterministic resolver](docs/architecture/resolver.md)
 - [Operating model](docs/operating-model.md)
 - [Ticket-to-PR workflow](docs/workflows/ticket-to-pr.md)
+- [Milestone runbook](docs/runbooks/milestone.md)
 - [Course traceability](docs/course-traceability/README.md)
 - [Provenance and licensing](docs/provenance.md)
 - [Consumer contract](docs/consumer-contract.md)

@@ -1,6 +1,8 @@
 # Delivery Roadmap
 
 The foundation is intentionally delivered in reversible vertical slices.
+Use the [milestone runbook](../runbooks/milestone.md) to turn a slice into one
+live issue queue with explicit PR or blocker outcomes.
 
 | Slice | Outcome | Binary exit gate |
 | --- | --- | --- |
