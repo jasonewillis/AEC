@@ -1,0 +1,32 @@
+{
+  "decision_schema_version": "3.0.0",
+  "outcomes": {
+    "evidence_complete": {
+      "allowed": true,
+      "gate": "Ready",
+      "reason_code": "ACCEPTANCE_EVIDENCE_COMPLETE"
+    },
+    "evidence_incomplete": {
+      "allowed": true,
+      "gate": "Evidence needed",
+      "reason_code": null
+    },
+    "skill_unavailable": {
+      "allowed": false,
+      "anti_example": "Another available procedure is silently substituted.",
+      "finished": [
+        "The required procedure is available at its pinned revision."
+      ],
+      "gate": "Blocked",
+      "good": [
+        "The required procedure is available before it is recommended."
+      ],
+      "rationale_summary": "The required procedure is unavailable for the requested phase.",
+      "reason_code": "SKILL_UNAVAILABLE",
+      "required_evidence": [
+        "procedure-availability"
+      ]
+    }
+  },
+  "schema_version": "1.0.0"
+}

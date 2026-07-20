@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import math
 import re
+from typing import Any
 
 
 GITHUB_REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
@@ -17,9 +19,50 @@ PROJECT_PROFILE_FIELDS = {
 }
 
 
+def normalize_exact_json(value: object) -> Any:
+    """Return a detached exact-builtin JSON value or reject the input."""
+    return _normalize_exact_json(value, frozenset())
+
+
+def _normalize_exact_json(value: object, ancestors: frozenset[int]) -> Any:
+    """Recursively copy exact JSON values while rejecting reference cycles."""
+    if type(value) is float and not math.isfinite(value):
+        raise ValueError("JSON numbers must be finite")
+    if type(value) is str:
+        _validate_json_string(value)
+        return value
+    if value is None or type(value) in {bool, float, int, str}:
+        return value
+    marker = id(value)
+    if marker in ancestors:
+        raise TypeError("JSON containers must be acyclic")
+    descendants = ancestors | {marker}
+    if type(value) is list:
+        return [_normalize_exact_json(item, descendants) for item in value]
+    if type(value) is dict:
+        normalized: dict[str, Any] = {}
+        for key, item in value.items():
+            if type(key) is not str:
+                raise TypeError("JSON object keys must be exact strings")
+            _validate_json_string(key)
+            normalized[key] = _normalize_exact_json(item, descendants)
+        return normalized
+    raise TypeError("value must contain only exact JSON builtins")
+
+
+def _validate_json_string(value: str) -> None:
+    """Reject Unicode surrogate code points, which UTF-8 cannot encode."""
+    if any(0xD800 <= ord(character) <= 0xDFFF for character in value):
+        raise ValueError("JSON strings must contain only Unicode scalar values")
+
+
 def validate_project_profile(profile: object) -> list[str]:
     """Validate a consumer profile without importing consumer-owned state."""
-    if not isinstance(profile, dict):
+    try:
+        profile = normalize_exact_json(profile)
+    except (TypeError, ValueError):
+        return ["project profile must contain only exact JSON values"]
+    if type(profile) is not dict:
         return ["project profile must be an object"]
 
     errors: list[str] = []

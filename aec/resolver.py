@@ -9,7 +9,8 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from aec.contracts import validate_project_profile
+from aec._generated.resolver_program import RESOLVER_PROGRAM
+from aec.contracts import normalize_exact_json, validate_project_profile
 
 
 REQUIRED_REQUEST_FIELDS = {
@@ -66,18 +67,20 @@ STAGE_PHASES = {
 
 def canonical_resolution_bytes(resolution: object) -> bytes:
     """Return canonical UTF-8 bytes covered by a decision hash."""
-    if not isinstance(resolution, dict):
+    resolution = normalize_exact_json(resolution)
+    if type(resolution) is not dict:
         raise TypeError("resolution must be an object")
     payload = {
         key: value for key, value in resolution.items() if key != "resolution_hash"
     }
     serialized = json.dumps(
         payload,
+        allow_nan=False,
         ensure_ascii=False,
         separators=(",", ":"),
         sort_keys=True,
     )
-    return serialized.encode("utf-8")
+    return serialized.encode("utf-8", errors="strict")
 
 
 def compute_resolution_hash(resolution: object) -> str:
@@ -88,12 +91,14 @@ def compute_resolution_hash(resolution: object) -> str:
 
 def _canonical_json_bytes(value: object) -> bytes:
     """Return deterministic UTF-8 JSON bytes for a normalized input value."""
+    value = normalize_exact_json(value)
     return json.dumps(
         value,
+        allow_nan=False,
         ensure_ascii=False,
         separators=(",", ":"),
         sort_keys=True,
-    ).encode("utf-8")
+    ).encode("utf-8", errors="strict")
 
 
 def _input_binding(value: object) -> str:
@@ -372,7 +377,11 @@ def _validate_workflow(value: object, phase: object) -> list[str]:
 
 def validate_resolution_request(request: object) -> list[str]:
     """Return fail-closed validation errors for a normalized request."""
-    if not isinstance(request, dict):
+    try:
+        request = normalize_exact_json(request)
+    except (TypeError, ValueError):
+        return ["request must contain only exact JSON values"]
+    if type(request) is not dict:
         return ["request must be an object"]
     if not all(isinstance(key, str) for key in request):
         return ["request field names must be strings"]
@@ -418,7 +427,11 @@ def validate_resolution_request(request: object) -> list[str]:
 
 def validate_procedure_catalog(catalog: object) -> list[str]:
     """Return fail-closed validation errors for a procedure catalog."""
-    if not isinstance(catalog, dict):
+    try:
+        catalog = normalize_exact_json(catalog)
+    except (TypeError, ValueError):
+        return ["procedure catalog must contain only exact JSON values"]
+    if type(catalog) is not dict:
         return ["procedure catalog must be an object"]
     if not all(isinstance(key, str) for key in catalog):
         return ["procedure catalog field names must be strings"]
@@ -530,6 +543,17 @@ def resolve(
     request: object, procedures: object
 ) -> ResolutionDecision | ResolutionRejection:
     """Resolve one normalized request without discovery, I/O, or mutation."""
+    try:
+        request = normalize_exact_json(request)
+    except (TypeError, ValueError):
+        return ResolutionRejection(("request must contain only exact JSON values",))
+    try:
+        procedures = normalize_exact_json(procedures)
+    except (TypeError, ValueError):
+        return ResolutionRejection(
+            ("procedure catalog must contain only exact JSON values",),
+            code="PROCEDURE_CATALOG_INVALID",
+        )
     request_errors = validate_resolution_request(request)
     if request_errors:
         return ResolutionRejection(tuple(request_errors))
@@ -580,32 +604,33 @@ def resolve(
     required_evidence = sorted(
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
     )
-    allowed = True
+    outcomes = RESOLVER_PROGRAM["outcomes"]
+    outcome = (
+        outcomes["skill_unavailable"]
+        if skill_unavailable
+        else outcomes["evidence_incomplete"]
+        if required_evidence
+        else outcomes["evidence_complete"]
+    )
+    allowed = outcome["allowed"]
     anti_example = procedure["anti_example"]
     finished = procedure["finished"]
-    gate = "Evidence needed" if required_evidence else "Ready"
+    gate = outcome["gate"]
     good = procedure["good"]
     rationale = {
         "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
         "summary": procedure["rationale"]["summary"],
     }
-    reason_code = (
-        procedure["reason_code"]
-        if required_evidence
-        else "ACCEPTANCE_EVIDENCE_COMPLETE"
-    )
+    reason_code = outcome["reason_code"] or procedure["reason_code"]
     if skill_unavailable:
-        allowed = False
-        anti_example = "Another available procedure is silently substituted."
-        finished = ["The required procedure is available at its pinned revision."]
-        gate = "Blocked"
-        good = ["The required procedure is available before it is recommended."]
+        anti_example = outcome["anti_example"]
+        finished = outcome["finished"]
+        good = outcome["good"]
         rationale = {
             "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
-            "summary": "The required procedure is unavailable for the requested phase.",
+            "summary": outcome["rationale_summary"],
         }
-        reason_code = "SKILL_UNAVAILABLE"
-        required_evidence = ["procedure-availability"]
+        required_evidence = outcome["required_evidence"]
     workflow = request["workflow"]
     capability_profile = request["capability_profile"]
     consumer_profile = request["consumer_profile"]
@@ -643,7 +668,7 @@ def resolve(
             "revision": required_procedure["revision"],
         },
         "revision": request["revision"],
-        "schema_version": "3.0.0",
+        "schema_version": RESOLVER_PROGRAM["decision_schema_version"],
         "source_identities": {
             "capability_profile": capability_profile["identity"],
             "consumer_profile": consumer_profile["project"],
@@ -664,12 +689,7 @@ def resolve(
     }
     resolution_hash = compute_resolution_hash(payload)
     payload["resolution_hash"] = resolution_hash
-    canonical_bytes = json.dumps(
-        payload,
-        ensure_ascii=False,
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode("utf-8")
+    canonical_bytes = _canonical_json_bytes(payload)
     return ResolutionDecision(
         canonical_bytes=canonical_bytes,
         hashed_bytes=canonical_resolution_bytes(payload),
