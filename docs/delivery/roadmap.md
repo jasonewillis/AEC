@@ -25,7 +25,10 @@ has no semantic meaning. A ten-case completeness matrix now proves that the nine
 goldens select one procedure and the unavailable tracer returns one structured blocker,
 while every decision retains rationale, evidence, Good, Finished, and an anti-example.
 These tracers do not complete Slice 2: the static purity scans still must pass its binary
-exit gate.
+exit gate. Slice 3 preparation has installed the seven exact pinned Blueprint skills
+under one canonical `.agents/skills/` root, with Claude symlinks and deterministic
+hash and discovery-parity validation. Adapter execution and identical decision-hash
+proof remain open.
 
 ## Completion rule
 

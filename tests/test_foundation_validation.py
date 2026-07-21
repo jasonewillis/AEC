@@ -559,16 +559,29 @@ class SourceContractTests(unittest.TestCase):
             normalized_traceability,
         )
 
-    def test_blueprint_adoption_mode_is_rejected_without_license(self) -> None:
+    def test_blueprint_adoption_requires_the_recorded_direct_permission(self) -> None:
         provenance = load_json(ROOT / "provenance" / "upstream-lock.json")
         broken = copy.deepcopy(provenance)
         blueprint = next(
             item for item in broken["upstreams"] if item["name"] == "blueprint"
         )
-        blueprint["relationship"] = "adopted"
+        blueprint.pop("authorization")
 
         self.assertIn(
-            "Blueprint must remain reference-only without a verified adoption license",
+            "Blueprint authorization record does not match",
+            validate_provenance(broken),
+        )
+
+    def test_blueprint_permission_does_not_invent_an_upstream_license(self) -> None:
+        provenance = load_json(ROOT / "provenance" / "upstream-lock.json")
+        broken = copy.deepcopy(provenance)
+        blueprint = next(
+            item for item in broken["upstreams"] if item["name"] == "blueprint"
+        )
+        blueprint["license"] = "MIT"
+
+        self.assertIn(
+            "Blueprint license must remain null unless independently verified",
             validate_provenance(broken),
         )
 

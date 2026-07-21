@@ -35,6 +35,8 @@ This repository currently provides:
   exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
 - provenance locks for upstream pattern sources;
+- seven exact, pinned Blueprint skills under one canonical agent-neutral root with
+  Claude symlinks and fail-closed hash and discovery-parity validation;
 - factual-only provenance for 13 AI Engineer lessons, one supplemental gateway PDF,
   and eight Evals & Monitoring lessons with honestly unverified hashes;
 - an independently authored AEC principle registry with no course-to-policy mapping;
@@ -65,10 +67,12 @@ python3 -m unittest discover -s tests -v
 
 ## Source boundaries
 
-AEC is independently authored. `owainlewis/workflows` is a pinned MIT-licensed
-pattern source. `owainlewis/blueprint` is a pinned reference-only capability index
-because this project has not verified an adoption license. Private course records are
-limited to factual identifiers, exact titles, source filenames, and hashes when
-verified. They do not define runtime policy or prompts. AEC ships no populated
-consumer profile; consumer profiles are declared and owned entirely in consumer
-repositories. See [provenance](docs/provenance.md).
+AEC-authored content is MIT licensed. `owainlewis/workflows` is a pinned MIT-licensed
+pattern source. The seven `owainlewis/blueprint` skills are installed byte-for-byte at
+the pinned revision under the repository owner's attestation of direct permission from
+Owain Lewis as the course creator. Blueprint has no verified upstream license, and the
+permission record is not an MIT claim. Private course records remain limited to factual
+identifiers, exact titles, source filenames, and verified hashes. They do not define
+runtime policy or prompts. AEC ships no populated consumer profile; consumer profiles
+are declared and owned entirely in consumer repositories. See
+[provenance](docs/provenance.md) and [third-party notices](THIRD_PARTY_NOTICES.md).

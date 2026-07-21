@@ -37,8 +37,11 @@ Consumers must not translate it to an alternate `identity` and `version` shape.
 The project value is the hashed consumer-profile identity, and `profile_version` is
 the hashed consumer-profile revision.
 
-Consumers must not vendor private course sources, copy Blueprint skill text,
-create agent-specific policy forks, or let AEC write their lifecycle state.
+Consumers must not vendor private course sources, infer a general Blueprint license
+from AEC's recorded direct permission, create agent-specific policy forks, or let AEC
+write their lifecycle state. Consumers may discover AEC's exact installed Blueprint
+skills through the canonical `.agents/skills/` root or its Claude symlinks; they must
+not silently fork or adapt those files.
 
 ## Conformance exit gate
 
