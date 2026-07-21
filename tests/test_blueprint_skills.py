@@ -173,6 +173,21 @@ class BlueprintSkillInstallationTests(unittest.TestCase):
                 validate_blueprint_installation(copied_root),
             )
 
+    def test_upstream_lock_cannot_redirect_the_blueprint_repository(self) -> None:
+        with self._copy_repository() as copied_root:
+            lock_path = copied_root / "provenance/upstream-lock.json"
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+            blueprint = next(
+                item for item in lock["upstreams"] if item["name"] == "blueprint"
+            )
+            blueprint["repository"] = "https://github.com/attacker/not-blueprint"
+            lock_path.write_text(json.dumps(lock, indent=2) + "\n", encoding="utf-8")
+
+            self.assertIn(
+                "Blueprint upstream repository does not match the authorized source",
+                validate_blueprint_installation(copied_root),
+            )
+
     def test_aec_mit_license_must_exclude_the_blueprint_files(self) -> None:
         with self._copy_repository() as copied_root:
             (copied_root / "THIRD_PARTY_NOTICES.md").unlink()

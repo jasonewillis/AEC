@@ -17,7 +17,7 @@ here.
 | Canonical hash contract | Satisfied | `tools/validate_foundation.py:69-86` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
 | executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json:9,12` (`const false`), `tools/validate_foundation.py:107-110` |
 | Workflows MIT pin | Satisfied | `provenance/upstream-lock.json:4-10`, `docs/provenance.md:9,16-18` |
-| Blueprint authorized skill pin and parity | Satisfied after Slice 3 foundation install | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/` |
+| Blueprint authorized skill pin and static discovery parity | Partially satisfied after Slice 3 foundation install; real loader and decision-hash parity remain open | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/`, issue #5 |
 | Factual course provenance (13 + 8 lessons) | Satisfied | `provenance/course-inventory.json`, `docs/course-traceability/README.md` |
 | Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml:16-38` |
 

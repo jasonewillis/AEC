@@ -170,6 +170,10 @@ def validate_blueprint_installation(root: Path = ROOT) -> list[str]:
         errors.append("upstream provenance must contain an upstreams list")
     if blueprint_lock.get("license") is not None:
         errors.append("Blueprint license must remain null unless independently verified")
+    if blueprint_lock.get("repository") != BLUEPRINT_REPOSITORY:
+        errors.append(
+            "Blueprint upstream repository does not match the authorized source"
+        )
     if blueprint_lock.get("revision") != BLUEPRINT_REVISION:
         errors.append("Blueprint upstream revision does not match the skill manifest")
     if blueprint_lock.get("relationship") != "authorized-skill-source":
