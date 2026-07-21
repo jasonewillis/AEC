@@ -19,6 +19,10 @@ from aec.resolver import (  # noqa: E402
     validate_procedure_catalog,
     validate_resolution_request,
 )
+from tools.validate_blueprint_skills import (  # noqa: E402
+    EXPECTED_AUTHORIZATION,
+    validate_blueprint_installation,
+)
 
 
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
@@ -509,22 +513,24 @@ def validate_provenance(provenance: object) -> list[str]:
         errors.append("Workflows relationship must be pattern-source")
 
     blueprint = by_name.get("blueprint", {})
-    if (
-        not blueprint.get("license")
-        and blueprint.get("relationship") != "reference-only"
-    ):
-        errors.append(
-            "Blueprint must remain reference-only without a verified adoption license"
-        )
+    if blueprint.get("license") is not None:
+        errors.append("Blueprint license must remain null unless independently verified")
+    if blueprint.get("relationship") != "authorized-skill-source":
+        errors.append("Blueprint relationship must be authorized-skill-source")
+    if blueprint.get("authorization") != EXPECTED_AUTHORIZATION:
+        errors.append("Blueprint authorization record does not match")
 
     for name, upstream in by_name.items():
-        if set(upstream) != {
+        expected_fields = {
             "license",
             "name",
             "relationship",
             "repository",
             "revision",
-        }:
+        }
+        if name == "blueprint":
+            expected_fields.add("authorization")
+        if set(upstream) != expected_fields:
             errors.append(f"{name} fields do not match the upstream contract")
         revision = upstream.get("revision")
         if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
@@ -860,6 +866,10 @@ def main() -> int:
         (ROOT / "tests" / "fixtures" / "resolver" / "golden").glob("*.json")
     )
     checks = [
+        report_errors(
+            "blueprint-skills",
+            validate_blueprint_installation(ROOT),
+        ),
         report_errors(
             "provenance",
             validate_provenance(load_json(ROOT / "provenance" / "upstream-lock.json")),

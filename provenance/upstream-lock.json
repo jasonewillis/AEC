@@ -9,11 +9,19 @@
       "revision": "ce3ff09e27c501e7689fd069ece3aaab63da7e46"
     },
     {
+      "authorization": {
+        "application": "exact-byte installation in AEC directed by repository owner",
+        "asserted_by": "AEC repository owner",
+        "basis": "operator-attested-course-participant-permission",
+        "granted_by": "Owain Lewis",
+        "recorded_on": "2026-07-21",
+        "scope": "course-participant use of the seven Blueprint skills"
+      },
       "license": null,
       "name": "blueprint",
       "repository": "https://github.com/owainlewis/blueprint",
-      "relationship": "reference-only",
-      "revision": "1787459f5a9dc5f95b04f156b1b0877696fb81c5"
+      "relationship": "authorized-skill-source",
+      "revision": "3af769db122e3c16f64bb78bcd93eb64d3e541e8"
     }
   ]
 }

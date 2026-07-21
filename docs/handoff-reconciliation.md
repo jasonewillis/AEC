@@ -17,7 +17,7 @@ here.
 | Canonical hash contract | Satisfied | `tools/validate_foundation.py:69-86` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
 | executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json:9,12` (`const false`), `tools/validate_foundation.py:107-110` |
 | Workflows MIT pin | Satisfied | `provenance/upstream-lock.json:4-10`, `docs/provenance.md:9,16-18` |
-| Blueprint reference-only pin | Satisfied | `provenance/upstream-lock.json:11-17`, `docs/provenance.md:10,20-25` |
+| Blueprint authorized skill pin and parity | Satisfied after Slice 3 foundation install | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/` |
 | Factual course provenance (13 + 8 lessons) | Satisfied | `provenance/course-inventory.json`, `docs/course-traceability/README.md` |
 | Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml:16-38` |
 
@@ -66,9 +66,9 @@ Slice numbers match `docs/delivery/roadmap.md`.
 
 ## Q4: Smallest next slice
 
-**Slice 2** -- the deterministic resolver, Claude/Codex parity, and the
-threat-model red canaries from the handoff's Mandatory Red Canaries list (all
-nine), per `docs/delivery/roadmap.md` row 2.
+**Slice 2** remains the deterministic resolver and resolver-owned threat-model
+canaries. Claude/Codex loader discovery parity is Slice 3 and is owned by issue #5;
+consumer-state and writer canaries stay in their linked consumer issues.
 
 ## Q5: Red/green proof list for Slice 2
 
@@ -79,8 +79,8 @@ nine), per `docs/delivery/roadmap.md` row 2.
   mutating AEC, stale revision, missing evidence, unpinned capability profile,
   duplicate resolution, unavailable procedure, cross-environment leakage,
   unauthorized lifecycle write).
-- A parity harness that runs the same fixture through the Claude adapter and
-  the Codex adapter and asserts identical `resolution_hash` output.
+- Slice 3 separately proves Claude and Codex discover one canonical skill set and run
+  equivalent adapter inputs. That proof must not be used to close Slice 2 early.
 
 ## Q6: Owning branch/issue/PR pattern
 

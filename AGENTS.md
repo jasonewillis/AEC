@@ -23,8 +23,13 @@ These rules apply to every agent working in this repository.
 
 ## Source and licensing boundaries
 
-- Do not copy or adapt Blueprint expressive content unless a compatible adoption
-  license is verified and recorded.
+- Do not copy or adapt Blueprint expressive content unless a compatible license or
+  direct authorization is verified and recorded. The seven pinned Blueprint skills
+  are installed byte-for-byte under the repository owner's attestation of direct
+  permission from Owain Lewis. That permission is not an upstream MIT license claim.
+- Keep Blueprint skills under `.agents/skills/` as the canonical Codex-discoverable
+  source and `.claude/skills/` as relative symlinks to that source. Hash, provenance,
+  and parity validation must pass before those files are trusted.
 - Do not copy course transcripts, recordings, slides, or proprietary lesson text.
 - Keep private course provenance factual-only: stable source-set identities, exact
   titles, source filenames, and verified hashes. Do not store summaries, mappings,
