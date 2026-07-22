@@ -1,0 +1,113 @@
+name: Candidate admission
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+jobs:
+  admit:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      head-sha: ${{ steps.head.outputs.sha }}
+    steps:
+      - name: Check out immutable base
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Admit candidate as Git data
+        id: head
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -m tools.admission_root_v1 --self-check --root .
+          git fetch --no-tags --depth=1 origin "${HEAD_SHA}"
+          git ls-tree -rz --full-tree "${HEAD_SHA}" > "${RUNNER_TEMP}/candidate-tree.bin"
+          mkdir "${RUNNER_TEMP}/candidate-blobs"
+          while IFS= read -r path; do
+            object_id="$(git rev-parse "${HEAD_SHA}:${path}")"
+            git cat-file blob "${object_id}" > "${RUNNER_TEMP}/candidate-blobs/${object_id}"
+          done < <(python3 -m tools.admission_root_v1 --print-required-paths)
+          validator_blob="$(git rev-parse "${BASE_SHA}:tools/admission_root_v1.py")"
+          workflow_blob="$(git rev-parse \
+            "${BASE_SHA}:.github/workflows/candidate-admission.yml")"
+          python3 -m tools.admission_root_v1 \
+            --candidate \
+            --records "${RUNNER_TEMP}/candidate-tree.bin" \
+            --record-format tree-v1 \
+            --blob-dir "${RUNNER_TEMP}/candidate-blobs" \
+            --base-sha "${BASE_SHA}" \
+            --validator-blob-oid "${validator_blob}" \
+            --validator-sha256 "$(shasum -a 256 tools/admission_root_v1.py | cut -d ' ' -f 1)" \
+            --workflow-blob-oid "${workflow_blob}" \
+            --workflow-sha256 "$(shasum -a 256 \
+              .github/workflows/candidate-admission.yml | cut -d ' ' -f 1)"
+          echo "sha=${HEAD_SHA}" >> "${GITHUB_OUTPUT}"
+
+  behavior:
+    needs: admit
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out admitted head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.admit.outputs.head-sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+
+      - name: Prove admitted behavior
+        run: |
+          python3 -m tools.validate_foundation
+          python3 -m tools.generate_resolver --check
+          python3 -m unittest discover -s tests -v
+
+  publish-validate:
+    needs: [admit, behavior]
+    if: ${{ always() }}
+    permissions:
+      statuses: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Publish validate status on the exact pull request head
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          ADMITTED_SHA: ${{ needs.admit.outputs.head-sha }}
+          ADMIT_RESULT: ${{ needs.admit.result }}
+          BEHAVIOR_RESULT: ${{ needs.behavior.result }}
+        with:
+          script: |
+            const headSha = process.env.HEAD_SHA;
+            const admittedSha = process.env.ADMITTED_SHA;
+            const passed = process.env.ADMIT_RESULT === "success"
+              && process.env.BEHAVIOR_RESULT === "success"
+              && admittedSha === headSha;
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: headSha,
+              state: passed ? "success" : "failure",
+              context: "validate",
+              description: passed
+                ? "Base admission and post-admission behavior passed"
+                : "Base admission or post-admission behavior failed",
+            });
