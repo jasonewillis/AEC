@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/jasonewillis/AEC/schemas/consumer-state.schema.json",
+  "additionalProperties": false,
+  "properties": {
+    "blockers": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {"type": "boolean"},
+          "identity": {"minLength": 1, "type": "string"},
+          "reason_code": {"minLength": 1, "type": "string"}
+        },
+        "required": ["active", "identity", "reason_code"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {"minLength": 1, "type": "string"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "identity": {"minLength": 1, "type": "string"},
+        "version": {"minLength": 1, "type": "string"}
+      },
+      "required": ["capabilities", "identity", "version"],
+      "type": "object"
+    },
+    "consumer_profile": {"$ref": "#/$defs/consumer_profile"},
+    "effects": {
+      "additionalProperties": false,
+      "properties": {
+        "executes": {"const": false},
+        "mutates": {"const": false}
+      },
+      "required": ["executes", "mutates"],
+      "type": "object"
+    },
+    "environment": {
+      "additionalProperties": false,
+      "properties": {"identity": {"minLength": 1, "type": "string"}},
+      "required": ["identity"],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {"type": "boolean"},
+          "environment": {"minLength": 1, "type": "string"},
+          "kind": {"minLength": 1, "type": "string"},
+          "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
+        },
+        "required": ["accepted", "environment", "kind", "revision"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "expires_at": {"format": "date-time", "pattern": "Z$", "type": "string"},
+    "observed_at": {"format": "date-time", "pattern": "Z$", "type": "string"},
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "additionalProperties": false,
+          "properties": {
+            "require_exact_environment": {"const": true},
+            "require_exact_revision": {"const": true}
+          },
+          "required": ["require_exact_environment", "require_exact_revision"],
+          "type": "object"
+        },
+        "identity": {"minLength": 1, "type": "string"},
+        "revision": {"minLength": 1, "type": "string"}
+      },
+      "required": ["facts", "identity", "revision"],
+      "type": "object"
+    },
+    "procedures": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "items": {"$ref": "#/$defs/procedure_reference"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required": {"$ref": "#/$defs/procedure_reference"}
+      },
+      "required": ["available", "required"],
+      "type": "object"
+    },
+    "provider": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {"minLength": 1, "type": "string"},
+        "revision": {
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "type": "string"
+        }
+      },
+      "required": ["identity", "revision"],
+      "type": "object"
+    },
+    "revision": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
+      },
+      "required": ["identity"],
+      "type": "object"
+    },
+    "schema_version": {"const": "1.0.0"},
+    "task": {
+      "additionalProperties": false,
+      "properties": {"identity": {"minLength": 1, "type": "string"}},
+      "required": ["identity"],
+      "type": "object"
+    },
+    "workflow_position": {
+      "additionalProperties": false,
+      "properties": {
+        "lane": {"minLength": 1, "type": "string"},
+        "phase": {
+          "enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]
+        },
+        "stage": {"enum": ["Understand", "Design", "Execute", "Assure & Release"]},
+        "workflow": {"const": "ticket-to-pr"},
+        "workflow_revision": {"minLength": 1, "type": "string"}
+      },
+      "required": ["lane", "phase", "stage", "workflow", "workflow_revision"],
+      "type": "object"
+    }
+  },
+  "required": [
+    "blockers",
+    "capabilities",
+    "consumer_profile",
+    "effects",
+    "environment",
+    "evidence",
+    "expires_at",
+    "observed_at",
+    "policy",
+    "procedures",
+    "provider",
+    "revision",
+    "schema_version",
+    "task",
+    "workflow_position"
+  ],
+  "$defs": {
+    "consumer_profile": {
+      "additionalProperties": false,
+      "properties": {
+        "aec_mode": {"const": "read-only-mentor"},
+        "agent_adapters": {
+          "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "lifecycle_authority": {"const": "consumer-owned"},
+        "profile_version": {"minLength": 1, "type": "string"},
+        "project": {
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$(?![\\s\\S])",
+          "type": "string"
+        },
+        "schema_version": {"const": "1.0.0"},
+        "workflow": {"const": "ticket-to-pr"}
+      },
+      "required": [
+        "aec_mode",
+        "agent_adapters",
+        "lifecycle_authority",
+        "profile_version",
+        "project",
+        "schema_version",
+        "workflow"
+      ],
+      "type": "object"
+    },
+    "procedure_reference": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {"minLength": 1, "type": "string"},
+        "revision": {"minLength": 1, "type": "string"}
+      },
+      "required": ["identity", "revision"],
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "workflow_position": {
+            "properties": {"phase": {"enum": ["Intake", "Framing"]}},
+            "required": ["phase"]
+          }
+        },
+        "required": ["workflow_position"]
+      },
+      "then": {
+        "properties": {
+          "workflow_position": {"properties": {"stage": {"const": "Understand"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "workflow_position": {
+            "properties": {"phase": {"enum": ["Spec", "Plan"]}},
+            "required": ["phase"]
+          }
+        },
+        "required": ["workflow_position"]
+      },
+      "then": {
+        "properties": {
+          "workflow_position": {"properties": {"stage": {"const": "Design"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "workflow_position": {
+            "properties": {"phase": {"enum": ["Build", "Verify"]}},
+            "required": ["phase"]
+          }
+        },
+        "required": ["workflow_position"]
+      },
+      "then": {
+        "properties": {
+          "workflow_position": {"properties": {"stage": {"const": "Execute"}}}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "workflow_position": {
+            "properties": {"phase": {"enum": ["Review", "PR", "Deploy"]}},
+            "required": ["phase"]
+          }
+        },
+        "required": ["workflow_position"]
+      },
+      "then": {
+        "properties": {
+          "workflow_position": {
+            "properties": {"stage": {"const": "Assure & Release"}}
+          }
+        }
+      }
+    }
+  ],
+  "title": "AEC Consumer State Provider Record",
+  "type": "object"
+}

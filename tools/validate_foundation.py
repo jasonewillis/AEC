@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 import sys
@@ -14,6 +15,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from aec.contracts import validate_project_profile  # noqa: E402, F401
+from aec.consumer import (  # noqa: E402
+    ConsumerStateRejection,
+    resolve_consumer_state,
+    validate_consumer_state,
+)
 from aec.resolver import (  # noqa: E402
     compute_resolution_hash,
     validate_procedure_catalog,
@@ -854,10 +860,29 @@ def report_errors(label: str, errors: list[str]) -> bool:
     return False
 
 
+def materialize_consumer_state_case(
+    state: dict[str, Any], case: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply one bounded red-fixture operation to a consumer state record."""
+    value = copy.deepcopy(state)
+    path = case["path"]
+    target: dict[str, Any] = value
+    for part in path[:-1]:
+        target = target[part]
+    if case["operation"] == "remove":
+        del target[path[-1]]
+    elif case["operation"] == "replace":
+        target[path[-1]] = case["value"]
+    return value
+
+
 def main() -> int:
     """Validate the complete foundation bootstrap contract."""
     course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
     procedure_catalog = load_json(ROOT / "config" / "procedures" / "ticket-to-pr.json")
+    consumer_state = load_json(
+        ROOT / "tests" / "fixtures" / "consumer-state" / "valid.json"
+    )
     principle_registry = load_json(
         ROOT / "config" / "principles" / "aec-engineering.json"
     )
@@ -899,6 +924,10 @@ def main() -> int:
         report_errors(
             "procedure-catalog.ticket-to-pr",
             validate_procedure_catalog(procedure_catalog),
+        ),
+        report_errors(
+            "consumer-state.valid",
+            validate_consumer_state(consumer_state),
         ),
         report_errors(
             "resolution.valid",
@@ -1044,6 +1073,30 @@ def main() -> int:
             else ["canary did not detect course runtime authority"],
         )
     )
+    consumer_cases = load_json(
+        ROOT / "tests" / "fixtures" / "consumer-state" / "red-cases.json"
+    )["cases"]
+    for case in consumer_cases:
+        result = resolve_consumer_state(
+            materialize_consumer_state_case(consumer_state, case),
+            procedure_catalog,
+            current_time=case.get("current_time", "2026-01-01T00:30:00Z"),
+            expected_environment=case.get("expected_environment", "test"),
+            expected_revision=case.get(
+                "expected_revision",
+                "0123456789abcdef0123456789abcdef01234567",
+            ),
+        )
+        checks.append(
+            report_errors(
+                f"red-canary.consumer-state.{case['name']}",
+                []
+                if isinstance(result, ConsumerStateRejection)
+                and result.code == case["code"]
+                and result.to_dict()["card"] is None
+                else ["consumer-state canary did not fail closed"],
+            )
+        )
     return 0 if all(checks) else 1
 
 
