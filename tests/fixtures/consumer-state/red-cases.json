@@ -1,0 +1,81 @@
+{
+  "cases": [
+    {
+      "code": "CONSUMER_STATE_INVALID",
+      "name": "missing",
+      "operation": "remove",
+      "path": ["evidence"]
+    },
+    {
+      "code": "CONSUMER_STATE_INVALID",
+      "name": "malformed",
+      "operation": "replace",
+      "path": ["workflow_position", "phase"],
+      "value": 7
+    },
+    {
+      "code": "CONSUMER_STATE_STALE",
+      "current_time": "2026-01-01T01:00:00Z",
+      "name": "stale",
+      "operation": "none",
+      "path": []
+    },
+    {
+      "code": "CONSUMER_STATE_MISMATCH",
+      "expected_revision": "fedcba9876543210fedcba9876543210fedcba98",
+      "name": "mismatched",
+      "operation": "none",
+      "path": []
+    },
+    {
+      "code": "CONSUMER_STATE_EFFECTFUL",
+      "name": "effectful",
+      "operation": "replace",
+      "path": ["effects", "mutates"],
+      "value": true
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-bearing",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "/Users/example/private/task"
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-after-parenthesis",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "artifact:(/Users/example/private/task)"
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-after-colon",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "path:/Users/example/private/task"
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-unc",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "\\\\server\\private\\task"
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-windows-drive",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "prefix[C:\\Users\\example\\secret]"
+    },
+    {
+      "code": "CONSUMER_STATE_PRIVATE_PATH",
+      "name": "private-path-dot-relative",
+      "operation": "replace",
+      "path": ["task", "identity"],
+      "value": "../private/task"
+    }
+  ],
+  "schema_version": "1.0.0"
+}

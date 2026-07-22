@@ -4,6 +4,11 @@ AEC is reusable only when consumer-specific state stays in the consumer. AEC shi
 no populated consumer profile; a consumer produces its own, shaped to the contract
 validated by `tools/validate_foundation.py`.
 
+The public state-provider boundary is the closed, versioned
+[`consumer-state.schema.json`](../schemas/consumer-state.schema.json) contract. A caller
+supplies one in-memory record plus the expected revision, expected environment, current
+time, and AEC-owned procedure catalog. AEC performs no discovery or I/O at this seam.
+
 ## AEC provides
 
 - workflow and phase vocabulary;
@@ -43,6 +48,37 @@ write their lifecycle state. Consumers may discover AEC's exact installed Bluepr
 skills through the canonical `.agents/skills/` root or its Claude symlinks; they must
 not silently fork or adapt those files.
 
+## Pure consumer adapter
+
+```python
+from aec.consumer import ConsumerStateRejection, resolve_consumer_state
+
+result = resolve_consumer_state(
+    caller_state,
+    procedure_catalog,
+    current_time="2026-01-01T00:30:00Z",
+    expected_environment="test",
+    expected_revision="0123456789abcdef0123456789abcdef01234567",
+)
+if isinstance(result, ConsumerStateRejection):
+    rejection = result.to_dict()  # card is always null
+else:
+    card = result.to_dict()
+```
+
+The record contains only project-neutral task, revision, environment, workflow
+position, evidence, capability, procedure, policy, blocker, provider, freshness, and
+read-only effect facts. Its `effects` object must declare `executes=false` and
+`mutates=false`. The adapter rejects malformed or unknown fields, stale freshness
+windows, revision or environment mismatches, effectful declarations, and local private
+paths before invoking the resolver.
+
+An accepted record is translated into the existing normalized resolver request. The
+resulting card contains Lane, Phase, the stage and nine-phase rail position, Gate,
+rationale, required proof, Good, Finished, and one anti-example. Its transition request
+is a draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC never
+submits that draft.
+
 ## Conformance exit gate
 
 The consumer integration is ready for a bounded pilot only when:
@@ -52,3 +88,9 @@ The consumer integration is ready for a bounded pilot only when:
 3. missing, stale, malformed, duplicate, and effectful inputs fail closed;
 4. one real issue traverses the nine phases with exact evidence; and
 5. the authoritative record and visible project projection reconcile.
+
+The consumer integration and ownership disposition for the first FedJobAdvisor
+consumer is recorded in the
+[FedJobAdvisor migration map](fedjobadvisor-migration-map.md). That map is evidence and
+does not import its transport, Project, label, writer, or deployment implementation
+into AEC.
