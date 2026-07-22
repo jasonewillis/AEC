@@ -345,14 +345,17 @@ def _terminal_receipt(
     )
 
 
-def _loader_evidence_is_valid(evidence: LoaderEvidence) -> bool:
+def _loader_evidence_is_valid(
+    evidence: LoaderEvidence,
+    project_root: Path,
+) -> bool:
     """Return whether normalized loader evidence satisfies every invariant."""
     expected_roots = {
         "claude": (".claude", "skills"),
         "codex": (".agents", "skills"),
     }
     expected_suffix = expected_roots.get(evidence.agent)
-    if expected_suffix is None:
+    if expected_suffix is None or not project_root.is_absolute():
         return False
     if type(evidence.runtime_version) is not str or not evidence.runtime_version.strip():
         return False
@@ -360,8 +363,9 @@ def _loader_evidence_is_valid(evidence: LoaderEvidence) -> bool:
         return False
     if type(evidence.project_root) is not str:
         return False
-    project_root = Path(evidence.project_root)
-    if not project_root.is_absolute() or project_root.parts[-2:] != expected_suffix:
+    evidence_root = Path(evidence.project_root)
+    expected_root = project_root.resolve().joinpath(*expected_suffix)
+    if not evidence_root.is_absolute() or evidence_root != expected_root:
         return False
     if (
         type(evidence.suppressed_conflicts) is not int
@@ -378,6 +382,7 @@ def build_adapter_receipt(
     skill_manifest: object,
     *,
     installation_errors: tuple[str, ...],
+    project_root: Path,
     aec_available: bool = True,
 ) -> AdapterReceipt:
     """Bind trusted loader evidence to one deterministic AEC decision."""
@@ -388,23 +393,23 @@ def build_adapter_receipt(
             status="rejected",
         )
     agent = evidence.agent if evidence.agent in {"claude", "codex"} else "unknown"
+    if not aec_available:
+        return _terminal_receipt(
+            agent=agent,
+            code="AEC_UNAVAILABLE",
+            status="degraded",
+        )
     if isinstance(evidence, AdapterRejection):
         return _terminal_receipt(
             agent=agent,
             code=evidence.code,
             status="rejected",
         )
-    if not _loader_evidence_is_valid(evidence):
+    if not _loader_evidence_is_valid(evidence, project_root):
         return _terminal_receipt(
             agent=agent,
             code="LOADER_EVIDENCE_INVALID",
             status="rejected",
-        )
-    if not aec_available:
-        return _terminal_receipt(
-            agent=agent,
-            code="AEC_UNAVAILABLE",
-            status="degraded",
         )
     if installation_errors:
         return _terminal_receipt(

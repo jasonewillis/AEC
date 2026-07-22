@@ -199,6 +199,7 @@ def prove() -> dict[str, object]:
         catalog,
         manifest,
         installation_errors=installation_errors,
+        project_root=ROOT,
     )
     claude_receipt = build_adapter_receipt(
         claude_evidence,
@@ -206,6 +207,7 @@ def prove() -> dict[str, object]:
         catalog,
         manifest,
         installation_errors=installation_errors,
+        project_root=ROOT,
     )
     _require_ready(codex_receipt)
     _require_ready(claude_receipt)

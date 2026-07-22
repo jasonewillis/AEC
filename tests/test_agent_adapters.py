@@ -93,6 +93,7 @@ class AgentAdapterTests(unittest.TestCase):
             self.catalog,
             self.manifest,
             installation_errors=(),
+            project_root=ROOT,
         )
         claude_receipt = build_adapter_receipt(
             claude,
@@ -100,6 +101,7 @@ class AgentAdapterTests(unittest.TestCase):
             self.catalog,
             self.manifest,
             installation_errors=(),
+            project_root=ROOT,
         )
 
         self.assertEqual("ready", codex_receipt.status)
@@ -195,6 +197,7 @@ class AgentAdapterTests(unittest.TestCase):
             self.catalog,
             self.manifest,
             installation_errors=("skill hash mismatch",),
+            project_root=ROOT,
         )
         changed_manifest = copy.deepcopy(self.manifest)
         changed_manifest["skills"][0]["name"] = "renamed"
@@ -204,6 +207,7 @@ class AgentAdapterTests(unittest.TestCase):
             self.catalog,
             changed_manifest,
             installation_errors=(),
+            project_root=ROOT,
         )
 
         self.assertEqual("SKILL_INSTALLATION_INVALID", invalid_install.code)
@@ -226,6 +230,7 @@ class AgentAdapterTests(unittest.TestCase):
             "empty runtime": {"runtime_version": ""},
             "wrong skill order": {"skill_names": tuple(reversed(SKILL_NAMES))},
             "relative project root": {"project_root": ".agents/skills"},
+            "stale project root": {"project_root": "/stale/.agents/skills"},
             "wrong root kind": {"project_root": str(ROOT / ".claude/skills")},
             "negative conflict count": {"suppressed_conflicts": -1},
             "boolean conflict count": {"suppressed_conflicts": False},
@@ -245,6 +250,7 @@ class AgentAdapterTests(unittest.TestCase):
                     self.catalog,
                     self.manifest,
                     installation_errors=(),
+                    project_root=ROOT,
                 )
 
                 self.assertEqual("LOADER_EVIDENCE_INVALID", result.code)
@@ -265,6 +271,7 @@ class AgentAdapterTests(unittest.TestCase):
             self.catalog,
             self.manifest,
             installation_errors=(),
+            project_root=ROOT,
             aec_available=False,
         )
 
@@ -274,6 +281,21 @@ class AgentAdapterTests(unittest.TestCase):
         self.assertIsNone(result.request_hash)
         self.assertIsNone(result.decision_hash)
         self.assertIsNone(result.skill_manifest_hash)
+
+    def test_aec_unavailable_dominates_loader_rejection(self) -> None:
+        result = build_adapter_receipt(
+            AdapterRejection(code="PROJECT_SKILL_ROOT_MISSING", agent="codex"),
+            self.request,
+            self.catalog,
+            self.manifest,
+            installation_errors=(),
+            project_root=ROOT,
+            aec_available=False,
+        )
+
+        self.assertEqual("degraded", result.status)
+        self.assertEqual("AEC_UNAVAILABLE", result.code)
+        self.assertFalse(result.authoritative)
 
 
 if __name__ == "__main__":
