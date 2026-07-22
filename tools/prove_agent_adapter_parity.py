@@ -97,7 +97,7 @@ def _stop_process(process: subprocess.Popen[bytes]) -> None:
             process.wait(timeout=2)
 
 
-def _collect_claude(timeout: float = 15.0) -> tuple[str, str]:
+def _collect_claude(timeout: float = 15.0) -> tuple[str, str, bool]:
     """Collect Claude project-loader debug evidence before any model prompt."""
     version = _run_text(["claude", "--version"])
     with tempfile.TemporaryDirectory(prefix="aec-claude-loader-") as temporary:
@@ -129,12 +129,15 @@ def _collect_claude(timeout: float = 15.0) -> tuple[str, str]:
         os.close(slave)
         deadline = time.monotonic() + timeout
         log_text = ""
+        terminal_output = bytearray()
         try:
             while time.monotonic() < deadline:
                 readable, _, _ = select.select([master], [], [], 0.05)
                 if readable:
                     try:
-                        os.read(master, 65536)
+                        terminal_output.extend(os.read(master, 65536))
+                        if len(terminal_output) > 65536:
+                            del terminal_output[:-65536]
                     except OSError:
                         break
                 if debug_path.exists():
@@ -151,7 +154,8 @@ def _collect_claude(timeout: float = 15.0) -> tuple[str, str]:
             os.close(master)
         if "getSkills returning:" not in log_text:
             raise ProofError("Claude project loader did not emit complete evidence")
-        return log_text, version
+        trust_prompt_observed = b"Quick safety check:" in terminal_output
+        return log_text, version, trust_prompt_observed
 
 
 def _load_json(path: Path) -> object:
@@ -177,7 +181,7 @@ def prove() -> dict[str, object]:
     installation_errors = tuple(validate_blueprint_installation(ROOT))
 
     codex_payload, codex_version, codex_suppressed = _collect_codex()
-    claude_log, claude_version = _collect_claude()
+    claude_log, claude_version, claude_trust_prompt = _collect_claude()
     codex_evidence = parse_codex_prompt_input(
         codex_payload,
         runtime_version=codex_version,
@@ -213,6 +217,7 @@ def prove() -> dict[str, object]:
         raise ProofError("Claude and Codex adapter receipt bindings differ")
     return {
         "agents": [codex_receipt.to_dict(), claude_receipt.to_dict()],
+        "claude_trust_prompt_observed": claude_trust_prompt,
         "decision_hash_equal": True,
         "model_requests": 0,
         "mutates": False,

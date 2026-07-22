@@ -20,6 +20,12 @@ skills, zero plugin skills, and zero duplicate or skipped entries. The existing
 Blueprint installation validator separately proves that `.claude/skills` contains the
 seven exact symlinks to the hashed canonical files.
 
+Claude may display its workspace trust prompt in a fresh checkout. Skill loading occurs
+before that prompt in the supported runtime. The collector drains the terminal, records
+whether the prompt appeared, waits on the separate loader log, and terminates without
+answering the prompt or changing trust configuration. A fresh-worktree canary is part
+of the release evidence for this adapter boundary.
+
 The two receipts must bind:
 
 - the runtime identity and version;
