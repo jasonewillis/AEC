@@ -30,12 +30,16 @@ These rules apply to every agent working in this repository.
 - Keep Blueprint skills under `.agents/skills/` as the canonical Codex-discoverable
   source and `.claude/skills/` as relative symlinks to that source. Hash, provenance,
   and parity validation must pass before those files are trusted.
-- Do not copy course transcripts, recordings, slides, or proprietary lesson text.
-- Keep private course provenance factual-only: stable source-set identities, exact
-  titles, source filenames, and verified hashes. Do not store summaries, mappings,
-  effects, guidance, or prompt text derived from private lessons.
+- Do not copy course transcripts, recordings, slides, proprietary lesson text, or
+  course-derived mentoring content into the tracked public repository.
+- Keep tracked private course provenance factual-only: stable source-set identities,
+  exact titles, source filenames, and verified hashes.
+- An owner-authorized local ignored course lens may contain private paraphrased
+  mentoring cards. It must remain untracked, must never enter fixtures, automated proof
+  logs, or hosted CI, and may render only to the authorized user after authoritative
+  resolution.
 - Define runtime principles independently under AEC-owned identities. Private course
-  identifiers must never become procedure or policy authority.
+  identifiers and local mentoring cards must never become procedure or policy authority.
 - Pin every upstream reference to a full Git commit and validate the relationship.
 
 ## Quality

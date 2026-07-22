@@ -1,0 +1,69 @@
+{
+  "$id": "https://github.com/jasonewillis/AEC/schemas/private-mentor-lens.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "cards": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "guidance": {
+            "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "id": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+          "phase": {
+            "enum": [
+              "Intake",
+              "Framing",
+              "Spec",
+              "Plan",
+              "Build",
+              "Verify",
+              "Review",
+              "PR",
+              "Deploy"
+            ]
+          },
+          "principle_ids": {
+            "items": {"pattern": "^aec-[a-z0-9-]+$", "type": "string"},
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "questions": {
+            "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "source_ids": {
+            "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "guidance",
+          "id",
+          "phase",
+          "principle_ids",
+          "questions",
+          "source_ids"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "identity": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+    "revision": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["cards", "identity", "revision", "schema_version"],
+  "title": "AEC Private Non-Authoritative Mentor Lens",
+  "type": "object"
+}

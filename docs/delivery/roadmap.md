@@ -27,8 +27,9 @@ while every decision retains rationale, evidence, Good, Finished, and an anti-ex
 These tracers do not complete Slice 2: the static purity scans still must pass its binary
 exit gate. Slice 3 preparation has installed the seven exact pinned Blueprint skills
 under one canonical `.agents/skills/` root, with Claude symlinks and deterministic
-hash and discovery-parity validation. Adapter execution and identical decision-hash
-proof remain open.
+hash and discovery-parity validation. A private course lens can now add local mentoring
+context after resolution without changing authority. Real Claude and Codex adapter
+execution and identical decision-hash proof remain open.
 
 ## Completion rule
 

@@ -57,6 +57,7 @@ python3 -m unittest discover -s tests -v
 
 - [Architecture](docs/architecture/overview.md)
 - [Deterministic resolver](docs/architecture/resolver.md)
+- [Private course lens](docs/architecture/private-course-lens.md)
 - [Operating model](docs/operating-model.md)
 - [Ticket-to-PR workflow](docs/workflows/ticket-to-pr.md)
 - [Milestone runbook](docs/runbooks/milestone.md)
@@ -71,8 +72,10 @@ AEC-authored content is MIT licensed. `owainlewis/workflows` is a pinned MIT-lic
 pattern source. The seven `owainlewis/blueprint` skills are installed byte-for-byte at
 the pinned revision under the repository owner's attestation of direct permission from
 Owain Lewis as the course creator. Blueprint has no verified upstream license, and the
-permission record is not an MIT claim. Private course records remain limited to factual
-identifiers, exact titles, source filenames, and verified hashes. They do not define
-runtime policy or prompts. AEC ships no populated consumer profile; consumer profiles
+permission record is not an MIT claim. Tracked private course records remain limited to
+factual identifiers, exact titles, source filenames, and verified hashes. An
+owner-authorized local ignored lens may add private mentoring context after resolution,
+but it cannot define runtime policy, change the decision hash, or authorize execution.
+AEC ships no populated consumer profile; consumer profiles
 are declared and owned entirely in consumer repositories. See
 [provenance](docs/provenance.md) and [third-party notices](THIRD_PARTY_NOTICES.md).

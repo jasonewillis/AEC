@@ -1,0 +1,31 @@
+{
+  "cards": [
+    {
+      "guidance": [
+        "Use one synthetic observable outcome before expanding the task."
+      ],
+      "id": "synthetic-intake-card",
+      "phase": "Intake",
+      "principle_ids": ["aec-ticket-to-pr-intake"],
+      "questions": [
+        "What single observable result proves this synthetic task succeeded?"
+      ],
+      "source_ids": ["synthetic-source-01"]
+    },
+    {
+      "guidance": [
+        "Make the synthetic test fail for the intended reason before implementation."
+      ],
+      "id": "synthetic-build-card",
+      "phase": "Build",
+      "principle_ids": ["aec-ticket-to-pr-build"],
+      "questions": [
+        "Does the red case reproduce the behavior at the closest practical boundary?"
+      ],
+      "source_ids": ["synthetic-source-02"]
+    }
+  ],
+  "identity": "synthetic-private-lens",
+  "revision": "synthetic-private-lens:1.0.0",
+  "schema_version": "1.0.0"
+}
