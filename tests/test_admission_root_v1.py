@@ -193,6 +193,47 @@ class AdmissionRootV1Tests(unittest.TestCase):
         ):
             self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
 
+    def test_base_workflow_admits_before_behavior_and_publishes_exact_head(
+        self,
+    ) -> None:
+        workflow = (ROOT / ".github/workflows/candidate-admission.yml").read_text()
+        admit = workflow.split("\n  admit:\n", 1)[1].split("\n  behavior:\n", 1)[0]
+        behavior = workflow.split("\n  behavior:\n", 1)[1].split(
+            "\n  publish-validate:\n", 1
+        )[0]
+        publish = workflow.split("\n  publish-validate:\n", 1)[1]
+
+        self.assertIn("--candidate", admit)
+        self.assertIn("permissions:\n      contents: read", admit)
+        self.assertIn("needs: admit", behavior)
+        self.assertIn("permissions:\n      contents: read", behavior)
+        self.assertIn("ref: ${{ needs.admit.outputs.head-sha }}", behavior)
+        self.assertIn("persist-credentials: false", behavior)
+        self.assertNotIn("permissions:\n      statuses: write", behavior)
+        self.assertIn("needs: [admit, behavior]", publish)
+        self.assertIn("if: ${{ always() }}", publish)
+        self.assertIn("permissions:\n      statuses: write", publish)
+        self.assertIn("HEAD_SHA: ${{ github.event.pull_request.head.sha }}", publish)
+        self.assertIn("ADMITTED_SHA: ${{ needs.admit.outputs.head-sha }}", publish)
+        self.assertIn('context: "validate"', publish)
+        self.assertIn("sha: headSha", publish)
+        self.assertIn('state: passed ? "success" : "failure"', publish)
+        self.assertNotIn("actions/checkout", publish)
+        self.assertNotIn("tools.admission_root_v1 --candidate", publish)
+
+    def test_pr_b_keeps_admission_workflow_and_changes_only_legacy_gate(self) -> None:
+        active = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
+        future_gate = (ROOT / ".github/admission/v1/foundation-gate.yml").read_bytes()
+
+        self.assertEqual(
+            hashlib.sha256(active).hexdigest(),
+            WORKFLOW_TRANSITION_BASELINE[".github/workflows/candidate-admission.yml"],
+        )
+        self.assertEqual(
+            hashlib.sha256(future_gate).hexdigest(),
+            WORKFLOW_TRANSITION_BASELINE[".github/workflows/foundation-gate.yml"],
+        )
+
     def test_base_constants_and_current_bytes_self_check(self) -> None:
         self.assertEqual(
             ARTIFACT_MANIFEST_ROOT, artifact_manifest_root(ARTIFACT_BASELINE)
