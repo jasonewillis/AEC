@@ -57,6 +57,7 @@ python3 -m unittest discover -s tests -v
 
 - [Architecture](docs/architecture/overview.md)
 - [Deterministic resolver](docs/architecture/resolver.md)
+- [Agent adapter parity](docs/architecture/agent-adapters.md)
 - [Private course lens](docs/architecture/private-course-lens.md)
 - [Operating model](docs/operating-model.md)
 - [Ticket-to-PR workflow](docs/workflows/ticket-to-pr.md)
