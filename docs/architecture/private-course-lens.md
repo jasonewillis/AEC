@@ -42,10 +42,21 @@ The recommended ignored layout is:
       recovery-manifest.json
   mentor-lenses/
     ai-engineer.json
+docs/
+  AI Engineer Course/
+    <private course sources>
 ```
 
-Keep `.local/` excluded from Git. Consumers pass the lens path explicitly instead of
-relying on a repository default.
+Keep `.local/` and `docs/AI Engineer Course/` excluded from Git. The latter is the
+owner's local source-material directory. Synthesize only original paraphrased guidance
+into `.local/mentor-lenses/ai-engineer.json`; do not copy course text into tracked files
+or fixtures. Consumers pass the lens path explicitly instead of relying on a repository
+default.
+
+The local lens should cover all nine AEC phases and bind every card to the matching
+public AEC principle. `source_ids` provide local traceability across the 13 lessons, but
+they do not grant those lessons policy authority. Rebuild the local lens manually when
+the private sources change, increment its revision, and rerun the metadata-only proof.
 
 ## Metadata-only proof
 
@@ -55,7 +66,7 @@ lens. The command prints hashes and selected card identities, never guidance tex
 ```bash
 python3 tools/prove_private_mentor_lens.py \
   --request tests/fixtures/resolver/golden/intake.json \
-  --lens /absolute/path/to/private-lens.json
+  --lens .local/mentor-lenses/ai-engineer.json
 ```
 
 Good proof reports `decision_unchanged=true`, `executes=false`, `mutates=false`, and

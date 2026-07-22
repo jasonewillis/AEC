@@ -37,6 +37,11 @@ class PrivateMentorLensTests(unittest.TestCase):
 
         self.assertIn(".local/", patterns)
 
+    def test_private_course_source_directory_is_ignored(self) -> None:
+        patterns = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+
+        self.assertIn("docs/AI Engineer Course/", patterns)
+
     def test_schema_and_validator_share_one_closed_card_contract(self) -> None:
         schema = load_json(ROOT / "schemas/private-mentor-lens.schema.json")
 
