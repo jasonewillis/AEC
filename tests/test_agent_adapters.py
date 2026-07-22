@@ -5,6 +5,7 @@ from pathlib import Path
 
 from aec.adapters import (
     AdapterRejection,
+    LoaderEvidence,
     build_adapter_receipt,
     codex_nonproject_conflicts,
     parse_claude_loader_log,
@@ -211,6 +212,45 @@ class AgentAdapterTests(unittest.TestCase):
         self.assertIsNone(invalid_install.decision_hash)
         self.assertEqual("SKILL_MANIFEST_MISMATCH", mismatched_manifest.code)
         self.assertIsNone(mismatched_manifest.decision_hash)
+
+    def test_direct_malformed_loader_evidence_fails_closed(self) -> None:
+        valid = {
+            "agent": "codex",
+            "runtime_version": "codex-cli 0.144.4",
+            "skill_names": SKILL_NAMES,
+            "project_root": str(ROOT / ".agents/skills"),
+            "suppressed_conflicts": 0,
+        }
+        malformed = {
+            "unsupported agent": {"agent": "evil"},
+            "empty runtime": {"runtime_version": ""},
+            "wrong skill order": {"skill_names": tuple(reversed(SKILL_NAMES))},
+            "relative project root": {"project_root": ".agents/skills"},
+            "wrong root kind": {"project_root": str(ROOT / ".claude/skills")},
+            "negative conflict count": {"suppressed_conflicts": -1},
+            "boolean conflict count": {"suppressed_conflicts": False},
+            "claude conflict suppression": {
+                "agent": "claude",
+                "project_root": str(ROOT / ".claude/skills"),
+                "suppressed_conflicts": 1,
+            },
+        }
+
+        for label, changes in malformed.items():
+            with self.subTest(label=label):
+                evidence = LoaderEvidence(**(valid | changes))
+                result = build_adapter_receipt(
+                    evidence,
+                    self.request,
+                    self.catalog,
+                    self.manifest,
+                    installation_errors=(),
+                )
+
+                self.assertEqual("LOADER_EVIDENCE_INVALID", result.code)
+                self.assertEqual("rejected", result.status)
+                self.assertFalse(result.authoritative)
+                self.assertIsNone(result.decision_hash)
 
     def test_aec_unavailable_is_explicit_non_authoritative_degraded_mode(self) -> None:
         evidence = parse_codex_prompt_input(
