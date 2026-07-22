@@ -1,6 +1,11 @@
 import copy
 import itertools
+import json
+import os
+import subprocess
+import sys
 import unittest
+from dataclasses import asdict
 
 from aec.review_attestation import (
     OfflineReviewFailure,
@@ -53,6 +58,18 @@ class OfflineReviewVerificationTests(unittest.TestCase):
         self.assertEqual("subject-1", result.subject_identity)
         self.assertEqual("observation-1", result.latest_observation_identity)
         self.assertEqual(1, result.latest_order)
+        expected_bindings = asdict(result)
+        expected_bindings.pop("canonical_bytes")
+        self.assertEqual(expected_bindings, json.loads(result.canonical_bytes))
+        self.assertEqual(
+            json.dumps(
+                expected_bindings,
+                ensure_ascii=False,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8"),
+            result.canonical_bytes,
+        )
 
         evidence["subject_identity"] = "mutated"
         evidence["observations"][0]["review_state"] = "failed"
@@ -64,6 +81,8 @@ class OfflineReviewVerificationTests(unittest.TestCase):
 
         with self.assertRaises((AttributeError, TypeError)):
             result.status = "changed"
+        with self.assertRaises((AttributeError, TypeError)):
+            result.canonical_bytes = b"changed"
 
     def test_missing_extra_and_wrong_type_inputs_are_invalid(self) -> None:
         missing = valid_evidence()
@@ -215,7 +234,52 @@ class OfflineReviewVerificationTests(unittest.TestCase):
         for observations in itertools.permutations(evidence["observations"]):
             candidate = copy.deepcopy(evidence)
             candidate["observations"] = list(observations)
-            self.assertEqual(expected, verify_offline_review(candidate))
+            actual = verify_offline_review(candidate)
+            self.assertEqual(expected, actual)
+            self.assertEqual(expected.canonical_bytes, actual.canonical_bytes)
+
+    def test_failure_permutations_have_identical_exact_bytes(self) -> None:
+        evidence = valid_evidence()
+        newer = copy.deepcopy(evidence["observations"][0])
+        newer.update(
+            observation_identity="observation-2",
+            order=2,
+            review_state="failed",
+        )
+        evidence["observations"].append(newer)
+
+        expected = verify_offline_review(evidence)
+        self.assertEqual(b'{"code":"REVIEW_NOT_VERIFIED"}', expected.canonical_bytes)
+        for observations in itertools.permutations(evidence["observations"]):
+            candidate = copy.deepcopy(evidence)
+            candidate["observations"] = list(observations)
+            actual = verify_offline_review(candidate)
+            self.assertEqual(expected, actual)
+            self.assertEqual(expected.canonical_bytes, actual.canonical_bytes)
+
+    def test_canonical_bytes_are_stable_across_process_hash_seeds(self) -> None:
+        script = """
+from tests.test_review_attestation import valid_evidence
+from aec.review_attestation import verify_offline_review
+evidence = valid_evidence()
+newer = dict(evidence["observations"][0])
+newer.update(observation_identity="observation-2", order=2)
+evidence["observations"].insert(0, newer)
+print(verify_offline_review(evidence).canonical_bytes.hex())
+"""
+        outputs = []
+        for seed in ("1", "777", "random"):
+            environment = os.environ.copy()
+            environment.update(PYTHONDONTWRITEBYTECODE="1", PYTHONHASHSEED=seed)
+            outputs.append(
+                subprocess.check_output(
+                    [sys.executable, "-c", script],
+                    cwd=os.fspath(os.path.dirname(os.path.dirname(__file__))),
+                    env=environment,
+                    text=True,
+                ).strip()
+            )
+        self.assertEqual([outputs[0]] * len(outputs), outputs)
 
     def test_failure_precedence_is_stable(self) -> None:
         invalid = valid_evidence()
