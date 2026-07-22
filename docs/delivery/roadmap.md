@@ -25,11 +25,12 @@ has no semantic meaning. A ten-case completeness matrix now proves that the nine
 goldens select one procedure and the unavailable tracer returns one structured blocker,
 while every decision retains rationale, evidence, Good, Finished, and an anti-example.
 These tracers do not complete Slice 2: the static purity scans still must pass its binary
-exit gate. Slice 3 preparation has installed the seven exact pinned Blueprint skills
-under one canonical `.agents/skills/` root, with Claude symlinks and deterministic
-hash and discovery-parity validation. A private course lens can now add local mentoring
-context after resolution without changing authority. Real Claude and Codex adapter
-execution and identical decision-hash proof remain open.
+exit gate. Slice 3 has installed the seven exact pinned Blueprint skills under one
+canonical `.agents/skills/` root, with Claude symlinks and deterministic integrity
+validation. Its real-loader parity harness collects Codex model-free prompt input and
+Claude project-loader debug evidence, then requires both adapter receipts to bind the
+same normalized request, manifest, and authoritative decision hash. A private course
+lens can add local mentoring context after resolution without changing authority.
 
 ## Completion rule
 
