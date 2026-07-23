@@ -6,12 +6,17 @@ import subprocess
 import sys
 import unittest
 from dataclasses import asdict
+from pathlib import Path
 
 from aec.review_attestation import (
     OfflineReviewFailure,
     OfflineReviewVerification,
     verify_offline_review,
 )
+from tools.validate_foundation import validate_review_attestation_purity
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def valid_evidence() -> dict[str, object]:
@@ -334,6 +339,27 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
             rendered = repr(result).lower()
             for term in forbidden:
                 self.assertNotIn(term, rendered)
+
+    def test_foundation_purity_rejects_forbidden_imports_and_calls(self) -> None:
+        source = (ROOT / "aec/review_attestation.py").read_text(encoding="utf-8")
+        self.assertEqual([], validate_review_attestation_purity(source))
+        mutations = {
+            "filesystem-import": "\nfrom pathlib import Path\n",
+            "environment-import": "\nimport os\n",
+            "clock-import": "\nimport time\n",
+            "randomness-import": "\nimport random\n",
+            "network-import": "\nimport socket\n",
+            "process-import": "\nimport subprocess\n",
+            "dynamic-import": "\n__import__('os')\n",
+            "dynamic-execution": "\neval('1')\n",
+            "filesystem-call": "\nopen('evidence.json')\n",
+        }
+        for case_id, mutation in mutations.items():
+            with self.subTest(case_id=case_id):
+                self.assertTrue(
+                    validate_review_attestation_purity(source + mutation),
+                    f"{case_id} passed unexpectedly",
+                )
 
 
 if __name__ == "__main__":

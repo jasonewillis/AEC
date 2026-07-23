@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import copy
 import json
 import re
@@ -45,6 +46,44 @@ SUPPORTED_REASON_CODES = {
 }
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
+REVIEW_ATTESTATION_IMPORTS = frozenset(
+    {
+        ("from", "__future__", ("annotations",)),
+        ("from", "dataclasses", ("dataclass",)),
+        ("import", "json", ()),
+    }
+)
+REVIEW_ATTESTATION_CALL_NAMES = frozenset(
+    {
+        "OfflineReviewFailure",
+        "OfflineReviewVerification",
+        "_canonical_bytes",
+        "_failure",
+        "_has_exact_unaliased_containers",
+        "_is_identity",
+        "_is_observation",
+        "_verify_offline_review",
+        "all",
+        "any",
+        "bool",
+        "dataclass",
+        "frozenset",
+        "id",
+        "isinstance",
+        "len",
+        "max",
+        "set",
+        "type",
+    }
+)
+REVIEW_ATTESTATION_CALL_ATTRIBUTES = frozenset(
+    {
+        "add",
+        "dumps",
+        "encode",
+        "items",
+    }
+)
 COURSE_EXPRESSIVE_FIELDS = {
     "advice",
     "body",
@@ -828,6 +867,47 @@ def validate_runtime_authority(paths: list[Path]) -> list[str]:
     return errors
 
 
+def validate_review_attestation_purity(source: str) -> list[str]:
+    """Reject capabilities outside the exact offline-review implementation."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return ["review attestation module must parse as Python"]
+
+    imports: set[tuple[str, str, tuple[str, ...]]] = set()
+    errors: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.asname is not None:
+                    errors.append("review attestation imports must not use aliases")
+                imports.add(("import", alias.name, ()))
+        elif isinstance(node, ast.ImportFrom):
+            if node.level != 0 or node.module is None:
+                errors.append("review attestation imports must be absolute")
+                continue
+            names = tuple(alias.name for alias in node.names)
+            if any(alias.asname is not None for alias in node.names):
+                errors.append("review attestation imports must not use aliases")
+            imports.add(("from", node.module, names))
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id not in REVIEW_ATTESTATION_CALL_NAMES:
+                    errors.append(
+                        f"review attestation call is not admitted: {node.func.id}"
+                    )
+            elif isinstance(node.func, ast.Attribute):
+                if node.func.attr not in REVIEW_ATTESTATION_CALL_ATTRIBUTES:
+                    errors.append(
+                        f"review attestation call is not admitted: {node.func.attr}"
+                    )
+            else:
+                errors.append("review attestation dynamic call target is not admitted")
+    if imports != REVIEW_ATTESTATION_IMPORTS:
+        errors.append("review attestation imports do not match the exact allowlist")
+    return errors
+
+
 def validate_workflow(workflow: object) -> list[str]:
     """Validate the reusable ticket-to-PR lifecycle registry."""
     if not isinstance(workflow, dict):
@@ -944,6 +1024,15 @@ def main() -> int:
         report_errors(
             "runtime-authority.course-boundary",
             validate_runtime_authority(runtime_authority_paths),
+        ),
+        report_errors(
+            "review-attestation.purity",
+            validate_review_attestation_purity(
+                (ROOT / "aec" / "review_attestation.py").read_text(
+                    encoding="utf-8",
+                    errors="strict",
+                )
+            ),
         ),
         report_errors(
             "workflow.ticket-to-pr",

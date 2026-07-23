@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:b901d01234329c5d061b89e6e257a5cf580615f43873e781370349fa20b28963"
+    "sha256:060396745d823da7b42bf6b77f6d4f571900dc9660c203c6dd611070ae16ad4d"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -47,6 +47,9 @@ SOURCE_BASELINE: dict[str, str] = {
     "aec/_generated/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "aec/_generated/resolver_program.py": "9d2ef02a8d0422ad8a9b89856276dc42ae798c975ab4ce60a5627a4da3eb7bb8",
     "aec/contracts.py": "077f7225b232d04ab02e5d908b5af0fb9243ed20def359ac739baefd1ddbedc1",
+    "aec/review_attestation.py": (
+        "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
+    ),
     "aec/resolver.py": "1a0db71539fb0851cd6135d6c7dbd37c1638a2b0fca8dbb9ee31c0bacd88b8c3",
 }
 ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
@@ -232,6 +235,10 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
         REGULAR_MODE,
         "25f544e69b7b66ca768c3a0272ea8448c58f50ae880fa860c1bac828e7533519",
     ),
+    "tests/test_review_attestation.py": FileBaseline(
+        REGULAR_MODE,
+        "8b889c7cd43073ab8637a47c4430606627d6ed2a4f450f01e9d62c5b402e8e7c",
+    ),
     "tools/__init__.py": FileBaseline(
         REGULAR_MODE,
         "24fcc84ad8324d8ab9da5493c183e7ae307a1508cdbc4dc2efde04f18ba18811",
@@ -250,7 +257,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "a2355bcc4caa31e9f4c46e24c80e75f52851e0142d6eafae844c3d4f8a88dacf",
+        "a64a649a15e1b0ea925564babb9b9de0fb3b3fd222cb05a45a53bcf2b452411d",
     ),
 }
 PYTHON_PATHS = frozenset(
@@ -271,6 +278,7 @@ PYTHON_PATHS = frozenset(
         "tests/test_resolver.py",
         "tests/test_resolver_blocker_precedence.py",
         "tests/test_resolver_program.py",
+        "tests/test_review_attestation.py",
         "tools/__init__.py",
         "tools/admission_root_v1.py",
         "tools/generate_resolver.py",
