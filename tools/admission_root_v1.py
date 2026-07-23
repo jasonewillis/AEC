@@ -12,13 +12,13 @@ from typing import Mapping, NamedTuple
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
 BEHAVIOR_IDENTITY = (
-    "sha256:24e113a27e8ffce6b2cea99c85420ee0c3d581943d109d0d5033e12352bcb70d"
+    "sha256:d6ea3a7f2df5703541f87e2e68a722546c76a81153a41edf097d2b36db2fb61a"
 )
 ARTIFACT_MANIFEST_ROOT = (
-    "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
+    "sha256:3029507d76dd3b536e72d905318824e22d371c30c1058f688baca9e46c0c17a4"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:a8275ad121554f2a6202d58f8bcb85023b182df018e3ee8d41112a9cf579f9f5"
+    "sha256:016ee8532c242189bb46bd0eb8ffe0f8e4086a125e87d5365776891310cb392b"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -50,7 +50,7 @@ SOURCE_BASELINE: dict[str, str] = {
     "aec/review_attestation.py": (
         "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
     ),
-    "aec/resolver.py": "1a0db71539fb0851cd6135d6c7dbd37c1638a2b0fca8dbb9ee31c0bacd88b8c3",
+    "aec/resolver.py": "67b4fd4651291010e58999b782e35e9f1383d560cbcf4d6b2f239fe6e16e6ae2",
 }
 ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     "config/principles/aec-engineering.json": ArtifactBaseline(
@@ -103,7 +103,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/resolution-decision.schema.json": ArtifactBaseline(
         "schema",
-        "b80f70934f85ef17fa99184dcc0b30fd4ef4ddab55dfca50e0eb4fa7018253df",
+        "7ecf82040cb46e26476d50fab5c85a39b47f5b206748a71af3ca960ebc9e2d57",
     ),
     "schemas/resolution-rejection.schema.json": ArtifactBaseline(
         "schema",
@@ -249,7 +249,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/prove_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
-        "77a624852de262d48b65d600fa325cae33797f5764189568497272f4aa80ccc8",
+        "6da72867576089ada5610ed0581e3dc4c11e45d7894d1ededc8bf7f58b303b45",
     ),
     "tools/validate_blueprint_skills.py": FileBaseline(
         REGULAR_MODE,
@@ -257,7 +257,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "8aed6dcb36eeec5588ef5704d4ac6c8e3c9e8f175f1d542b94e15e727e60e0d1",
+        "61a3962ab3178a4f717a4abdcf553017579cc7861690038f293a1dd1894e2318",
     ),
 }
 PYTHON_PATHS = frozenset(

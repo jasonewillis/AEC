@@ -33,7 +33,7 @@ GOLDEN_HASHES = {
     "Plan": "sha256:738301624bb2df321eee8f541071a9498b1a1f043fddb6a96b6f59da555c313b",
     "Build": "sha256:405fab94155c404c01323cdde74422c6600e296e0fe6a8a29aea79a25d360672",
     "Verify": "sha256:c67e019fe21a6ffd815f8732c86639b6b98c2b8857aac8336a6cd6c6f4eede23",
-    "Review": "sha256:76dbb682605816fa23e89b03b4b17308e9ed5552b0c6c60f51c09e1b6fab9712",
+    "Review": "sha256:4d0892d8538863a22996c5e83d77c8f914c23a1a0bf2797875c7f02e05c6109b",
     "PR": "sha256:a2868094ab4eda780808398dc2f11086c4517ca72502cb074693495871019741",
     "Deploy": "sha256:766aaf24a6bf499f8320c9df3ef3244284dadb8cea7d036f47699efdf9478f50",
 }
@@ -144,7 +144,10 @@ class ResolverTracerTests(unittest.TestCase):
                 self.assertEqual(phase, payload["phase"])
                 self.assertEqual(stage, payload["workflow_stage"])
                 self.assertEqual(identity, payload["primary_procedure"])
-                self.assertEqual("Evidence needed", payload["gate"])
+                self.assertEqual(
+                    "Needs review" if phase == "Review" else "Evidence needed",
+                    payload["gate"],
+                )
                 self.assertTrue(payload["rationale"]["principle_ids"])
                 self.assertTrue(payload["rationale"]["summary"])
                 self.assertTrue(payload["required_evidence"])
@@ -867,6 +870,35 @@ class ResolverTracerTests(unittest.TestCase):
             [
                 "Ready decisions must use ACCEPTANCE_EVIDENCE_COMPLETE",
                 "Ready decisions must not require evidence",
+            ],
+            validate_resolution(tampered),
+        )
+
+    def test_complete_review_cannot_claim_needs_review_after_hash_recompute(
+        self,
+    ) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/review.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        request["evidence"] = [
+            {
+                "accepted": True,
+                "environment": request["environment"],
+                "kind": kind,
+                "revision": request["revision"],
+            }
+            for kind in ("base-head-binding", "independent-review")
+        ]
+        result = resolve(request, procedures)
+        self.assertNotIsInstance(result, ResolutionRejection)
+        tampered = result.to_dict()
+        self.assertEqual("Ready", tampered["gate"])
+        tampered["gate"] = "Needs review"
+        tampered["resolution_hash"] = compute_resolution_hash(tampered)
+
+        self.assertEqual(
+            [
+                "Needs review decisions must use ACCEPTANCE_EVIDENCE_INCOMPLETE",
+                "Needs review decisions must require review evidence",
             ],
             validate_resolution(tampered),
         )

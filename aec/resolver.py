@@ -697,6 +697,13 @@ def resolve(
         "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
         "summary": procedure["rationale"]["summary"],
     }
+    if caller_blocker is None and not skill_unavailable:
+        if request["phase"] == "Review" and required_evidence:
+            gate = "Needs review"
+        elif not required_evidence:
+            rationale["summary"] = (
+                "All required evidence is accepted for the exact revision and environment."
+            )
     reason_code = (
         caller_blocker["reason_code"]
         if caller_blocker is not None
