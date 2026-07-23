@@ -12,13 +12,13 @@ from typing import Mapping, NamedTuple
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
 BEHAVIOR_IDENTITY = (
-    "sha256:267e457762263aa1330f45663d7abe040e266ee88d5737ff3f993cd94cc11f0a"
+    "sha256:24e113a27e8ffce6b2cea99c85420ee0c3d581943d109d0d5033e12352bcb70d"
 )
 ARTIFACT_MANIFEST_ROOT = (
-    "sha256:f77420c25171d422e5932b5578c49e6003ef2c91498bbbeaa66f259ea0ccc441"
+    "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:26f727badaa82232fcb8e8978ae8f433a2e289e0614cdaa8e5a693e50f6e0b61"
+    "sha256:52baff939c83adb3e20de6a24bfea74cdb1bfb83ed3c27e603b2da4d15e3acae"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -40,7 +40,7 @@ SOURCE_BASELINE: dict[str, str] = {
     "aec/_generated/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "aec/_generated/resolver_program.py": "9d2ef02a8d0422ad8a9b89856276dc42ae798c975ab4ce60a5627a4da3eb7bb8",
     "aec/contracts.py": "077f7225b232d04ab02e5d908b5af0fb9243ed20def359ac739baefd1ddbedc1",
-    "aec/resolver.py": "985cb5a2ff873cbbc8a5c094ac010d212896d62c1a51ebe0c7c8166395f58e65",
+    "aec/resolver.py": "193ea967cafac448546f01f8c54db1ecfb9b831e87356d1a4a514ec6253a4242",
 }
 ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     "config/principles/aec-engineering.json": ArtifactBaseline(
@@ -93,7 +93,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/resolution-decision.schema.json": ArtifactBaseline(
         "schema",
-        "3c4c5057a6c8517f8fc3ddcc6ade2e6c91551613181a1179bc1f159f7f147078",
+        "b80f70934f85ef17fa99184dcc0b30fd4ef4ddab55dfca50e0eb4fa7018253df",
     ),
     "schemas/resolution-rejection.schema.json": ArtifactBaseline(
         "schema",
@@ -101,7 +101,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/resolution-request.schema.json": ArtifactBaseline(
         "schema",
-        "6f1cc13c0f04173c3504bcfffb787e9b6a32df8ea4d43dadce6e28598d174088",
+        "ad4a414b1ce85010e646f12851d381257c64479019232ee36cc98f4863c3ce59",
     ),
     "schemas/resolver-program.schema.json": ArtifactBaseline(
         "schema",

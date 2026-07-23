@@ -245,6 +245,35 @@ class AdmissionRootV1Tests(unittest.TestCase):
         )
         self.assertEqual((), self_check(ROOT))
 
+    def test_resolve009_controlled_transition_matches_exact_candidate_bytes(
+        self,
+    ) -> None:
+        expected = {
+            "aec/resolver.py": (
+                "193ea967cafac448546f01f8c54db1ecfb9b831e87356d1a4a514ec6253a4242"
+            ),
+            "schemas/resolution-decision.schema.json": (
+                "b80f70934f85ef17fa99184dcc0b30fd4ef4ddab55dfca50e0eb4fa7018253df"
+            ),
+            "schemas/resolution-request.schema.json": (
+                "ad4a414b1ce85010e646f12851d381257c64479019232ee36cc98f4863c3ce59"
+            ),
+        }
+
+        self.assertEqual(
+            expected["aec/resolver.py"],
+            SOURCE_BASELINE["aec/resolver.py"],
+        )
+        for path in expected.keys() - {"aec/resolver.py"}:
+            self.assertEqual(expected[path], ARTIFACT_BASELINE[path].sha256)
+        self.assertEqual(
+            expected,
+            {
+                path: hashlib.sha256((ROOT / path).read_bytes()).hexdigest()
+                for path in expected
+            },
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

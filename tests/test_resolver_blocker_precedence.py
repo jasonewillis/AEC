@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ from aec.resolver import (
     resolve,
 )
 from tools.validate_foundation import validate_resolution
+from tools.admission_root_v1 import BEHAVIOR_IDENTITY
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,6 +22,9 @@ BLOCKER_PRECEDENCE = (
     "POLICY_CONFLICT",
     "LIFECYCLE_STATE_STALE",
     "EVIDENCE_CONTRADICTED",
+)
+LEGACY_BEHAVIOR_IDENTITY = (
+    "sha256:267e457762263aa1330f45663d7abe040e266ee88d5737ff3f993cd94cc11f0a"
 )
 
 
@@ -106,6 +111,34 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
             "required_evidence": ["procedure-availability"],
         }
         self.assertEqual(expected, contracts)
+
+    def test_blocker_decisions_extend_the_frozen_behavior_identity(self) -> None:
+        decisions = []
+        for reason_code in BLOCKER_PRECEDENCE:
+            request = copy.deepcopy(self.request)
+            request["blockers"] = [
+                {
+                    "active": True,
+                    "identity": f"blocker-{reason_code.lower()}",
+                    "reason_code": reason_code,
+                }
+            ]
+            result = resolve(request, self.procedures)
+            self.assertNotIsInstance(result, ResolutionRejection)
+            decisions.append(
+                [
+                    reason_code,
+                    result.resolution_hash,
+                    result.canonical_bytes.hex(),
+                ]
+            )
+        payload = json.dumps(
+            [LEGACY_BEHAVIOR_IDENTITY, decisions],
+            separators=(",", ":"),
+        ).encode("utf-8")
+        identity = "sha256:" + hashlib.sha256(payload).hexdigest()
+
+        self.assertEqual(BEHAVIOR_IDENTITY, identity)
 
     def test_inactive_blockers_do_not_override_evidence_gate(self) -> None:
         self.request["blockers"] = [
