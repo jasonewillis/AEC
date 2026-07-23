@@ -353,6 +353,13 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
             "dynamic-import": "\n__import__('os')\n",
             "dynamic-execution": "\neval('1')\n",
             "filesystem-call": "\nopen('evidence.json')\n",
+            "rebound-filesystem-call": (
+                "\nall = open\nall('/tmp/aec-purity-bypass', 'w')\n"
+            ),
+            "rebound-dynamic-execution": "\nall = eval\nall('1 + 1')\n",
+            "mutated-module-call": (
+                "\njson.dumps = open\njson.dumps('/tmp/aec-purity-bypass', 'w')\n"
+            ),
         }
         for case_id, mutation in mutations.items():
             with self.subTest(case_id=case_id):

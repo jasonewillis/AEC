@@ -84,6 +84,23 @@ REVIEW_ATTESTATION_CALL_ATTRIBUTES = frozenset(
         "items",
     }
 )
+REVIEW_ATTESTATION_FORBIDDEN_REFERENCES = frozenset(
+    {
+        "__import__",
+        "breakpoint",
+        "compile",
+        "eval",
+        "exec",
+        "input",
+        "open",
+    }
+)
+REVIEW_ATTESTATION_PROTECTED_NAMES = frozenset(
+    {
+        *REVIEW_ATTESTATION_CALL_NAMES,
+        "json",
+    }
+)
 COURSE_EXPRESSIVE_FIELDS = {
     "advice",
     "body",
@@ -903,6 +920,29 @@ def validate_review_attestation_purity(source: str) -> list[str]:
                     )
             else:
                 errors.append("review attestation dynamic call target is not admitted")
+        elif (
+            isinstance(node, ast.Name)
+            and isinstance(node.ctx, ast.Load)
+            and node.id in REVIEW_ATTESTATION_FORBIDDEN_REFERENCES
+        ):
+            errors.append(
+                f"review attestation forbidden capability is referenced: {node.id}"
+            )
+        elif (
+            isinstance(node, ast.Name)
+            and isinstance(node.ctx, (ast.Store, ast.Del))
+            and node.id in REVIEW_ATTESTATION_PROTECTED_NAMES
+        ):
+            errors.append(f"review attestation admitted name is rebound: {node.id}")
+        elif (
+            isinstance(node, ast.Attribute)
+            and isinstance(node.ctx, (ast.Store, ast.Del))
+            and isinstance(node.value, ast.Name)
+            and node.value.id == "json"
+        ):
+            errors.append(
+                f"review attestation admitted module is mutated: json.{node.attr}"
+            )
     if imports != REVIEW_ATTESTATION_IMPORTS:
         errors.append("review attestation imports do not match the exact allowlist")
     return errors
