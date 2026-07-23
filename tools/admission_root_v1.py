@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:f50954fff60a327db650dee1d9127d274ea8e5a9c6241d163c0500dc383d93f8"
+    "sha256:b901d01234329c5d061b89e6e257a5cf580615f43873e781370349fa20b28963"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -32,6 +32,13 @@ class ArtifactBaseline(NamedTuple):
     """One admitted artifact path identity."""
 
     closed_class: str
+    sha256: str
+
+
+class FileBaseline(NamedTuple):
+    """One admitted proof-closure path identity."""
+
+    mode: str
     sha256: str
 
 
@@ -208,6 +215,74 @@ WORKFLOW_TRANSITION_BUNDLES: dict[str, str] = {
         ".github/admission/v1/foundation-gate.yml"
     ),
 }
+PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
+    ".claude/skills/milestone": FileBaseline(
+        "120000",
+        "179787e57e206baeb8719792db0ef2b0ed38bba71ac395db51e83cf02b98724c",
+    ),
+    ".github/admission/v1/foundation-gate.yml": FileBaseline(
+        REGULAR_MODE,
+        "75d940adee48523e8c4163cc78b2cb16cc2f8d80317a026677f4b52adb70459b",
+    ),
+    "aec/consumer.py": FileBaseline(
+        REGULAR_MODE,
+        "a1bf4688ee1952f4a207a0b72a8e792c6684b63d20a006e3bd6d2444eb0b03ae",
+    ),
+    "tests/test_foundation_behavior.py": FileBaseline(
+        REGULAR_MODE,
+        "25f544e69b7b66ca768c3a0272ea8448c58f50ae880fa860c1bac828e7533519",
+    ),
+    "tools/__init__.py": FileBaseline(
+        REGULAR_MODE,
+        "24fcc84ad8324d8ab9da5493c183e7ae307a1508cdbc4dc2efde04f18ba18811",
+    ),
+    "tools/generate_resolver.py": FileBaseline(
+        REGULAR_MODE,
+        "1f5e845b8e0ab41a89bdb346dba66fba39c520d276039cb528c89591386f98e4",
+    ),
+    "tools/prove_foundation_behavior.py": FileBaseline(
+        REGULAR_MODE,
+        "77a624852de262d48b65d600fa325cae33797f5764189568497272f4aa80ccc8",
+    ),
+    "tools/validate_blueprint_skills.py": FileBaseline(
+        REGULAR_MODE,
+        "951d722c12a33903b119fff9ed11c3c6563e09a6f786d348fbab451b1daee77f",
+    ),
+    "tools/validate_foundation.py": FileBaseline(
+        REGULAR_MODE,
+        "a2355bcc4caa31e9f4c46e24c80e75f52851e0142d6eafae844c3d4f8a88dacf",
+    ),
+}
+PYTHON_PATHS = frozenset(
+    {
+        *SOURCE_BASELINE,
+        "aec/adapters.py",
+        "aec/consumer.py",
+        "aec/mentor.py",
+        "tests/test_admission_root_v1.py",
+        "tests/test_agent_adapters.py",
+        "tests/test_authority_v2_hostile_corpus.py",
+        "tests/test_blueprint_skills.py",
+        "tests/test_consumer_interface.py",
+        "tests/test_exact_json.py",
+        "tests/test_foundation_validation.py",
+        "tests/test_foundation_behavior.py",
+        "tests/test_private_mentor_lens.py",
+        "tests/test_resolver.py",
+        "tests/test_resolver_blocker_precedence.py",
+        "tests/test_resolver_program.py",
+        "tools/__init__.py",
+        "tools/admission_root_v1.py",
+        "tools/generate_resolver.py",
+        "tools/prove_agent_adapter_parity.py",
+        "tools/prove_foundation_behavior.py",
+        "tools/prove_private_mentor_lens.py",
+        "tools/validate_blueprint_skills.py",
+        "tools/validate_foundation.py",
+    }
+)
+VALIDATOR_PATH = "tools/admission_root_v1.py"
+ACTIVE_WORKFLOW_PATH = ".github/workflows/candidate-admission.yml"
 
 
 @dataclass(frozen=True)
@@ -270,8 +345,9 @@ def parse_git_records(raw: bytes, record_format: str) -> tuple[GitRecord, ...]:
             raise ValueError("Git record paths must be non-empty and unique")
         try:
             fields = metadata.decode("ascii", errors="strict").split(" ")
+            path.decode("utf-8", errors="strict")
         except UnicodeDecodeError as error:
-            raise ValueError("Git record metadata must be ASCII") from error
+            raise ValueError("Git record metadata and paths must be UTF-8") from error
         if record_format == "stage-v1":
             if len(fields) != 3 or fields[2] != "0":
                 raise ValueError("Git stage record is invalid")
@@ -340,6 +416,17 @@ def validate_candidate(
     expected_artifacts = {
         path.encode(): artifact.sha256 for path, artifact in ARTIFACT_BASELINE.items()
     }
+    expected_closure = {
+        path.encode(): baseline for path, baseline in PROOF_CLOSURE_BASELINE.items()
+    }
+    tracked_python = {
+        path.decode()
+        for path in by_path
+        if path.endswith(b".py")
+        and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
+    }
+    if tracked_python != PYTHON_PATHS:
+        findings.add("ADMISSION-001 EXACT_BASELINE")
     tracked_json = {path for path in by_path if path.endswith(b".json")}
     if tracked_json != set(expected_artifacts):
         findings.add("ADMISSION-001 EXACT_BASELINE")
@@ -354,12 +441,20 @@ def validate_candidate(
     }
     if tracked_workflows != set(expected_workflows):
         findings.add("ADMISSION-001 EXACT_BASELINE")
-    expected = expected_sources | expected_artifacts | expected_workflows
+    expected = (
+        expected_sources
+        | expected_artifacts
+        | expected_workflows
+        | {path: baseline.sha256 for path, baseline in expected_closure.items()}
+    )
     if not set(expected).issubset(by_path):
         findings.add("ADMISSION-001 EXACT_BASELINE")
     for path, digest in expected.items():
         record = by_path.get(path)
-        if record is None or record.mode != REGULAR_MODE:
+        expected_mode = expected_closure.get(
+            path, FileBaseline(REGULAR_MODE, digest)
+        ).mode
+        if record is None or record.mode != expected_mode:
             findings.add("ADMISSION-001 EXACT_BASELINE")
             continue
         content = blobs.get(record.object_id)
@@ -371,6 +466,28 @@ def validate_candidate(
             continue
         if hashlib.sha256(content).hexdigest() != digest:
             findings.add("ADMISSION-001 EXACT_BASELINE")
+    validator_record = by_path.get(VALIDATOR_PATH.encode())
+    validator_content = (
+        None if validator_record is None else blobs.get(validator_record.object_id)
+    )
+    if (
+        validator_record is None
+        or validator_record.mode != REGULAR_MODE
+        or validator_record.object_id != authority.validator_blob_oid
+        or validator_content is None
+        or git_blob_oid(validator_content, len(validator_record.object_id))
+        != validator_record.object_id
+        or hashlib.sha256(validator_content).hexdigest() != authority.validator_sha256
+    ):
+        findings.add("ADMISSION-001 EXACT_BASELINE")
+    workflow_record = by_path.get(ACTIVE_WORKFLOW_PATH.encode())
+    if (
+        workflow_record is None
+        or workflow_record.object_id != authority.workflow_blob_oid
+        or authority.workflow_sha256
+        != WORKFLOW_TRANSITION_BASELINE[ACTIVE_WORKFLOW_PATH]
+    ):
+        findings.add("ADMISSION-001 EXACT_BASELINE")
     if artifact_manifest_root(ARTIFACT_BASELINE) != ARTIFACT_MANIFEST_ROOT:
         findings.add("ADMISSION-001 EXACT_BASELINE")
     ordered = tuple(outcome for outcome in OUTCOMES if outcome in findings)
@@ -391,6 +508,15 @@ def self_check(root: Path) -> tuple[str, ...]:
     for path, artifact in ARTIFACT_BASELINE.items():
         if hashlib.sha256((root / path).read_bytes()).hexdigest() != artifact.sha256:
             findings.append(path)
+    for path, baseline in PROOF_CLOSURE_BASELINE.items():
+        candidate = root / path
+        content = (
+            candidate.readlink().as_posix().encode()
+            if baseline.mode == "120000"
+            else candidate.read_bytes()
+        )
+        if hashlib.sha256(content).hexdigest() != baseline.sha256:
+            findings.append(path)
     for target, bundle in WORKFLOW_TRANSITION_BUNDLES.items():
         digest = hashlib.sha256((root / bundle).read_bytes()).hexdigest()
         if digest != WORKFLOW_TRANSITION_BASELINE[target]:
@@ -403,6 +529,8 @@ def self_check(root: Path) -> tuple[str, ...]:
             BEHAVIOR_IDENTITY,
             ARTIFACT_MANIFEST_ROOT,
             sorted(SOURCE_BASELINE.items()),
+            sorted(PROOF_CLOSURE_BASELINE.items()),
+            sorted(PYTHON_PATHS),
             sorted(WORKFLOW_TRANSITION_BASELINE.items()),
         ],
         separators=(",", ":"),
@@ -415,7 +543,13 @@ def self_check(root: Path) -> tuple[str, ...]:
 def _required_paths() -> tuple[str, ...]:
     """Return the exact candidate paths whose blobs admission consumes."""
     return tuple(
-        sorted(SOURCE_BASELINE | ARTIFACT_BASELINE | WORKFLOW_TRANSITION_BASELINE)
+        sorted(
+            SOURCE_BASELINE
+            | ARTIFACT_BASELINE
+            | PROOF_CLOSURE_BASELINE
+            | WORKFLOW_TRANSITION_BASELINE
+            | {VALIDATOR_PATH: ""}
+        )
     )
 
 

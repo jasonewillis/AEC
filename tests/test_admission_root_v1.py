@@ -12,6 +12,8 @@ from tools.admission_root_v1 import (
     ARTIFACT_BASELINE,
     ARTIFACT_MANIFEST_ROOT,
     BEHAVIOR_IDENTITY,
+    PROOF_CLOSURE_BASELINE,
+    PYTHON_PATHS,
     SOURCE_BASELINE,
     WORKFLOW_TRANSITION_BASELINE,
     WORKFLOW_TRANSITION_BUNDLES,
@@ -32,12 +34,14 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        validator = (ROOT / "tools/admission_root_v1.py").read_bytes()
+        workflow = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
         cls.authority = BaseAuthority(
             base_sha="a" * 40,
-            validator_blob_oid="b" * 40,
-            validator_sha256="c" * 64,
-            workflow_blob_oid="d" * 40,
-            workflow_sha256="e" * 64,
+            validator_blob_oid=git_blob_oid(validator),
+            validator_sha256=hashlib.sha256(validator).hexdigest(),
+            workflow_blob_oid=git_blob_oid(workflow),
+            workflow_sha256=hashlib.sha256(workflow).hexdigest(),
         )
         cls.blobs: dict[str, bytes] = {}
         cls.entries: dict[bytes, tuple[str, str]] = {}
@@ -47,15 +51,31 @@ class AdmissionRootV1Tests(unittest.TestCase):
             cls._add_baseline(path, artifact.sha256)
         for path, digest in WORKFLOW_TRANSITION_BASELINE.items():
             cls._add_baseline(path, digest, WORKFLOW_TRANSITION_BUNDLES[path])
+        for path, baseline in PROOF_CLOSURE_BASELINE.items():
+            source = ROOT / path
+            content = (
+                source.readlink().as_posix().encode()
+                if baseline.mode == "120000"
+                else source.read_bytes()
+            )
+            cls._add_bytes(path, content, baseline.mode)
+        for path in PYTHON_PATHS:
+            if path.encode() not in cls.entries:
+                cls._add_bytes(path, (ROOT / path).read_bytes())
 
     @classmethod
     def _add_baseline(cls, path: str, digest: str, source: str | None = None) -> None:
         content = (ROOT / (source or path)).read_bytes()
         if hashlib.sha256(content).hexdigest() != digest:
             raise AssertionError(f"baseline digest drift: {path}")
+        cls._add_bytes(path, content)
+
+    @classmethod
+    def _add_bytes(cls, path: str, content: bytes, mode: str = "100644") -> None:
+        """Add one exact repository path to the candidate snapshot."""
         oid = git_blob_oid(content)
         cls.blobs[oid] = content
-        cls.entries[path.encode()] = ("100644", oid)
+        cls.entries[path.encode()] = (mode, oid)
 
     def raw_stage(self, entries: dict[bytes, tuple[str, str]] | None = None) -> bytes:
         """Return strict NUL-delimited stage records without path decoding."""
@@ -163,7 +183,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
         )
         self.assertNotEqual(ARTIFACT_MANIFEST_ROOT, artifact_manifest_root(rows))
 
-    def test_candidate_validator_replacement_cannot_change_base_identity(self) -> None:
+    def test_candidate_validator_replacement_is_rejected_by_base_identity(self) -> None:
         entries = dict(self.entries)
         content = b"raise SystemExit('candidate executed')\n"
         oid = git_blob_oid(content)
@@ -173,7 +193,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
         report = self.prove(entries=entries, blobs=blobs)
 
-        self.assertTrue(report.passed, report.findings)
+        self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
         self.assertEqual(report.base_authority, self.authority)
 
     def test_workflow_transition_is_exact_and_closed(self) -> None:
@@ -215,6 +235,11 @@ class AdmissionRootV1Tests(unittest.TestCase):
         self.assertIn("ref: ${{ needs.admit.outputs.head-sha }}", behavior)
         self.assertIn("persist-credentials: false", behavior)
         self.assertNotIn("permissions:\n      statuses: write", behavior)
+        self.assertIn("python3 -m unittest discover -s tests -v", behavior)
+        self.assertIn(
+            "tests/test_foundation_behavior.py",
+            PROOF_CLOSURE_BASELINE,
+        )
         self.assertIn("needs: [admit, behavior]", publish)
         self.assertIn("if: ${{ always() }}", publish)
         self.assertIn("permissions:\n      statuses: write", publish)
@@ -228,6 +253,9 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
     def test_pr_b_keeps_admission_workflow_and_changes_only_legacy_gate(self) -> None:
         active = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
+        transitioned_gate = (
+            ROOT / ".github/workflows/foundation-gate.yml"
+        ).read_bytes()
         future_gate = (ROOT / ".github/admission/v1/foundation-gate.yml").read_bytes()
 
         self.assertEqual(
@@ -238,6 +266,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
             hashlib.sha256(future_gate).hexdigest(),
             WORKFLOW_TRANSITION_BASELINE[".github/workflows/foundation-gate.yml"],
         )
+        self.assertEqual(future_gate, transitioned_gate)
 
     def test_base_constants_and_current_bytes_self_check(self) -> None:
         self.assertEqual(
