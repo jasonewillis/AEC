@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import sys
@@ -45,6 +46,9 @@ SUPPORTED_REASON_CODES = {
 }
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
+REVIEW_ATTESTATION_SHA256 = (
+    "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
+)
 COURSE_EXPRESSIVE_FIELDS = {
     "advice",
     "body",
@@ -828,6 +832,17 @@ def validate_runtime_authority(paths: list[Path]) -> list[str]:
     return errors
 
 
+def validate_review_attestation_purity(source: str) -> list[str]:
+    """Accept only the independently reviewed offline-review source bytes."""
+    try:
+        encoded = source.encode("utf-8", errors="strict")
+    except UnicodeEncodeError:
+        return ["review attestation source must be strict UTF-8"]
+    if hashlib.sha256(encoded).hexdigest() != REVIEW_ATTESTATION_SHA256:
+        return ["review attestation source bytes do not match the reviewed identity"]
+    return []
+
+
 def validate_workflow(workflow: object) -> list[str]:
     """Validate the reusable ticket-to-PR lifecycle registry."""
     if not isinstance(workflow, dict):
@@ -944,6 +959,15 @@ def main() -> int:
         report_errors(
             "runtime-authority.course-boundary",
             validate_runtime_authority(runtime_authority_paths),
+        ),
+        report_errors(
+            "review-attestation.purity",
+            validate_review_attestation_purity(
+                (ROOT / "aec" / "review_attestation.py").read_text(
+                    encoding="utf-8",
+                    errors="strict",
+                )
+            ),
         ),
         report_errors(
             "workflow.ticket-to-pr",
