@@ -22,6 +22,8 @@ time, and AEC-owned procedure catalog. AEC performs no discovery or I/O at this 
 
 - repository instructions and a local procedure registry;
 - current task, revision, environment, Lane, Phase, Gate, and evidence references;
+- optional material-decision context with two or three choices, explicit tradeoffs,
+  one recommendation, change-the-decision evidence, and the authority owner;
 - agent adapters that only read and render the AEC decision;
 - an authenticated single lifecycle writer;
 - Project or issue projection rules;
@@ -67,17 +69,29 @@ else:
 ```
 
 The record contains only project-neutral task, revision, environment, workflow
-position, evidence, capability, procedure, policy, blocker, provider, freshness, and
-read-only effect facts. Its `effects` object must declare `executes=false` and
-`mutates=false`. The adapter rejects malformed or unknown fields, stale freshness
-windows, revision or environment mismatches, effectful declarations, and local private
-paths before invoking the resolver.
+position, evidence, capability, procedure, policy, blocker, provider, freshness,
+optional decision context, and read-only effect facts. Its `effects` object must
+declare `executes=false` and `mutates=false`. The adapter rejects malformed or unknown
+fields, stale freshness windows, revision or environment mismatches, effectful
+declarations, and local private paths before invoking the resolver.
 
 An accepted record is translated into the existing normalized resolver request. The
 resulting card contains Lane, Phase, the stage and nine-phase rail position, Gate,
-rationale, required proof, Good, Finished, and one anti-example. Its transition request
-is a draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC never
-submits that draft.
+rationale, required proof, Good, Finished, one anti-example, and AEC-authored teaching.
+The teaching states the transferable lesson, why the gate exists, and how to recognize
+the situation again.
+
+`decision_context` is optional. Omission means the task has no material fork and the
+card returns `decision_support: null`. When supplied, it must contain two or three
+choices. Every choice names quality, risk, reversibility, maintainability, and scope
+tradeoffs. The recommendation must identify one declared choice, explain why, and name
+observable evidence that would justify revisiting it. The authority owner is one of
+`agent`, `consumer-owner`, or `external`; AEC itself is never an authority owner.
+
+The complete decision context is normalized, bound into the request hash, copied to
+the decision, and rendered identically on the public card. Its transition request is a
+draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC never
+submits that draft or acts on the recommendation.
 
 ## Conformance exit gate
 

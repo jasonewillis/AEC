@@ -19,6 +19,12 @@
       "uniqueItems": true
     },
     "capability_profile_version": {"minLength": 1, "type": "string"},
+    "decision_support": {
+      "oneOf": [
+        {"$ref": "resolution-request.schema.json#/$defs/decision_context"},
+        {"type": "null"}
+      ]
+    },
     "environment": {"minLength": 1, "type": "string"},
     "executes": {"const": false},
     "finished": {
@@ -48,6 +54,16 @@
       "type": "object"
     },
     "lane": {"minLength": 1, "type": "string"},
+    "mentoring": {
+      "additionalProperties": false,
+      "properties": {
+        "lesson": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+        "recognition_heuristic": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+        "why_gate_exists": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+      },
+      "required": ["lesson", "recognition_heuristic", "why_gate_exists"],
+      "type": "object"
+    },
     "mutates": {"const": false},
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
     "policy_version": {"minLength": 1, "type": "string"},
@@ -119,7 +135,7 @@
     },
     "resolution_hash": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"},
     "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-    "schema_version": {"const": "3.0.0"},
+    "schema_version": {"const": "4.0.0"},
     "source_identities": {
       "additionalProperties": false,
       "properties": {
@@ -165,6 +181,7 @@
     "anti_example",
     "available_procedures",
     "capability_profile_version",
+    "decision_support",
     "environment",
     "executes",
     "finished",
@@ -172,6 +189,7 @@
     "good",
     "input_bindings",
     "lane",
+    "mentoring",
     "mutates",
     "phase",
     "policy_version",

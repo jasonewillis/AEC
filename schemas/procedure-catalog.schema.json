@@ -19,6 +19,16 @@
             "type": "array"
           },
           "identity": {"minLength": 1, "type": "string"},
+          "mentoring": {
+            "additionalProperties": false,
+            "properties": {
+              "lesson": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "recognition_heuristic": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "why_gate_exists": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+            },
+            "required": ["lesson", "recognition_heuristic", "why_gate_exists"],
+            "type": "object"
+          },
           "phase": {
             "enum": [
               "Intake",
@@ -62,6 +72,7 @@
           "finished",
           "good",
           "identity",
+          "mentoring",
           "phase",
           "rationale",
           "reason_code",
@@ -74,7 +85,7 @@
       "type": "array",
       "uniqueItems": true
     },
-    "schema_version": {"const": "1.0.0"}
+    "schema_version": {"const": "2.0.0"}
   },
   "required": ["procedures", "schema_version"],
   "title": "AEC Procedure Catalog",

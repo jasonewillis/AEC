@@ -23,8 +23,8 @@ copy so callers cannot mutate the stored canonical decision.
 
 Both public inputs are validated before resolution. Normalized requests conform to
 `resolution-request.schema.json`, and procedure catalogs conform to
-`procedure-catalog.schema.json`. Catalogs require schema version `1.0.0`, one or more
-fully shaped procedures, and the currently supported
+`procedure-catalog.schema.json`. Catalogs require schema version `2.0.0`, one or more
+fully shaped procedures with AEC-authored mentoring, and the currently supported
 `ACCEPTANCE_EVIDENCE_INCOMPLETE` catalog reason code.
 
 The procedure-catalog JSON Schema is the structural boundary. It rejects malformed
@@ -46,7 +46,7 @@ project-profile contract with `project` and `profile_version`. The resolver does
 accept or translate the former `identity` and `version` aliases. The embedded profile
 keeps its own schema version `1.0.0`.
 
-The output decision schema is deliberately versioned `3.0.0`. Every accepted decision,
+The output decision schema is deliberately versioned `4.0.0`. Every accepted decision,
 including a blocked unavailable-procedure decision, contains exactly one primary
 subject. A successful or evidence-needed decision contains a `primary_procedure` and a
 null `primary_blocker`. A blocked unavailable-procedure decision contains a null
@@ -78,11 +78,22 @@ only those collections leaves both canonical decision bytes and hash unchanged. 
 Finished, and other presentation sequences remain ordered because their sequence can
 carry meaning.
 
+Every procedure supplies one closed `mentoring` record with a transferable lesson, an
+explanation of why the phase gate exists, and a recognition heuristic. This content is
+AEC-authored and remains available even when the gate is blocked.
+
+The request may also include `decision_context` as null or a closed material-decision
+brief. The brief contains two or three choices, five explicit tradeoff dimensions per
+choice, one recommendation, evidence that would justify revisiting it, and the
+decision authority owner. The resolver validates it, binds it into the request hash,
+and returns it as `decision_support`. The resolver does not invent choices, select an
+authority, or execute the recommendation.
+
 ## Lifecycle golden catalog
 
 The golden catalog contains one explicit procedure for Intake, Framing, Spec, Plan,
 Build, Verify, Review, PR, and Deploy. Every procedure contains a phase-specific
-rationale, evidence request, Good, Finished, and one anti-example. Each golden request
+rationale, evidence request, Good, Finished, one anti-example, and mentoring. Each golden request
 selects its pinned procedure at Gate `Evidence needed` and maps to the lifecycle stage
 defined by the workflow registry.
 

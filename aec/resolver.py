@@ -11,6 +11,11 @@ from typing import Any
 
 from aec._generated.resolver_program import RESOLVER_PROGRAM
 from aec.contracts import normalize_exact_json, validate_project_profile
+from aec.mentoring import (
+    normalized_decision_context,
+    validate_decision_context,
+    validate_mentoring,
+)
 
 
 REQUIRED_REQUEST_FIELDS = {
@@ -29,6 +34,7 @@ REQUIRED_REQUEST_FIELDS = {
     "task_id",
     "workflow",
 }
+OPTIONAL_REQUEST_FIELDS = {"decision_context"}
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 PROCEDURE_REVISION = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -38,6 +44,7 @@ PROCEDURE_FIELDS = {
     "finished",
     "good",
     "identity",
+    "mentoring",
     "phase",
     "rationale",
     "reason_code",
@@ -439,7 +446,7 @@ def validate_resolution_request(request: object) -> list[str]:
 
     keys = set(request)
     missing = sorted(REQUIRED_REQUEST_FIELDS - keys)
-    unknown = sorted(keys - REQUIRED_REQUEST_FIELDS)
+    unknown = sorted(keys - REQUIRED_REQUEST_FIELDS - OPTIONAL_REQUEST_FIELDS)
     errors: list[str] = []
     if missing:
         errors.append(f"missing request fields: {', '.join(missing)}")
@@ -460,6 +467,7 @@ def validate_resolution_request(request: object) -> list[str]:
     if "phase" in request and (not isinstance(phase, str) or phase not in PHASES):
         errors.append("phase is unsupported")
     errors.extend(_validate_evidence(request.get("evidence")))
+    errors.extend(validate_decision_context(request.get("decision_context")))
     errors.extend(_validate_policy(request.get("policy")))
     errors.extend(
         _validate_procedure_reference(
@@ -495,8 +503,8 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
         errors.append(f"missing procedure catalog fields: {', '.join(missing)}")
     if unknown:
         errors.append(f"unknown procedure catalog fields: {', '.join(unknown)}")
-    if "schema_version" in catalog and catalog.get("schema_version") != "1.0.0":
-        errors.append("procedure catalog schema_version must equal 1.0.0")
+    if "schema_version" in catalog and catalog.get("schema_version") != "2.0.0":
+        errors.append("procedure catalog schema_version must equal 2.0.0")
     procedures = catalog.get("procedures")
     if "procedures" in catalog and not isinstance(procedures, list):
         errors.append("procedure catalog procedures must be a list")
@@ -516,6 +524,7 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
                     ("anti_example", "identity", "revision"),
                 )
             )
+            errors.extend(validate_mentoring(procedure.get("mentoring"), f"{field}.mentoring"))
             phase = procedure.get("phase")
             if not isinstance(phase, str) or phase not in PHASES:
                 errors.append(f"{field}.phase is unsupported")
@@ -734,6 +743,7 @@ def resolve(
         "good": good,
         "input_bindings": input_bindings,
         "lane": request["lane"],
+        "mentoring": procedure["mentoring"],
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],
@@ -751,6 +761,9 @@ def resolve(
             None
             if caller_blocker is not None or skill_unavailable
             else procedure["identity"]
+        ),
+        "decision_support": normalized_decision_context(
+            request.get("decision_context")
         ),
         "project_profile_version": consumer_profile["profile_version"],
         "rationale": rationale,

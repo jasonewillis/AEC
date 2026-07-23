@@ -13,10 +13,10 @@ from aec.resolver import ResolutionDecision, resolve
 
 
 TEN_DECISION_AGGREGATE = (
-    "sha256:2f21eb3e645db00ec475a27d7ffc66636136d7b73e0f947acdcf770e4f4d0fbb"
+    "sha256:ecf77736fa8885142d1c8b699ab5233f40935608ea8bb39c2e42aaf5cb396438"
 )
 EXPECTED_AGGREGATE = (
-    "sha256:d6ea3a7f2df5703541f87e2e68a722546c76a81153a41edf097d2b36db2fb61a"
+    "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
 BLOCKER_PRECEDENCE = (
     "AUTHORITY_CONFLICT",

@@ -12,13 +12,13 @@ from typing import Mapping, NamedTuple
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
 BEHAVIOR_IDENTITY = (
-    "sha256:d6ea3a7f2df5703541f87e2e68a722546c76a81153a41edf097d2b36db2fb61a"
+    "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
 ARTIFACT_MANIFEST_ROOT = (
-    "sha256:3029507d76dd3b536e72d905318824e22d371c30c1058f688baca9e46c0c17a4"
+    "sha256:686ece3d31618e22961acd8fe2d8e72d35ae30e750bf86d4efcaa9ad5b3890ef"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:016ee8532c242189bb46bd0eb8ffe0f8e4086a125e87d5365776891310cb392b"
+    "sha256:ce099d7a3d32e6dbc2b788c6aa950fad09b61b49f8b08048ed33cf86806d1c84"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -44,13 +44,22 @@ class FileBaseline(NamedTuple):
 
 SOURCE_BASELINE: dict[str, str] = {
     "aec/__init__.py": "6eb9af014892dc51902c32b0e1fcac89836e194831f023a5e341d636a1e78173",
-    "aec/_generated/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "aec/_generated/resolver_program.py": "9d2ef02a8d0422ad8a9b89856276dc42ae798c975ab4ce60a5627a4da3eb7bb8",
+    "aec/_generated/__init__.py": (
+        "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    ),
+    "aec/_generated/resolver_program.py": (
+        "4cf7aa4c831abe910d88bb23bf344beaa6dcfa11d0317e63048bb4a05508c270"
+    ),
     "aec/contracts.py": "077f7225b232d04ab02e5d908b5af0fb9243ed20def359ac739baefd1ddbedc1",
+    "aec/mentoring.py": (
+        "06590eec08ef9210b9dd2488d30bd1b6e1e4a2df1fed997fa4b7c0077bd40331"
+    ),
     "aec/review_attestation.py": (
         "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
     ),
-    "aec/resolver.py": "67b4fd4651291010e58999b782e35e9f1383d560cbcf4d6b2f239fe6e16e6ae2",
+    "aec/resolver.py": (
+        "5a0b9701eaa8621adca55ac23c92394ec30b026bf6161da9f822e0abfb3cdb14"
+    ),
 }
 ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     "config/principles/aec-engineering.json": ArtifactBaseline(
@@ -59,11 +68,11 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "config/procedures/ticket-to-pr.json": ArtifactBaseline(
         "configuration",
-        "1c93157620754a13dc1b83ef41188d8318d4db738fc35d5a009ca0cf24e659f6",
+        "5725ee4a2f905770602950059e9afa2835cf4da648225eff487117555ea8a777",
     ),
     "config/resolver/resolver-program.json": ArtifactBaseline(
         "configuration",
-        "1f56277ba9b41b17ead8bce2f676417157b921fd03ba42bac5322fab0509a8c2",
+        "da560799943cc99b9bfa68c0ba531f26a815065e7d1b1632a67bc9249f6f97e9",
     ),
     "config/workflows/ticket-to-pr.json": ArtifactBaseline(
         "configuration",
@@ -83,7 +92,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/consumer-state.schema.json": ArtifactBaseline(
         "schema",
-        "193be49aa1f15fe7c5f2e815f5b55ea5667c6a8c363f0ee428af7c57fba3d20c",
+        "12ff738f9b4cb0fefcfebfbf91ceafe0f28631fda415f1c162bcd2d02a2e3f5d",
     ),
     "schemas/course-inventory.schema.json": ArtifactBaseline(
         "schema",
@@ -99,11 +108,11 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/procedure-catalog.schema.json": ArtifactBaseline(
         "schema",
-        "8e715f1fce4c8f89483cc0ef614f111a8df3460c3979b9f095730ddd0040e2e1",
+        "e8652016c71607f68f3b6db09a9994d994a13b568f1a09721c4c2b3b8dcdf027",
     ),
     "schemas/resolution-decision.schema.json": ArtifactBaseline(
         "schema",
-        "7ecf82040cb46e26476d50fab5c85a39b47f5b206748a71af3ca960ebc9e2d57",
+        "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679",
     ),
     "schemas/resolution-rejection.schema.json": ArtifactBaseline(
         "schema",
@@ -111,11 +120,11 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/resolution-request.schema.json": ArtifactBaseline(
         "schema",
-        "ad4a414b1ce85010e646f12851d381257c64479019232ee36cc98f4863c3ce59",
+        "28c54ac54fa8c4dd782e881e7f49d0ecfda8a97aeed15fc07886c34a259c1247",
     ),
     "schemas/resolver-program.schema.json": ArtifactBaseline(
         "schema",
-        "c794fc88e8284618bf41a1ccb4684b4533be90cf671a68d4853c1043ae0f269a",
+        "ec1bd9ba3ee66e11d6aba7c6b3ecb6367b122df756fd13092ea070a92f9944fb",
     ),
     "skills-lock.json": ArtifactBaseline(
         "skill-lock",
@@ -143,15 +152,15 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "tests/fixtures/resolution.mutating-aec.json": ArtifactBaseline(
         "test-fixture",
-        "c0f1e6141beaebf4cf12053942abb2a37030c6c77f3b9b0df85cdd32fb0a7a67",
+        "cbb97de814da1f70da025fa08860c5f7cc021033de8734c6c4617d41c35953f7",
     ),
     "tests/fixtures/resolution.valid.json": ArtifactBaseline(
         "test-fixture",
-        "5c5bca1bec310f9251c54ee7aaac31e32fe3e332e1c1e04c0f9079ced9964c46",
+        "96789f3fd42b90f943845a0f0c36b7fa4d2815e3da371d89e7b86d57ab95600b",
     ),
     "tests/fixtures/resolution.wrong-hash.json": ArtifactBaseline(
         "test-fixture",
-        "24b2c2853ad31de9263bf002a99ac76f066d47b826687ca6308bca30ad8a4a1b",
+        "e4513e12685b394b6130c4610b054b3d84e056fa843e97a557f516b310bfc84b",
     ),
     "tests/fixtures/resolver/golden/build.json": ArtifactBaseline(
         "test-fixture",
@@ -195,7 +204,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "tests/fixtures/resolver/red/malformed-procedure-catalog.json": ArtifactBaseline(
         "test-fixture",
-        "c9a7010510cbea5a1abbfebcfc915cfcc4c71c2cf3dc6b8127b0900ff7f98308",
+        "97cc0519e22d73b16a714c54c2283774ab196b14a7414bb2d38bbd22d8382450",
     ),
     "tests/fixtures/resolver/red/unavailable-skill.json": ArtifactBaseline(
         "test-fixture",
@@ -229,7 +238,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "aec/consumer.py": FileBaseline(
         REGULAR_MODE,
-        "a1bf4688ee1952f4a207a0b72a8e792c6684b63d20a006e3bd6d2444eb0b03ae",
+        "39d5ac572f140e2d45f9c0304b4bf5f4a5315159a7e6243a06b07e3fd79e635a",
     ),
     "tests/test_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
@@ -245,11 +254,11 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/generate_resolver.py": FileBaseline(
         REGULAR_MODE,
-        "1f5e845b8e0ab41a89bdb346dba66fba39c520d276039cb528c89591386f98e4",
+        "d2fa950f2572fb213eade309f5763739fea1fff4d1f859bb5b85d22cfcf68676",
     ),
     "tools/prove_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
-        "6da72867576089ada5610ed0581e3dc4c11e45d7894d1ededc8bf7f58b303b45",
+        "a53aab66774a61e1982229c04c954be36f7cc705a9ee76783b22bfe6148a9291",
     ),
     "tools/validate_blueprint_skills.py": FileBaseline(
         REGULAR_MODE,
@@ -257,7 +266,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "61a3962ab3178a4f717a4abdcf553017579cc7861690038f293a1dd1894e2318",
+        "e9e29cd5a22068e4239c7d1febb4d5355e2a1ae46770df0d6ab4f129e202b5e0",
     ),
 }
 PYTHON_PATHS = frozenset(
@@ -266,6 +275,7 @@ PYTHON_PATHS = frozenset(
         "aec/adapters.py",
         "aec/consumer.py",
         "aec/mentor.py",
+        "aec/mentoring.py",
         "tests/test_admission_root_v1.py",
         "tests/test_agent_adapters.py",
         "tests/test_authority_v2_hostile_corpus.py",

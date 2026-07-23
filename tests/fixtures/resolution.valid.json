@@ -8,6 +8,7 @@
     }
   ],
   "capability_profile_version": "claude-codex-common:0.1.0",
+  "decision_support": null,
   "environment": "test",
   "executes": false,
   "finished": [
@@ -22,6 +23,11 @@
     "resolution_request": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
   },
   "lane": "TEST",
+  "mentoring": {
+    "lesson": "Verification evidence must bind the exact revision and environment.",
+    "recognition_heuristic": "Use this gate when implementation is complete but proof is incomplete.",
+    "why_gate_exists": "Evidence from another revision or environment can create a false green."
+  },
   "mutates": false,
   "phase": "Verify",
   "policy_version": "0.1.0",
@@ -42,9 +48,9 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:fd143902d7065d097cfb451fe66eb9a7d5fb91ab5f49fd0031eb20181f815adb",
+  "resolution_hash": "sha256:5e43bd42638001c871801bad6c93240869d5b57c51c9b3477cf4b5eabc624a04",
   "revision": "0123456789abcdef0123456789abcdef01234567",
-  "schema_version": "3.0.0",
+  "schema_version": "4.0.0",
   "source_identities": {
     "capability_profile": "claude-codex-common",
     "consumer_profile": "reference-profile",

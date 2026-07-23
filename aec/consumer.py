@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from aec.contracts import normalize_exact_json, validate_project_profile
+from aec.mentoring import validate_decision_context
 from aec.resolver import (
     ResolutionDecision,
     resolve,
@@ -33,6 +34,7 @@ CONSUMER_STATE_FIELDS = {
     "task",
     "workflow_position",
 }
+OPTIONAL_CONSUMER_STATE_FIELDS = {"decision_context"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 PINNED_IDENTITY = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PRIVATE_PATH_PATTERNS = (
@@ -209,7 +211,7 @@ def validate_consumer_state(state: object) -> list[str]:
     keys = set(state)
     errors: list[str] = []
     missing = sorted(CONSUMER_STATE_FIELDS - keys)
-    unknown = sorted(keys - CONSUMER_STATE_FIELDS)
+    unknown = sorted(keys - CONSUMER_STATE_FIELDS - OPTIONAL_CONSUMER_STATE_FIELDS)
     if missing:
         errors.append(f"missing consumer state fields: {', '.join(missing)}")
     if unknown:
@@ -295,6 +297,7 @@ def validate_consumer_state(state: object) -> list[str]:
     )
     errors.extend(_validate_evidence(state.get("evidence")))
     errors.extend(_validate_blockers(state.get("blockers")))
+    errors.extend(validate_decision_context(state.get("decision_context")))
 
     procedures, procedure_errors = _exact_object(
         state.get("procedures"), "procedures", {"available", "required"}
@@ -395,7 +398,7 @@ def _normalized_request(state: dict[str, Any]) -> dict[str, Any]:
     """Translate accepted caller state into the existing resolver request."""
     position = state["workflow_position"]
     procedures = state["procedures"]
-    return {
+    request = {
         "available_procedures": procedures["available"],
         "blockers": state["blockers"],
         "capability_profile": state["capabilities"],
@@ -415,6 +418,9 @@ def _normalized_request(state: dict[str, Any]) -> dict[str, Any]:
             "stage": position["stage"],
         },
     }
+    if "decision_context" in state:
+        request["decision_context"] = state["decision_context"]
+    return request
 
 
 def _render_card(decision: ResolutionDecision) -> ConsumerCard:
@@ -429,6 +435,7 @@ def _render_card(decision: ResolutionDecision) -> ConsumerCard:
         "finished": resolved["finished"],
         "gate": resolved["gate"],
         "good": resolved["good"],
+        "mentoring": resolved["mentoring"],
         "lane": resolved["lane"],
         "phase": phase,
         "rail_position": {
@@ -441,7 +448,8 @@ def _render_card(decision: ResolutionDecision) -> ConsumerCard:
         "rationale": resolved["rationale"],
         "required_proof": resolved["required_evidence"],
         "resolution_hash": resolved["resolution_hash"],
-        "schema_version": "1.0.0",
+        "schema_version": "2.0.0",
+        "decision_support": resolved["decision_support"],
         "transition_request": {
             "authoritative": False,
             "environment": resolved["environment"],
