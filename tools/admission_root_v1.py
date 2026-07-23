@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:f77420c25171d422e5932b5578c49e6003ef2c91498bbbeaa66f259ea0ccc441"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:99be71a553f3a839a72ac656c4fdc86fe92c5b756eccb1ab7a8f9e6731920a9c"
+    "sha256:26f727badaa82232fcb8e8978ae8f433a2e289e0614cdaa8e5a693e50f6e0b61"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -194,7 +194,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
 }
 WORKFLOW_TRANSITION_BASELINE: dict[str, str] = {
     ".github/workflows/candidate-admission.yml": (
-        "55cdab9371b7eed43b2950bb7a2b5f337ea5442f043842f451aaedbf3087456e"
+        "2d0229163087c649042e0f4af0060ab269af036c84df398745f8cb7802ac9068"
     ),
     ".github/workflows/foundation-gate.yml": (
         "75d940adee48523e8c4163cc78b2cb16cc2f8d80317a026677f4b52adb70459b"

@@ -205,6 +205,11 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
         self.assertIn("--candidate", admit)
         self.assertIn("permissions:\n      contents: read", admit)
+        self.assertIn("persist-credentials: true", admit)
+        self.assertLess(
+            admit.index("persist-credentials: true"),
+            admit.index('git fetch --no-tags --depth=1 origin "${HEAD_SHA}"'),
+        )
         self.assertIn("needs: admit", behavior)
         self.assertIn("permissions:\n      contents: read", behavior)
         self.assertIn("ref: ${{ needs.admit.outputs.head-sha }}", behavior)
