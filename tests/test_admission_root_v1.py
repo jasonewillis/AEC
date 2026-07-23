@@ -235,6 +235,11 @@ class AdmissionRootV1Tests(unittest.TestCase):
         self.assertIn("ref: ${{ needs.admit.outputs.head-sha }}", behavior)
         self.assertIn("persist-credentials: false", behavior)
         self.assertNotIn("permissions:\n      statuses: write", behavior)
+        self.assertIn("python3 -m unittest discover -s tests -v", behavior)
+        self.assertIn(
+            "tests/test_foundation_behavior.py",
+            PROOF_CLOSURE_BASELINE,
+        )
         self.assertIn("needs: [admit, behavior]", publish)
         self.assertIn("if: ${{ always() }}", publish)
         self.assertIn("permissions:\n      statuses: write", publish)

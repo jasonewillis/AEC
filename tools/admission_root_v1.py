@@ -228,6 +228,10 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
         REGULAR_MODE,
         "a1bf4688ee1952f4a207a0b72a8e792c6684b63d20a006e3bd6d2444eb0b03ae",
     ),
+    "tests/test_foundation_behavior.py": FileBaseline(
+        REGULAR_MODE,
+        "05054db3aa81580cf3d63e21ebaec6c20378aff02fe8a8fe7912aac3d7e63aa9",
+    ),
     "tools/__init__.py": FileBaseline(
         REGULAR_MODE,
         "24fcc84ad8324d8ab9da5493c183e7ae307a1508cdbc4dc2efde04f18ba18811",
@@ -235,6 +239,10 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     "tools/generate_resolver.py": FileBaseline(
         REGULAR_MODE,
         "1f5e845b8e0ab41a89bdb346dba66fba39c520d276039cb528c89591386f98e4",
+    ),
+    "tools/prove_foundation_behavior.py": FileBaseline(
+        REGULAR_MODE,
+        "96855d8aafb1868cb28afb1ec716821aba7e9d6c3f4f94fb2d1be8828c261650",
     ),
     "tools/validate_blueprint_skills.py": FileBaseline(
         REGULAR_MODE,
@@ -258,6 +266,7 @@ PYTHON_PATHS = frozenset(
         "tests/test_consumer_interface.py",
         "tests/test_exact_json.py",
         "tests/test_foundation_validation.py",
+        "tests/test_foundation_behavior.py",
         "tests/test_private_mentor_lens.py",
         "tests/test_resolver.py",
         "tests/test_resolver_program.py",
@@ -265,6 +274,7 @@ PYTHON_PATHS = frozenset(
         "tools/admission_root_v1.py",
         "tools/generate_resolver.py",
         "tools/prove_agent_adapter_parity.py",
+        "tools/prove_foundation_behavior.py",
         "tools/prove_private_mentor_lens.py",
         "tools/validate_blueprint_skills.py",
         "tools/validate_foundation.py",
