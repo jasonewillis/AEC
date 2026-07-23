@@ -31,9 +31,7 @@ REQUIRED_REQUEST_FIELDS = {
 }
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
-PROCEDURE_REVISION = re.compile(
-    r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$"
-)
+PROCEDURE_REVISION = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROCEDURE_VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROCEDURE_FIELDS = {
     "anti_example",
@@ -80,7 +78,9 @@ BLOCKER_REASON_REGISTRY = {
     },
     "PRIVATE_INPUT_INCLUDED": {
         "anti_example": "Private input is forwarded into shared mentoring evidence.",
-        "finished": ["Private input is excluded before the request crosses its boundary."],
+        "finished": [
+            "Private input is excluded before the request crosses its boundary."
+        ],
         "good": ["Only authorized project-neutral facts reach the resolver."],
         "rationale_summary": "Private input crossed the normalized request boundary.",
         "required_evidence": ["private-input-exclusion"],
@@ -596,11 +596,7 @@ def _primary_active_blocker(request: dict[str, Any]) -> dict[str, str] | None:
         reason_code: index
         for index, reason_code in enumerate(BLOCKER_REASON_PRECEDENCE)
     }
-    active = [
-        blocker
-        for blocker in request["blockers"]
-        if blocker["active"] is True
-    ]
+    active = [blocker for blocker in request["blockers"] if blocker["active"] is True]
     if not active:
         return None
     selected = min(

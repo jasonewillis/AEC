@@ -199,7 +199,8 @@ class SourceContractTests(unittest.TestCase):
             set(blocker_schema["required"]),
         )
         self.assertEqual(
-            SUPPORTED_REASON_CODES - {
+            SUPPORTED_REASON_CODES
+            - {
                 "ACCEPTANCE_EVIDENCE_COMPLETE",
                 "ACCEPTANCE_EVIDENCE_INCOMPLETE",
             },

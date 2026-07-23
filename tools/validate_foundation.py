@@ -362,9 +362,7 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append("caller-blocked decisions require a primary blocker")
         elif primary_blocker["reason_code"] != reason_code:
             errors.append("primary_blocker.reason_code must equal reason_code")
-        expected_evidence = BLOCKER_REASON_REGISTRY[reason_code][
-            "required_evidence"
-        ]
+        expected_evidence = BLOCKER_REASON_REGISTRY[reason_code]["required_evidence"]
         if required_evidence != expected_evidence:
             errors.append(
                 "caller-blocked decision evidence must match its blocker reason"
@@ -550,7 +548,9 @@ def validate_provenance(provenance: object) -> list[str]:
 
     blueprint = by_name.get("blueprint", {})
     if blueprint.get("license") is not None:
-        errors.append("Blueprint license must remain null unless independently verified")
+        errors.append(
+            "Blueprint license must remain null unless independently verified"
+        )
     if blueprint.get("relationship") != "authorized-skill-source":
         errors.append("Blueprint relationship must be authorized-skill-source")
     if blueprint.get("authorization") != EXPECTED_AUTHORIZATION:

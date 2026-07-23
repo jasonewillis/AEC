@@ -35,12 +35,8 @@ def load_json(path: Path) -> object:
 
 class ResolverBlockerPrecedenceTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.request = load_json(
-            ROOT / "tests/fixtures/resolver/golden/verify.json"
-        )
-        self.procedures = load_json(
-            ROOT / "config/procedures/ticket-to-pr.json"
-        )
+        self.request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
+        self.procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
 
     def resolve_payload(self, request: object) -> dict[str, object]:
         result = resolve(request, self.procedures)
@@ -77,9 +73,7 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
         schema = load_json(ROOT / "schemas/resolution-decision.schema.json")
         contracts = {}
         for rule in schema["allOf"]:
-            condition = rule.get("if", {}).get("properties", {}).get(
-                "reason_code", {}
-            )
+            condition = rule.get("if", {}).get("properties", {}).get("reason_code", {})
             reason_code = condition.get("const")
             if reason_code is None:
                 continue
@@ -164,8 +158,7 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
         required_kinds = next(
             procedure["required_evidence"]
             for procedure in self.procedures["procedures"]
-            if procedure["identity"]
-            == request["required_procedure"]["identity"]
+            if procedure["identity"] == request["required_procedure"]["identity"]
         )
         request["evidence"] = [
             {
@@ -247,9 +240,7 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
         self.assertEqual("alpha", payload["primary_blocker"]["identity"])
 
     def test_active_caller_blocker_precedes_skill_unavailable(self) -> None:
-        request = load_json(
-            ROOT / "tests/fixtures/resolver/red/unavailable-skill.json"
-        )
+        request = load_json(ROOT / "tests/fixtures/resolver/red/unavailable-skill.json")
         request["blockers"] = [
             {
                 "active": True,

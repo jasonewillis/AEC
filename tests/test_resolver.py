@@ -273,9 +273,7 @@ class ResolverTracerTests(unittest.TestCase):
 
         for identity in ("bad identity", "bad:identity"):
             with self.subTest(identity=identity):
-                procedures = load_json(
-                    ROOT / "config/procedures/ticket-to-pr.json"
-                )
+                procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
                 procedures["procedures"][0]["identity"] = identity
                 procedures["procedures"][0]["revision"] = f"{identity}:1.0.0"
 
