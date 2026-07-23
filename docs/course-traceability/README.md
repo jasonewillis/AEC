@@ -8,11 +8,29 @@ validated against a closed factual schema and semantic checks.
 
 | Source set | Primary records | Hash status | Supplemental records |
 | --- | ---: | --- | ---: |
-| AI Engineer | 13 numbered RTF lessons | Exact SHA-256 recorded for all 13 | One gateway PDF with an exact SHA-256 |
+| AI Engineer | 13 numbered RTF lesson identities | Historical SHA-256 recorded for all 13 original source records | One gateway PDF identity with a historical SHA-256 |
 | AIA Week 5 Evals & Monitoring | Eight lessons | `null` until source files are verified | None |
 
 The gateway PDF is supplemental to AI Engineer. It is not lesson 14. Other PDFs and
 web links in the private education folder are not part of the numbered inventory.
+
+## Current local representation status
+
+The ignored local workspace currently contains:
+
+- 13 recovered plain-text lesson representations plus one supplemental gateway text
+  under `.local/course-sources/ai-engineer/`;
+- a recovery manifest that identifies the archived session used for reconstruction;
+  and
+- 13 local RTF or RTFD lesson files under `docs/AI Engineer Course/`.
+
+These files are useful owner-local mentoring sources, but they do **not** reproduce the
+tracked historical hashes. The recovered text intentionally changes representation,
+the original RTF formatting was not recovered, and the supplemental PDF binary is not
+present. The current local RTF or RTFD bytes also do not match the historical hashes
+recorded in `course-inventory.json`. Therefore original byte identity is unverified.
+The tracked inventory remains a factual historical provenance record, not a claim that
+the current recovered files are exact originals.
 
 ## Allowed metadata
 
