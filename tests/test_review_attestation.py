@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import itertools
 import json
 import os
@@ -13,7 +14,11 @@ from aec.review_attestation import (
     OfflineReviewVerification,
     verify_offline_review,
 )
-from tools.validate_foundation import validate_review_attestation_purity
+from tools.admission_root_v1 import SOURCE_BASELINE
+from tools.validate_foundation import (
+    REVIEW_ATTESTATION_SHA256,
+    validate_review_attestation_purity,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -342,6 +347,14 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
 
     def test_foundation_purity_rejects_forbidden_imports_and_calls(self) -> None:
         source = (ROOT / "aec/review_attestation.py").read_text(encoding="utf-8")
+        self.assertEqual(
+            REVIEW_ATTESTATION_SHA256,
+            hashlib.sha256(source.encode("utf-8")).hexdigest(),
+        )
+        self.assertEqual(
+            REVIEW_ATTESTATION_SHA256,
+            SOURCE_BASELINE["aec/review_attestation.py"],
+        )
         self.assertEqual([], validate_review_attestation_purity(source))
         mutations = {
             "filesystem-import": "\nfrom pathlib import Path\n",
@@ -372,6 +385,21 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
                 "\nmodule_dict = json.__dict__\n"
                 'module_dict["dumps"] = __builtins__["open"]\n'
                 "json.dumps('/tmp/aec-purity-bypass', 'w')\n"
+            ),
+            "function-name-binding": "\ndef all(*args):\n    return args\n",
+            "class-name-binding": "\nclass all:\n    pass\n",
+            "argument-name-binding": "\ndef helper(all):\n    return all\n",
+            "exception-name-binding": (
+                "\ntry:\n    raise RuntimeError\nexcept RuntimeError as all:\n    pass\n"
+            ),
+            "function-globals-capability": "\nverify_offline_review.__globals__\n",
+            "combined-globals-builtin-escape": (
+                "\ndef _is_identity(all):\n"
+                "    return all('/tmp/aec-purity-bypass', 'w')\n"
+                "_is_identity("
+                "verify_offline_review.__globals__"
+                "['__builtins__']['open']"
+                ")\n"
             ),
         }
         for case_id, mutation in mutations.items():

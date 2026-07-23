@@ -3,8 +3,8 @@
 
 from __future__ import annotations
 
-import ast
 import copy
+import hashlib
 import json
 import re
 import sys
@@ -46,61 +46,8 @@ SUPPORTED_REASON_CODES = {
 }
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
-REVIEW_ATTESTATION_IMPORTS = frozenset(
-    {
-        ("from", "__future__", ("annotations",)),
-        ("from", "dataclasses", ("dataclass",)),
-        ("import", "json", ()),
-    }
-)
-REVIEW_ATTESTATION_CALL_NAMES = frozenset(
-    {
-        "OfflineReviewFailure",
-        "OfflineReviewVerification",
-        "_canonical_bytes",
-        "_failure",
-        "_has_exact_unaliased_containers",
-        "_is_identity",
-        "_is_observation",
-        "_verify_offline_review",
-        "all",
-        "any",
-        "bool",
-        "dataclass",
-        "frozenset",
-        "id",
-        "isinstance",
-        "len",
-        "max",
-        "set",
-        "type",
-    }
-)
-REVIEW_ATTESTATION_CALL_ATTRIBUTES = frozenset(
-    {
-        "add",
-        "dumps",
-        "encode",
-        "items",
-    }
-)
-REVIEW_ATTESTATION_FORBIDDEN_REFERENCES = frozenset(
-    {
-        "__import__",
-        "__builtins__",
-        "breakpoint",
-        "compile",
-        "eval",
-        "exec",
-        "input",
-        "open",
-    }
-)
-REVIEW_ATTESTATION_PROTECTED_NAMES = frozenset(
-    {
-        *REVIEW_ATTESTATION_CALL_NAMES,
-        "json",
-    }
+REVIEW_ATTESTATION_SHA256 = (
+    "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
 )
 COURSE_EXPRESSIVE_FIELDS = {
     "advice",
@@ -886,64 +833,14 @@ def validate_runtime_authority(paths: list[Path]) -> list[str]:
 
 
 def validate_review_attestation_purity(source: str) -> list[str]:
-    """Reject capabilities outside the exact offline-review implementation."""
+    """Accept only the independently reviewed offline-review source bytes."""
     try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return ["review attestation module must parse as Python"]
-
-    imports: set[tuple[str, str, tuple[str, ...]]] = set()
-    errors: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            for alias in node.names:
-                if alias.asname is not None:
-                    errors.append("review attestation imports must not use aliases")
-                imports.add(("import", alias.name, ()))
-        elif isinstance(node, ast.ImportFrom):
-            if node.level != 0 or node.module is None:
-                errors.append("review attestation imports must be absolute")
-                continue
-            names = tuple(alias.name for alias in node.names)
-            if any(alias.asname is not None for alias in node.names):
-                errors.append("review attestation imports must not use aliases")
-            imports.add(("from", node.module, names))
-        elif isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name):
-                if node.func.id not in REVIEW_ATTESTATION_CALL_NAMES:
-                    errors.append(
-                        f"review attestation call is not admitted: {node.func.id}"
-                    )
-            elif isinstance(node.func, ast.Attribute):
-                if node.func.attr not in REVIEW_ATTESTATION_CALL_ATTRIBUTES:
-                    errors.append(
-                        f"review attestation call is not admitted: {node.func.attr}"
-                    )
-            else:
-                errors.append("review attestation dynamic call target is not admitted")
-        elif (
-            isinstance(node, ast.Name)
-            and isinstance(node.ctx, ast.Load)
-            and node.id in REVIEW_ATTESTATION_FORBIDDEN_REFERENCES
-        ):
-            errors.append(
-                f"review attestation forbidden capability is referenced: {node.id}"
-            )
-        elif (
-            isinstance(node, ast.Name)
-            and isinstance(node.ctx, (ast.Store, ast.Del))
-            and node.id in REVIEW_ATTESTATION_PROTECTED_NAMES
-        ):
-            errors.append(f"review attestation admitted name is rebound: {node.id}")
-        elif isinstance(node, (ast.Attribute, ast.Subscript)) and isinstance(
-            node.ctx, (ast.Store, ast.Del)
-        ):
-            errors.append("review attestation indirect mutation is not admitted")
-        elif isinstance(node, ast.Attribute) and node.attr == "__dict__":
-            errors.append("review attestation __dict__ capability is not admitted")
-    if imports != REVIEW_ATTESTATION_IMPORTS:
-        errors.append("review attestation imports do not match the exact allowlist")
-    return errors
+        encoded = source.encode("utf-8", errors="strict")
+    except UnicodeEncodeError:
+        return ["review attestation source must be strict UTF-8"]
+    if hashlib.sha256(encoded).hexdigest() != REVIEW_ATTESTATION_SHA256:
+        return ["review attestation source bytes do not match the reviewed identity"]
+    return []
 
 
 def validate_workflow(workflow: object) -> list[str]:
