@@ -17,7 +17,7 @@ here.
 | Canonical hash contract | Satisfied | `tools/validate_foundation.py:69-86` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
 | executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json:9,12` (`const false`), `tools/validate_foundation.py:107-110` |
 | Workflows MIT pin | Satisfied | `provenance/upstream-lock.json:4-10`, `docs/provenance.md:9,16-18` |
-| Blueprint authorized skill pin and static discovery parity | Partially satisfied after Slice 3 foundation install; real loader and decision-hash parity remain open | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/`, issue #5 |
+| Blueprint authorized skill pin and real Claude/Codex parity | Satisfied; exact canonical skill bytes, discovery paths, loader evidence, normalized request, manifest, and decision hash agree | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/`, `tests/test_agent_adapters.py`, closed parity issue [#32](https://github.com/jasonewillis/AEC/issues/32); complementary consumer-interface issue [#5](https://github.com/jasonewillis/AEC/issues/5) is also closed |
 | Factual course provenance (13 + 8 lessons) | Satisfied | `provenance/course-inventory.json`, `docs/course-traceability/README.md` |
 | Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml:16-38` |
 
@@ -37,13 +37,13 @@ as a reference example rather than a shipped artifact.
 | 4 | AEC callable interface + display form | Slice 3 |
 | 5 | Strict meaning of "how come" (rationale contract) | Slice 2 |
 | 6 | Learning measurement (does mentoring change behavior) | Slice 7 |
-| 7 | Break-glass override path | Slice 5 |
-| 8 | Concurrency / idempotency guarantees | Slice 5 |
+| 7 | Break-glass override path | Consumer-owned; outside AEC |
+| 8 | Concurrency / idempotency guarantees | Consumer-owned; outside AEC |
 | 9 | Foundation upgrade / rollback procedure | Slice 7 |
 | 10 | Workflow families beyond ticket-to-pr | Slice 7 |
 | 11 | AEC-unavailable degraded mode | Slice 3 |
 | 12 | Generic state-provider contract | Slice 4 |
-| 13 | Red-canary extension to full 9/9 threat-model coverage | Slice 2 |
+| 13 | End-to-end closure of all nine routed canaries | AEC plus consumer adoption |
 | 14 | Adaptive advice model | Slice 7 |
 
 Slice numbers match `docs/delivery/roadmap.md`.
@@ -64,23 +64,25 @@ Slice numbers match `docs/delivery/roadmap.md`.
   adopts AEC is a decision made in that repository, not in AEC, and is out of
   scope for this foundation.
 
-## Q4: Smallest next slice
+## Q4: Framework delivery status
 
-**Slice 2** remains the deterministic resolver and resolver-owned threat-model
-canaries. Claude/Codex loader discovery parity is Slice 3 and is owned by issue #5;
-consumer-state and writer canaries stay in their linked consumer issues.
+**AEC Slice 5 - Offline Review Evidence** merged in
+[PR #41](https://github.com/jasonewillis/AEC/pull/41) at main revision
+`88b5f5009b9cb9ae150b94282d8db8681cb98abc`, closing
+[#20](https://github.com/jasonewillis/AEC/issues/20). Slices 1 through 5 have no open
+implementation issue. Slice 2 is complete under closed
+[#6](https://github.com/jasonewillis/AEC/issues/6), real Claude/Codex parity is
+complete, and consumer single-writer work remains outside AEC.
 
-## Q5: Red/green proof list for Slice 2
+## Q5: Slice 2 proof after #6
 
-- Nine phase golden fixtures, one per lifecycle phase (Intake, Framing, Spec,
-  Plan, Build, Verify, Review, PR, Deploy), each resolving to a stable
-  `resolution_hash`.
-- Nine red fixtures, one per handoff-defined threat-model canary (wrong hash,
-  mutating AEC, stale revision, missing evidence, unpinned capability profile,
-  duplicate resolution, unavailable procedure, cross-environment leakage,
-  unauthorized lifecycle write).
-- Slice 3 separately proves Claude and Codex discover one canonical skill set and run
-  equivalent adapter inputs. That proof must not be used to close Slice 2 early.
+- Nine phase golden fixtures, one per lifecycle phase (Intake, Framing, Spec, Plan,
+  Build, Verify, Review, PR, Deploy), resolve to stable decision hashes.
+- Unavailable procedures and active blockers produce deterministic blocked decisions.
+- The base-owned admission proof rejects candidate self-authorization, governed-source
+  closure drift, hostile Git paths and modes, ambiguous artifacts, and behavior drift.
+- RESOLVE-009 proves blocker precedence is deterministic and order independent.
+- Claude and Codex parity remains a separate completed Slice 3 proof.
 
 ## Q6: Owning branch/issue/PR pattern
 
@@ -91,11 +93,27 @@ required check (`.github/workflows/foundation-gate.yml`) plus the same local
 verification commands documented in `README.md`. No slice merges until its
 binary exit gate in `docs/delivery/roadmap.md` is met on the exact PR head.
 
-## Handoff canary coverage
+## Handoff canary routing after #6
 
-Handoff canary coverage in merged `main`: **1 of 9**
-(`test_consumer_profile_cannot_claim_aec_as_lifecycle_writer` maps to handoff
-canary #9, unauthorized lifecycle write). The other 16 tests in
-`tests/test_foundation_validation.py` exercise schema, provenance, and
-workflow drift -- honest red canaries for those surfaces, but not the
-handoff's threat-model list. Closing that gap is Slice 2 gap #13 above.
+Issue #6 defines the authoritative nine-canary catalog. Slice 2 closes its
+resolver-owned outcomes, but it does not make every transferred consumer outcome an AEC
+claim. Current evidence is recorded per identity instead of forcing a misleading
+aggregate percentage.
+
+| # | Exact #6 canary identity | Status | Current owner evidence |
+| ---: | --- | --- | --- |
+| 1 | Unavailable skill | Proven in AEC | `test_unavailable_skill_returns_one_stable_blocked_decision` and closed [#6](https://github.com/jasonewillis/AEC/issues/6) |
+| 2 | Duplicate skill discovery | Proven in AEC | `test_duplicate_codex_skill_name_fails_closed`, Claude duplicate-loader rejection, and closed parity [#32](https://github.com/jasonewillis/AEC/issues/32) |
+| 3 | Wrong-revision evidence | Proven in AEC | The resolver binds wrong-revision evidence without allowing it to satisfy the current request; closed [#6](https://github.com/jasonewillis/AEC/issues/6) |
+| 4 | Stale lifecycle phase | Transferred | AEC proves deterministic handling of normalized `LIFECYCLE_STATE_STALE`; authoritative detection belongs to closed consumer writer [#8807](https://github.com/JLWAI/fedJobAdvisor/issues/8807) |
+| 5 | Missing browser capability | Open integration evidence | The #6 route points to closed AEC [#5](https://github.com/jasonewillis/AEC/issues/5), but #5 proves consumer-state adaptation, not a browser-capability canary. Closed parity [#32](https://github.com/jasonewillis/AEC/issues/32) proves loader evidence, not browser availability. |
+| 6 | Conflicting project policy | Proven in AEC | `POLICY_CONFLICT` is in the closed blocker registry and deterministic precedence proof under closed [#6](https://github.com/jasonewillis/AEC/issues/6) |
+| 7 | Private-file inclusion | Proven at the AEC boundary; consumer-owned beyond it | Private-path consumer-state fixtures reject before resolution under closed [#5](https://github.com/jasonewillis/AEC/issues/5); consumer adapter [#8808](https://github.com/JLWAI/fedJobAdvisor/issues/8808) is closed |
+| 8 | Label green while evidence is red | Open integration evidence | Labels are consumer state. The routed consumer writer [#8807](https://github.com/JLWAI/fedJobAdvisor/issues/8807) is closed, but its current contract does not provide linked binary proof of contradictory green-label removal. |
+| 9 | Duplicate or unauthorized lifecycle writer | Transferred | AEC rejects profiles that name AEC as writer; authenticated single-writer enforcement belongs to closed consumer writer [#8807](https://github.com/JLWAI/fedJobAdvisor/issues/8807) |
+
+The RESOLVE-007 hostile corpus adds separate admission-boundary protection. Existing
+wrong-hash, mutation, schema, provenance, and cross-environment integrity tests also
+remain required, but none substitute for the exact catalog above. End-to-end
+integration cannot claim all nine green while canaries 5 and 8 lack linked binary
+acceptance evidence.

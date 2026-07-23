@@ -8,7 +8,7 @@ unpinned revisions and unsafe relationship changes.
 | --- | --- | --- | --- |
 | `owainlewis/workflows` | `ce3ff09e27c501e7689fd069ece3aaab63da7e46` | Pattern source | MIT license verified upstream |
 | `owainlewis/blueprint` | `3af769db122e3c16f64bb78bcd93eb64d3e541e8` | Authorized exact skill source | No upstream license verified; owner attests course-participant permission from Owain Lewis and directs this AEC install |
-| AI Engineer course | Private education source | Factual provenance only | Exact source metadata, no protected expression |
+| AI Engineer course | Private education source | Factual provenance only | Historical source metadata; current recovered local representations are not byte-identical originals |
 | AIA Week 5 Evals & Monitoring | Private education source | Factual provenance only | Exact source metadata, hashes null until verified |
 
 ## Workflows boundary
@@ -43,6 +43,13 @@ other Blueprint content. See
 source-set identities, stable record identifiers, exact titles, source filenames, and
 SHA-256 values when verified. The gateway PDF is supplemental and is not lesson 14.
 Missing hashes remain `null`; they cannot be replaced with summaries.
+
+The ignored local AI Engineer sources are recovered representations for owner-local
+mentoring. Their current bytes do not reproduce the historical source hashes in the
+tracked inventory. Original byte identity therefore remains unverified. This status
+does not invalidate the factual source identities, but it forbids presenting the
+recovered text or local RTF files as authenticated originals. No private course
+expression is copied into tracked files.
 
 AEC does not store or derive lesson principles, summaries, operational effects,
 guidance, prompt text, or lesson-to-policy mappings. Runtime procedures cite only the
