@@ -231,6 +231,19 @@
       }
     },
     {
+      "if": {"properties": {"gate": {"const": "Needs review"}}},
+      "then": {
+        "properties": {
+          "allowed": {"const": true},
+          "phase": {"const": "Review"},
+          "primary_blocker": {"type": "null"},
+          "primary_procedure": {"minLength": 1, "type": "string"},
+          "reason_code": {"const": "ACCEPTANCE_EVIDENCE_INCOMPLETE"},
+          "required_evidence": {"minItems": 1}
+        }
+      }
+    },
+    {
       "if": {"properties": {"gate": {"const": "Blocked"}}},
       "then": {
         "properties": {

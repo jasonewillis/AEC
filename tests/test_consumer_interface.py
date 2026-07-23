@@ -112,6 +112,117 @@ class ConsumerStateContractTests(unittest.TestCase):
             card["transition_request"],
         )
 
+    def test_complete_evidence_renders_ready_rationale(self) -> None:
+        revision = self.state["revision"]["identity"]
+        self.state["evidence"] = [
+            {
+                "accepted": True,
+                "environment": "test",
+                "kind": kind,
+                "revision": revision,
+            }
+            for kind in ("focused-test-report", "integration-test-report")
+        ]
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=revision,
+        )
+
+        self.assertIsInstance(result, ConsumerCard)
+        card = result.to_dict()
+        self.assertEqual("Ready", card["gate"])
+        self.assertEqual([], card["required_proof"])
+        self.assertEqual(
+            "All required evidence is accepted for the exact revision and environment.",
+            card["rationale"]["summary"],
+        )
+
+    def test_review_without_independent_evidence_needs_review(self) -> None:
+        procedure = {
+            "identity": "review-exact-change",
+            "revision": "review-exact-change:1.0.0",
+        }
+        self.state["workflow_position"] = {
+            "lane": "GENERAL",
+            "phase": "Review",
+            "stage": "Assure & Release",
+            "workflow": "ticket-to-pr",
+            "workflow_revision": "ticket-to-pr:1.0.0",
+        }
+        self.state["procedures"] = {
+            "available": [procedure],
+            "required": procedure,
+        }
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=self.state["revision"]["identity"],
+        )
+
+        self.assertIsInstance(result, ConsumerCard)
+        card = result.to_dict()
+        self.assertEqual("Needs review", card["gate"])
+        self.assertEqual(
+            ["base-head-binding", "independent-review"],
+            card["required_proof"],
+        )
+        self.assertFalse(card["authoritative"])
+        self.assertFalse(card["transition_request"]["executes"])
+        self.assertFalse(card["transition_request"]["mutates"])
+
+    def test_stale_independent_review_keeps_review_gate_closed(self) -> None:
+        revision = self.state["revision"]["identity"]
+        procedure = {
+            "identity": "review-exact-change",
+            "revision": "review-exact-change:1.0.0",
+        }
+        self.state["workflow_position"] = {
+            "lane": "GENERAL",
+            "phase": "Review",
+            "stage": "Assure & Release",
+            "workflow": "ticket-to-pr",
+            "workflow_revision": "ticket-to-pr:1.0.0",
+        }
+        self.state["procedures"] = {
+            "available": [procedure],
+            "required": procedure,
+        }
+        self.state["evidence"] = [
+            {
+                "accepted": True,
+                "environment": "test",
+                "kind": "base-head-binding",
+                "revision": revision,
+            },
+            {
+                "accepted": True,
+                "environment": "test",
+                "kind": "independent-review",
+                "revision": "f" * 40,
+            },
+        ]
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=revision,
+        )
+
+        self.assertIsInstance(result, ConsumerCard)
+        card = result.to_dict()
+        self.assertEqual("Needs review", card["gate"])
+        self.assertEqual(["independent-review"], card["required_proof"])
+        self.assertFalse(card["authoritative"])
+
     def test_red_fixtures_fail_before_resolver_and_return_no_card(self) -> None:
         suite = load_json(FIXTURES / "red-cases.json")
         assert isinstance(suite, dict)

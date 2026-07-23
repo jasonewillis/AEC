@@ -393,6 +393,17 @@ def validate_resolution(resolution: object) -> list[str]:
             )
         if not isinstance(required_evidence, list) or not required_evidence:
             errors.append("Evidence needed decisions must require evidence")
+    elif gate == "Needs review":
+        if resolution.get("allowed") is not True:
+            errors.append("Needs review decisions must set allowed=true")
+        if resolution.get("phase") != "Review":
+            errors.append("Needs review decisions must use the Review phase")
+        if reason_code != "ACCEPTANCE_EVIDENCE_INCOMPLETE":
+            errors.append(
+                "Needs review decisions must use ACCEPTANCE_EVIDENCE_INCOMPLETE"
+            )
+        if not isinstance(required_evidence, list) or not required_evidence:
+            errors.append("Needs review decisions must require review evidence")
     elif gate == "Blocked" and not (unavailable or caller_blocked):
         errors.append("Blocked decision reason is unsupported")
 
