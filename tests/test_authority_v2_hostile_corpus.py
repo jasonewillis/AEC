@@ -13,6 +13,7 @@ from pathlib import Path
 from tools.admission_root_v1 import BaseAuthority, git_blob_oid, validate_candidate
 from tools.admission_root_v1 import (
     ARTIFACT_BASELINE,
+    PROOF_CLOSURE_BASELINE,
     SOURCE_BASELINE,
     WORKFLOW_TRANSITION_BASELINE,
     WORKFLOW_TRANSITION_BUNDLES,
@@ -21,6 +22,29 @@ from tools.admission_root_v1 import (
 
 ROOT = Path(__file__).resolve().parents[1]
 REJECTION = "ADMISSION-001 EXACT_BASELINE"
+FROZEN_PYTHON_PATHS = (
+    *SOURCE_BASELINE,
+    "aec/adapters.py",
+    "aec/consumer.py",
+    "aec/mentor.py",
+    "tests/test_admission_root_v1.py",
+    "tests/test_agent_adapters.py",
+    "tests/test_authority_v2_hostile_corpus.py",
+    "tests/test_blueprint_skills.py",
+    "tests/test_consumer_interface.py",
+    "tests/test_exact_json.py",
+    "tests/test_foundation_validation.py",
+    "tests/test_private_mentor_lens.py",
+    "tests/test_resolver.py",
+    "tests/test_resolver_program.py",
+    "tools/__init__.py",
+    "tools/admission_root_v1.py",
+    "tools/generate_resolver.py",
+    "tools/prove_agent_adapter_parity.py",
+    "tools/prove_private_mentor_lens.py",
+    "tools/validate_blueprint_skills.py",
+    "tools/validate_foundation.py",
+)
 
 
 class AuthorityV2HostileCorpus(unittest.TestCase):
@@ -28,12 +52,14 @@ class AuthorityV2HostileCorpus(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        validator = (ROOT / "tools/admission_root_v1.py").read_bytes()
+        workflow = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
         cls.authority = BaseAuthority(
             base_sha="a" * 40,
-            validator_blob_oid="b" * 40,
-            validator_sha256="c" * 64,
-            workflow_blob_oid="d" * 40,
-            workflow_sha256="e" * 64,
+            validator_blob_oid=git_blob_oid(validator),
+            validator_sha256=hashlib.sha256(validator).hexdigest(),
+            workflow_blob_oid=git_blob_oid(workflow),
+            workflow_sha256=hashlib.sha256(workflow).hexdigest(),
         )
         cls.entries, cls.blobs = cls._admitted_transition_snapshot()
 
@@ -56,23 +82,17 @@ class AuthorityV2HostileCorpus(unittest.TestCase):
             ):
                 raise AssertionError(f"workflow transition drift: {target}")
             cls._put(entries, blobs, target.encode(), content)
-        for path in (
-            "aec/consumer.py",
-            "tools/__init__.py",
-            "tools/admission_root_v1.py",
-            "tools/generate_resolver.py",
-            "tools/validate_blueprint_skills.py",
-            "tools/validate_foundation.py",
-            ".github/admission/v1/foundation-gate.yml",
-        ):
-            cls._put(entries, blobs, path.encode(), (ROOT / path).read_bytes())
-        cls._put(
-            entries,
-            blobs,
-            b".claude/skills/milestone",
-            os.readlink(ROOT / ".claude/skills/milestone").encode(),
-            mode="120000",
-        )
+        for path, baseline in PROOF_CLOSURE_BASELINE.items():
+            source = ROOT / path
+            content = (
+                os.readlink(source).encode()
+                if baseline.mode == "120000"
+                else source.read_bytes()
+            )
+            cls._put(entries, blobs, path.encode(), content, mode=baseline.mode)
+        for path in FROZEN_PYTHON_PATHS:
+            if path.encode() not in entries:
+                cls._put(entries, blobs, path.encode(), (ROOT / path).read_bytes())
         return entries, blobs
 
     @staticmethod
