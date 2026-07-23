@@ -20,6 +20,14 @@ These rules apply to every agent working in this repository.
   claims, integration, pushes, state changes, merges, and releases.
 - Treat `Blocked`, `Needs review`, `Evidence needed`, and `Ready` as exclusive gate
   states with fail-closed precedence.
+- Do not reduce mentoring to phase narration or a checklist. At every card, explain
+  the transferable lesson, why the current gate exists, and how to recognize this
+  situation again.
+- When a task reaches a material fork, provide two or three bounded choices with
+  explicit quality, risk, reversibility, maintainability, and scope tradeoffs. Name one
+  recommendation, what evidence would change it, and who owns the decision.
+- Keep routine steps free of artificial choice menus. A null decision context is the
+  correct representation when no material fork exists.
 
 ## Source and licensing boundaries
 

@@ -9,6 +9,11 @@
         "One observable outcome names its owner and task boundary."
       ],
       "identity": "intake-outcome",
+      "mentoring": {
+        "lesson": "Agentic delivery starts by converting a broad request into one observable outcome with a clear owner.",
+        "recognition_heuristic": "Use this procedure when the request names activity but not the externally visible result.",
+        "why_gate_exists": "Without an owned outcome, agents can produce substantial work that does not complete the user's goal."
+      },
       "phase": "Intake",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-intake"],
@@ -30,6 +35,11 @@
         "The delivery boundary distinguishes known facts from unresolved questions."
       ],
       "identity": "frame-delivery-context",
+      "mentoring": {
+        "lesson": "Good framing separates known facts, material unknowns, constraints, and decision authority before implementation.",
+        "recognition_heuristic": "Use this procedure when different answers to an unresolved question would change the solution or its owner.",
+        "why_gate_exists": "Implicit constraints and authority create rework, collisions, and decisions made by the wrong actor."
+      },
       "phase": "Framing",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-framing"],
@@ -52,6 +62,11 @@
         "The contract separates required behavior from explicit non-goals."
       ],
       "identity": "specify-behavior-contract",
+      "mentoring": {
+        "lesson": "A useful specification describes observable behavior, interfaces, non-goals, and binary acceptance evidence.",
+        "recognition_heuristic": "Use this procedure when two capable engineers could implement different behaviors from the same request.",
+        "why_gate_exists": "Implementation cannot be judged objectively while the expected behavior remains ambiguous."
+      },
       "phase": "Spec",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-spec"],
@@ -74,6 +89,11 @@
         "Each bounded slice names its dependency, owner, proof, and stop rule."
       ],
       "identity": "plan-vertical-delivery",
+      "mentoring": {
+        "lesson": "A delivery plan should create small vertical slices that each produce usable evidence and have an explicit stop rule.",
+        "recognition_heuristic": "Use this procedure when work spans dependencies, owners, or proof surfaces that cannot safely change as one slice.",
+        "why_gate_exists": "A task list without dependencies, ownership, and proof hides the critical path and encourages unfinished parallel work."
+      },
       "phase": "Plan",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-plan"],
@@ -96,6 +116,11 @@
         "The implementation is bounded to the behavior demonstrated by the red case."
       ],
       "identity": "build-coherent-slice",
+      "mentoring": {
+        "lesson": "The implementation should be the smallest coherent change that turns an honest failing example into passing behavior.",
+        "recognition_heuristic": "Use this procedure after the expected behavior can fail observably and the change boundary is understood.",
+        "why_gate_exists": "Building before a trustworthy red case invites speculative code and makes success hard to distinguish from test weakness."
+      },
       "phase": "Build",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-build"],
@@ -117,6 +142,11 @@
         "Focused and integration evidence bind the exact revision and environment."
       ],
       "identity": "verify-evidence",
+      "mentoring": {
+        "lesson": "Verification is evidence bound to the exact revision and environment, not a claim that testing happened.",
+        "recognition_heuristic": "Use this procedure when implementation is complete but its behavior has not been proven at all required boundaries.",
+        "why_gate_exists": "Passing evidence from another revision or environment can create a false green release decision."
+      },
       "phase": "Verify",
       "rationale": {
         "principle_ids": ["aec-evidence-input-binding"],
@@ -138,6 +168,11 @@
         "The reviewer records findings against the exact change and its contract."
       ],
       "identity": "review-exact-change",
+      "mentoring": {
+        "lesson": "Independent review tests the exact change against its accepted contract and searches for risks the author missed.",
+        "recognition_heuristic": "Use this procedure when a candidate is green locally and needs a fresh perspective before publication.",
+        "why_gate_exists": "Author confidence and passing tests do not expose every contract gap, regression, or hidden assumption."
+      },
       "phase": "Review",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-review"],
@@ -159,6 +194,11 @@
         "The merge candidate binds resolved findings and required checks to one revision."
       ],
       "identity": "prepare-merge-candidate",
+      "mentoring": {
+        "lesson": "A pull request becomes mergeable only when findings and required checks agree on the same immutable candidate.",
+        "recognition_heuristic": "Use this procedure when code is published but review or check evidence may be stale relative to the current head.",
+        "why_gate_exists": "A later push can invalidate earlier approval while leaving misleading green signals visible."
+      },
       "phase": "PR",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-pr"],
@@ -180,6 +220,11 @@
         "Deployment evidence binds the live observation and recovery path to one revision."
       ],
       "identity": "prove-live-revision",
+      "mentoring": {
+        "lesson": "Deployment is complete only when the intended revision is observed live and a recovery path is credible.",
+        "recognition_heuristic": "Use this procedure after release automation succeeds but before treating the user-facing outcome as delivered.",
+        "why_gate_exists": "A successful build or deploy command does not prove that users received the intended behavior."
+      },
       "phase": "Deploy",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-deploy"],
@@ -194,5 +239,5 @@
       "revision": "prove-live-revision:1.0.0"
     }
   ],
-  "schema_version": "1.0.0"
+  "schema_version": "2.0.0"
 }

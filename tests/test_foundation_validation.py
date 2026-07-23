@@ -180,7 +180,7 @@ class SourceContractTests(unittest.TestCase):
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 
         self.assertEqual(REQUIRED_RESOLUTION_FIELDS, set(schema["required"]))
-        self.assertEqual("3.0.0", schema["properties"]["schema_version"]["const"])
+        self.assertEqual("4.0.0", schema["properties"]["schema_version"]["const"])
         binding_schema = schema["properties"]["input_bindings"]
         self.assertFalse(binding_schema["additionalProperties"])
         self.assertEqual(

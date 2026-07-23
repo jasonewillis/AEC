@@ -10,6 +10,7 @@ from aec.consumer import (
     resolve_consumer_state,
     validate_consumer_state,
 )
+from tests.test_resolver import MATERIAL_DECISION_CONTEXT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,7 +54,8 @@ class ConsumerStateContractTests(unittest.TestCase):
         self.assertEqual("1.0.0", schema["properties"]["schema_version"]["const"])
         self.assertEqual(set(schema["required"]), set(self.state))
         self.assertEqual(
-            {"consumer_profile", "procedure_reference"}, set(schema["$defs"])
+            {"consumer_profile", "decision_context", "procedure_reference"},
+            set(schema["$defs"]),
         )
         self.assertFalse(schema["$defs"]["consumer_profile"]["additionalProperties"])
         self.assertFalse(schema["properties"]["effects"]["additionalProperties"])
@@ -99,6 +101,10 @@ class ConsumerStateContractTests(unittest.TestCase):
         self.assertTrue(card["good"])
         self.assertTrue(card["finished"])
         self.assertTrue(card["anti_example"])
+        self.assertTrue(card["mentoring"]["lesson"])
+        self.assertTrue(card["mentoring"]["why_gate_exists"])
+        self.assertTrue(card["mentoring"]["recognition_heuristic"])
+        self.assertIsNone(card["decision_support"])
         self.assertFalse(card["authoritative"])
         self.assertEqual(
             {
@@ -111,6 +117,39 @@ class ConsumerStateContractTests(unittest.TestCase):
             },
             card["transition_request"],
         )
+
+    def test_material_decision_context_renders_a_non_authoritative_brief(self) -> None:
+        self.state["decision_context"] = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=self.state["revision"]["identity"],
+        )
+
+        self.assertIsInstance(result, ConsumerCard)
+        card = result.to_dict()
+        self.assertEqual(MATERIAL_DECISION_CONTEXT, card["decision_support"])
+        self.assertFalse(card["authoritative"])
+        self.assertFalse(card["transition_request"]["executes"])
+        self.assertFalse(card["transition_request"]["mutates"])
+
+    def test_malformed_decision_context_is_rejected_before_resolution(self) -> None:
+        self.state["decision_context"] = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        self.state["decision_context"]["recommendation"]["choice"] = "missing-choice"
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=self.state["revision"]["identity"],
+        )
+
+        self.assertIsInstance(result, ConsumerStateRejection)
+        self.assertEqual("CONSUMER_STATE_INVALID", result.code)
 
     def test_complete_evidence_renders_ready_rationale(self) -> None:
         revision = self.state["revision"]["identity"]

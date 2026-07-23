@@ -31,6 +31,12 @@
       "type": "object"
     },
     "consumer_profile": {"$ref": "#/$defs/consumer_profile"},
+    "decision_context": {
+      "oneOf": [
+        {"$ref": "#/$defs/decision_context"},
+        {"type": "null"}
+      ]
+    },
     "effects": {
       "additionalProperties": false,
       "properties": {
@@ -180,6 +186,64 @@
         "schema_version",
         "workflow"
       ],
+      "type": "object"
+    },
+    "decision_context": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "additionalProperties": false,
+          "properties": {
+            "owner": {"enum": ["agent", "consumer-owner", "external"]},
+            "reason": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+          },
+          "required": ["owner", "reason"],
+          "type": "object"
+        },
+        "choices": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "identity": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "summary": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "tradeoffs": {
+                "additionalProperties": false,
+                "properties": {
+                  "maintainability": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "quality": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "reversibility": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "risk": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "scope": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+                },
+                "required": ["maintainability", "quality", "reversibility", "risk", "scope"],
+                "type": "object"
+              }
+            },
+            "required": ["identity", "summary", "tradeoffs"],
+            "type": "object"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "type": "array"
+        },
+        "question": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+        "recommendation": {
+          "additionalProperties": false,
+          "properties": {
+            "choice": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+            "revisit_when": {
+              "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "why": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+          },
+          "required": ["choice", "revisit_when", "why"],
+          "type": "object"
+        }
+      },
+      "required": ["authority", "choices", "question", "recommendation"],
       "type": "object"
     },
     "procedure_reference": {

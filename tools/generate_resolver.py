@@ -15,7 +15,7 @@ SCHEMA_PATH = ROOT / "schemas" / "resolver-program.schema.json"
 GENERATED_PATH = ROOT / "aec" / "_generated" / "resolver_program.py"
 PROGRAM_FIELDS = {"decision_schema_version", "outcomes", "schema_version"}
 PROGRAM_SCHEMA_VERSION = "1.0.0"
-DECISION_SCHEMA_VERSION = "3.0.0"
+DECISION_SCHEMA_VERSION = "4.0.0"
 CATALOG_OUTCOMES = {
     "evidence_complete": {
         "allowed": True,
@@ -78,7 +78,7 @@ def validate_program(program: object) -> list[str]:
     if program["schema_version"] != PROGRAM_SCHEMA_VERSION:
         errors.append("resolver program schema_version must equal 1.0.0")
     if program["decision_schema_version"] != DECISION_SCHEMA_VERSION:
-        errors.append("decision_schema_version must equal 3.0.0")
+        errors.append("decision_schema_version must equal 4.0.0")
     outcomes = program["outcomes"]
     if type(outcomes) is not dict or set(outcomes) != set(OUTCOME_FIELDS):
         return errors + ["resolver program outcomes do not match the contract"]

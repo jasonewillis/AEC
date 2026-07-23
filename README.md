@@ -7,6 +7,8 @@ It gives Claude, Codex, and future agents the same answer to four questions:
 2. What is the earliest unmet gate?
 3. Which locally installed procedure fits next?
 4. What observable evidence permits movement?
+5. What should the engineer learn and recognize next time?
+6. At a material fork, what are the choices, tradeoffs, recommendation, and owner?
 
 AEC is not a coding agent, lifecycle writer, deployment system, or second project
 tracker. It resolves a deterministic, non-mutating recommendation. The consuming
@@ -34,6 +36,7 @@ This repository currently provides:
   canonical SHA-256 contract with normalized request and catalog input bindings and
   exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
+- AEC-authored phase teaching plus optional, validated material-decision support;
 - provenance locks for upstream pattern sources;
 - seven exact, pinned Blueprint skills under one canonical agent-neutral root with
   Claude symlinks and fail-closed hash and discovery-parity validation;

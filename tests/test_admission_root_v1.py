@@ -274,18 +274,18 @@ class AdmissionRootV1Tests(unittest.TestCase):
         )
         self.assertEqual((), self_check(ROOT))
 
-    def test_resolve009_controlled_transition_matches_exact_candidate_bytes(
+    def test_current_controlled_transition_matches_exact_candidate_bytes(
         self,
     ) -> None:
         expected = {
             "aec/resolver.py": (
-                "67b4fd4651291010e58999b782e35e9f1383d560cbcf4d6b2f239fe6e16e6ae2"
+                "5a0b9701eaa8621adca55ac23c92394ec30b026bf6161da9f822e0abfb3cdb14"
             ),
             "schemas/resolution-decision.schema.json": (
-                "7ecf82040cb46e26476d50fab5c85a39b47f5b206748a71af3ca960ebc9e2d57"
+                "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679"
             ),
             "schemas/resolution-request.schema.json": (
-                "ad4a414b1ce85010e646f12851d381257c64479019232ee36cc98f4863c3ce59"
+                "28c54ac54fa8c4dd782e881e7f49d0ecfda8a97aeed15fc07886c34a259c1247"
             ),
         }
 

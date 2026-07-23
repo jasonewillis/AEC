@@ -181,6 +181,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "anti_example",
     "available_procedures",
     "capability_profile_version",
+    "decision_support",
     "environment",
     "executes",
     "finished",
@@ -188,6 +189,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "good",
     "input_bindings",
     "lane",
+    "mentoring",
     "mutates",
     "phase",
     "policy_version",
@@ -225,6 +227,107 @@ EXPECTED_PHASES = [
     "PR",
     "Deploy",
 ]
+MENTORING_FIELDS = {
+    "lesson",
+    "recognition_heuristic",
+    "why_gate_exists",
+}
+DECISION_CONTEXT_FIELDS = {
+    "authority",
+    "choices",
+    "question",
+    "recommendation",
+}
+TRADEOFF_FIELDS = {
+    "maintainability",
+    "quality",
+    "reversibility",
+    "risk",
+    "scope",
+}
+
+
+def _non_empty_string(value: object) -> bool:
+    """Return whether a value is an exact non-empty string."""
+    return type(value) is str and bool(value.strip())
+
+
+def _validate_mentoring(value: object) -> list[str]:
+    """Independently validate the closed teaching record."""
+    if type(value) is not dict or set(value) != MENTORING_FIELDS:
+        return ["mentoring fields do not match the contract"]
+    return [
+        f"mentoring.{name} must be a non-empty string"
+        for name in sorted(MENTORING_FIELDS)
+        if not _non_empty_string(value.get(name))
+    ]
+
+
+def _validate_decision_support(value: object) -> list[str]:
+    """Independently validate the closed optional decision brief."""
+    if value is None:
+        return []
+    if type(value) is not dict or set(value) != DECISION_CONTEXT_FIELDS:
+        return ["decision_support fields do not match the contract"]
+    errors: list[str] = []
+    if not _non_empty_string(value.get("question")):
+        errors.append("decision_support.question must be a non-empty string")
+    authority = value.get("authority")
+    if type(authority) is not dict or set(authority) != {"owner", "reason"}:
+        errors.append("decision_support.authority fields do not match the contract")
+    elif (
+        authority.get("owner") not in {"agent", "consumer-owner", "external"}
+        or not _non_empty_string(authority.get("reason"))
+    ):
+        errors.append("decision_support.authority is invalid")
+    choices = value.get("choices")
+    identities: list[str] = []
+    if type(choices) is not list or not 2 <= len(choices) <= 3:
+        errors.append("decision_support.choices must contain two or three choices")
+    else:
+        for choice in choices:
+            if type(choice) is not dict or set(choice) != {
+                "identity",
+                "summary",
+                "tradeoffs",
+            }:
+                errors.append("decision_support choice fields do not match the contract")
+                continue
+            identity = choice.get("identity")
+            if _non_empty_string(identity):
+                identities.append(identity)
+            else:
+                errors.append("decision_support choice identity is invalid")
+            if not _non_empty_string(choice.get("summary")):
+                errors.append("decision_support choice summary is invalid")
+            tradeoffs = choice.get("tradeoffs")
+            if type(tradeoffs) is not dict or set(tradeoffs) != TRADEOFF_FIELDS:
+                errors.append("decision_support tradeoffs do not match the contract")
+            elif not all(_non_empty_string(tradeoffs[name]) for name in TRADEOFF_FIELDS):
+                errors.append("decision_support tradeoffs must be non-empty strings")
+        if len(identities) != len(set(identities)):
+            errors.append("decision_support choice identities must be unique")
+    recommendation = value.get("recommendation")
+    if type(recommendation) is not dict or set(recommendation) != {
+        "choice",
+        "revisit_when",
+        "why",
+    }:
+        errors.append("decision_support recommendation fields do not match the contract")
+    else:
+        if recommendation.get("choice") not in identities:
+            errors.append("decision_support recommendation must name a declared choice")
+        if not _non_empty_string(recommendation.get("why")):
+            errors.append("decision_support recommendation reason is invalid")
+        revisit_when = recommendation.get("revisit_when")
+        if (
+            type(revisit_when) is not list
+            or not revisit_when
+            or not all(_non_empty_string(item) for item in revisit_when)
+            or len(revisit_when) != len(set(revisit_when))
+        ):
+            errors.append("decision_support revisit evidence is invalid")
+    return errors
 
 
 def load_json(path: Path) -> Any:
@@ -247,14 +350,16 @@ def validate_resolution(resolution: object) -> list[str]:
     if unknown:
         errors.append(f"unknown resolution fields: {', '.join(unknown)}")
 
-    if resolution.get("schema_version") != "3.0.0":
-        errors.append("schema_version must equal 3.0.0")
+    if resolution.get("schema_version") != "4.0.0":
+        errors.append("schema_version must equal 4.0.0")
     if not isinstance(resolution.get("allowed"), bool):
         errors.append("allowed must be a boolean")
     if resolution.get("executes") is not False:
         errors.append("AEC decisions must set executes=false")
     if resolution.get("mutates") is not False:
         errors.append("AEC decisions must set mutates=false")
+    errors.extend(_validate_mentoring(resolution.get("mentoring")))
+    errors.extend(_validate_decision_support(resolution.get("decision_support")))
 
     input_bindings = resolution.get("input_bindings")
     if not isinstance(input_bindings, dict) or set(input_bindings) != {

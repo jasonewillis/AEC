@@ -1,4 +1,4 @@
-RESOLVER_PROGRAM = {'decision_schema_version': '3.0.0',
+RESOLVER_PROGRAM = {'decision_schema_version': '4.0.0',
  'outcomes': {'evidence_complete': {'allowed': True,
                                     'gate': 'Ready',
                                     'reason_code': 'ACCEPTANCE_EVIDENCE_COMPLETE'},

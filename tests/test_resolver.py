@@ -27,15 +27,54 @@ GOLDEN_PHASES = {
     "Deploy": ("Assure & Release", "prove-live-revision"),
 }
 GOLDEN_HASHES = {
-    "Intake": "sha256:b290df71ba34362fa43a3c994912d4ac8069ae7d2902b91802674caf30e04319",
-    "Framing": "sha256:67aa9d06662d190962358e74f66412a70d053d5a86838a1bd042e37cfb65e23f",
-    "Spec": "sha256:f1790d95a17fcdb8ac6c4bbed9ba26cd849b028ec6d3b9033aec24a9f5cbafe2",
-    "Plan": "sha256:738301624bb2df321eee8f541071a9498b1a1f043fddb6a96b6f59da555c313b",
-    "Build": "sha256:405fab94155c404c01323cdde74422c6600e296e0fe6a8a29aea79a25d360672",
-    "Verify": "sha256:c67e019fe21a6ffd815f8732c86639b6b98c2b8857aac8336a6cd6c6f4eede23",
-    "Review": "sha256:4d0892d8538863a22996c5e83d77c8f914c23a1a0bf2797875c7f02e05c6109b",
-    "PR": "sha256:a2868094ab4eda780808398dc2f11086c4517ca72502cb074693495871019741",
-    "Deploy": "sha256:766aaf24a6bf499f8320c9df3ef3244284dadb8cea7d036f47699efdf9478f50",
+    "Intake": "sha256:26c8a4cba539657d74cb32a847dc275b42e6bdd66a3b5eb8f89a33b8c77276ac",
+    "Framing": "sha256:da1817d1c51b2a3d8edf8949703f6acbca356fcbb5c90e4c9feb636d8f3089d5",
+    "Spec": "sha256:ea7fda42dcb03fe0040e1ba6dcab584a65d21a3eaaaa9e481720966d11e0c045",
+    "Plan": "sha256:fed2bf404aa1b6c340490c09b3ae98d4becce6db57ec4b73b6d95687b9284b91",
+    "Build": "sha256:178f1acfc74e2105040adbd5b8a2895d060d3b298b01197ee456ef1c6e6b6870",
+    "Verify": "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
+    "Review": "sha256:9bfa2df8d5718b80a06dac9996b63f4872f729d2fb2df14c3aecdfdfbdd31152",
+    "PR": "sha256:ca2b967370e1a1795b215d9da2b61dbe4b756f609e53d3ae9752314d2e9e2a30",
+    "Deploy": "sha256:246b06e43f2d575246543f4984cc3459706972add6875fe0085e18b5c9954f01",
+}
+
+MATERIAL_DECISION_CONTEXT = {
+    "authority": {
+        "owner": "consumer-owner",
+        "reason": "The repository owner controls dependency and environment policy.",
+    },
+    "choices": [
+        {
+            "identity": "isolate-import-boundary",
+            "summary": "Move optional ML imports behind an explicit runtime boundary.",
+            "tradeoffs": {
+                "maintainability": "Keeps optional dependencies out of unrelated paths.",
+                "quality": "Preserves real UI proof without replacing the production path.",
+                "reversibility": "Can be reverted as one bounded adapter change.",
+                "risk": "Requires care to preserve existing ML behavior.",
+                "scope": "One import boundary and focused regression coverage.",
+            },
+        },
+        {
+            "identity": "install-ml-stack",
+            "summary": "Install the complete ML dependency stack in every test environment.",
+            "tradeoffs": {
+                "maintainability": "Couples all test paths to a platform-specific stack.",
+                "quality": "Exercises the production import path directly.",
+                "reversibility": "Dependency changes can be rolled back.",
+                "risk": "May hide an unnecessary eager-import dependency.",
+                "scope": "Environment and dependency configuration changes.",
+            },
+        },
+    ],
+    "question": "How should optional ML imports be isolated for real UI proof?",
+    "recommendation": {
+        "choice": "isolate-import-boundary",
+        "revisit_when": [
+            "The ML stack becomes a required dependency for every application entry point."
+        ],
+        "why": "It removes the unrelated import failure at the narrowest durable seam.",
+    },
 }
 
 
@@ -154,11 +193,84 @@ class ResolverTracerTests(unittest.TestCase):
                 self.assertTrue(payload["good"])
                 self.assertTrue(payload["finished"])
                 self.assertTrue(payload["anti_example"])
+                self.assertEqual(
+                    {
+                        "lesson",
+                        "recognition_heuristic",
+                        "why_gate_exists",
+                    },
+                    set(payload["mentoring"]),
+                )
+                self.assertTrue(all(payload["mentoring"].values()))
+                self.assertIsNone(payload["decision_support"])
                 if phase != "Verify":
                     self.assertEqual(
                         [f"aec-ticket-to-pr-{phase.lower()}"],
                         payload["rationale"]["principle_ids"],
                     )
+
+    def test_material_decision_context_is_validated_bound_and_rendered(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+        request["decision_context"] = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+
+        first = resolve(request, procedures)
+        second = resolve(copy.deepcopy(request), procedures)
+
+        self.assertNotIsInstance(first, ResolutionRejection)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            MATERIAL_DECISION_CONTEXT,
+            first.to_dict()["decision_support"],
+        )
+
+        changed = copy.deepcopy(request)
+        changed["decision_context"]["recommendation"]["why"] = (
+            "A changed reason must change the bound resolution."
+        )
+        changed_result = resolve(changed, procedures)
+        self.assertNotIsInstance(changed_result, ResolutionRejection)
+        self.assertNotEqual(first.resolution_hash, changed_result.resolution_hash)
+
+    def test_malformed_decision_context_fails_closed(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+        invalid_contexts = []
+
+        one_choice = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        one_choice["choices"] = one_choice["choices"][:1]
+        invalid_contexts.append(one_choice)
+
+        duplicate = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        duplicate["choices"][1]["identity"] = duplicate["choices"][0]["identity"]
+        invalid_contexts.append(duplicate)
+
+        unknown_recommendation = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        unknown_recommendation["recommendation"]["choice"] = "not-a-choice"
+        invalid_contexts.append(unknown_recommendation)
+
+        unknown_authority = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        unknown_authority["authority"]["owner"] = "aec"
+        invalid_contexts.append(unknown_authority)
+
+        missing_tradeoff = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        del missing_tradeoff["choices"][0]["tradeoffs"]["risk"]
+        invalid_contexts.append(missing_tradeoff)
+
+        unknown_field = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        unknown_field["agent_decision"] = True
+        invalid_contexts.append(unknown_field)
+
+        for context in invalid_contexts:
+            with self.subTest(context=context):
+                invalid = copy.deepcopy(request)
+                invalid["decision_context"] = context
+                self.assertIsInstance(
+                    resolve(invalid, procedures),
+                    ResolutionRejection,
+                )
 
     def test_unapproved_golden_request_drift_is_not_normalized_away(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
@@ -233,7 +345,7 @@ class ResolverTracerTests(unittest.TestCase):
             baseline_first.canonical_bytes, baseline_second.canonical_bytes
         )
         self.assertEqual(changed_first.canonical_bytes, changed_second.canonical_bytes)
-        self.assertEqual("3.0.0", baseline["schema_version"])
+        self.assertEqual("4.0.0", baseline["schema_version"])
         self.assertNotEqual(
             baseline["input_bindings"]["resolution_request"],
             changed_payload["input_bindings"]["resolution_request"],
@@ -562,7 +674,7 @@ class ResolverTracerTests(unittest.TestCase):
 
     def test_non_list_procedure_catalog_returns_catalog_rejection(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/verify.json")
-        invalid_catalog = {"procedures": None, "schema_version": "1.0.0"}
+        invalid_catalog = {"procedures": None, "schema_version": "2.0.0"}
 
         result = resolve(request, invalid_catalog)
 
@@ -933,7 +1045,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:c67e019fe21a6ffd815f8732c86639b6b98c2b8857aac8336a6cd6c6f4eede23",
+            "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -1024,7 +1136,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:4fe9279e0d376bb7ebc4ed67b9035ac4966f78244953022d75722bb1d01da637",
+            "sha256:2dcd3f4b60449f41a0f2a4e19d4e63be02f4beaa1608bc86520a7bfb27718c88",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))
@@ -1073,7 +1185,7 @@ class ResolverTracerTests(unittest.TestCase):
                 self.assertNotIsInstance(result, ResolutionRejection)
                 payload = result.to_dict()
 
-                self.assertEqual("3.0.0", payload["schema_version"])
+                self.assertEqual("4.0.0", payload["schema_version"])
                 self.assertEqual([], validate_resolution(payload))
                 self.assertTrue(payload["rationale"]["principle_ids"])
                 self.assertTrue(payload["rationale"]["summary"])
