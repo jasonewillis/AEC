@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:f50954fff60a327db650dee1d9127d274ea8e5a9c6241d163c0500dc383d93f8"
+    "sha256:b901d01234329c5d061b89e6e257a5cf580615f43873e781370349fa20b28963"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -230,7 +230,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tests/test_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
-        "05054db3aa81580cf3d63e21ebaec6c20378aff02fe8a8fe7912aac3d7e63aa9",
+        "25f544e69b7b66ca768c3a0272ea8448c58f50ae880fa860c1bac828e7533519",
     ),
     "tools/__init__.py": FileBaseline(
         REGULAR_MODE,
@@ -242,7 +242,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/prove_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
-        "96855d8aafb1868cb28afb1ec716821aba7e9d6c3f4f94fb2d1be8828c261650",
+        "77a624852de262d48b65d600fa325cae33797f5764189568497272f4aa80ccc8",
     ),
     "tools/validate_blueprint_skills.py": FileBaseline(
         REGULAR_MODE,
@@ -250,7 +250,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "ab28852c8c280569f5343d66d4051d03aca6d52dbd41eaa0e3e3bf1a3597e780",
+        "a2355bcc4caa31e9f4c46e24c80e75f52851e0142d6eafae844c3d4f8a88dacf",
     ),
 }
 PYTHON_PATHS = frozenset(
@@ -269,6 +269,7 @@ PYTHON_PATHS = frozenset(
         "tests/test_foundation_behavior.py",
         "tests/test_private_mentor_lens.py",
         "tests/test_resolver.py",
+        "tests/test_resolver_blocker_precedence.py",
         "tests/test_resolver_program.py",
         "tools/__init__.py",
         "tools/admission_root_v1.py",

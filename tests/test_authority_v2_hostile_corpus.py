@@ -37,6 +37,7 @@ FROZEN_PYTHON_PATHS = (
     "tests/test_foundation_behavior.py",
     "tests/test_private_mentor_lens.py",
     "tests/test_resolver.py",
+    "tests/test_resolver_blocker_precedence.py",
     "tests/test_resolver_program.py",
     "tools/__init__.py",
     "tools/admission_root_v1.py",

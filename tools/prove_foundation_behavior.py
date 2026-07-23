@@ -12,8 +12,18 @@ from typing import Callable
 from aec.resolver import ResolutionDecision, resolve
 
 
-EXPECTED_AGGREGATE = (
+TEN_DECISION_AGGREGATE = (
     "sha256:267e457762263aa1330f45663d7abe040e266ee88d5737ff3f993cd94cc11f0a"
+)
+EXPECTED_AGGREGATE = (
+    "sha256:24e113a27e8ffce6b2cea99c85420ee0c3d581943d109d0d5033e12352bcb70d"
+)
+BLOCKER_PRECEDENCE = (
+    "AUTHORITY_CONFLICT",
+    "PRIVATE_INPUT_INCLUDED",
+    "POLICY_CONFLICT",
+    "LIFECYCLE_STATE_STALE",
+    "EVIDENCE_CONTRADICTED",
 )
 FIXTURE_PATHS = (
     "tests/fixtures/resolver/golden/intake.json",
@@ -63,7 +73,7 @@ def _exact_equal(left: object, right: object) -> bool:
     return left == right
 
 
-def decision_aggregate(
+def ten_decision_aggregate(
     root: Path,
     resolver: Callable[[object, object], object] = resolve,
 ) -> str:
@@ -89,6 +99,41 @@ def decision_aggregate(
             ]
         )
     payload = json.dumps(decisions, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def decision_aggregate(
+    root: Path,
+    resolver: Callable[[object, object], object] = resolve,
+) -> str:
+    """Extend the frozen ten-decision aggregate with blocker decisions."""
+    legacy = ten_decision_aggregate(root, resolver)
+    catalog = _strict_json(root / "config/procedures/ticket-to-pr.json")
+    request = _strict_json(root / "tests/fixtures/resolver/golden/verify.json")
+    blocker_decisions: list[list[str]] = []
+    for reason_code in BLOCKER_PRECEDENCE:
+        blocked_request = copy.deepcopy(request)
+        blocked_request["blockers"] = [
+            {
+                "active": True,
+                "identity": f"blocker-{reason_code.lower()}",
+                "reason_code": reason_code,
+            }
+        ]
+        decision = resolver(blocked_request, catalog)
+        if not isinstance(decision, ResolutionDecision):
+            raise ValueError(f"blocker did not resolve: {reason_code}")
+        blocker_decisions.append(
+            [
+                reason_code,
+                decision.resolution_hash,
+                decision.canonical_bytes.hex(),
+            ]
+        )
+    payload = json.dumps(
+        [legacy, blocker_decisions],
+        separators=(",", ":"),
+    ).encode("utf-8")
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 

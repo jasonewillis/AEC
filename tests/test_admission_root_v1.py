@@ -253,6 +253,9 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
     def test_pr_b_keeps_admission_workflow_and_changes_only_legacy_gate(self) -> None:
         active = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
+        transitioned_gate = (
+            ROOT / ".github/workflows/foundation-gate.yml"
+        ).read_bytes()
         future_gate = (ROOT / ".github/admission/v1/foundation-gate.yml").read_bytes()
 
         self.assertEqual(
@@ -263,6 +266,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
             hashlib.sha256(future_gate).hexdigest(),
             WORKFLOW_TRANSITION_BASELINE[".github/workflows/foundation-gate.yml"],
         )
+        self.assertEqual(future_gate, transitioned_gate)
 
     def test_base_constants_and_current_bytes_self_check(self) -> None:
         self.assertEqual(

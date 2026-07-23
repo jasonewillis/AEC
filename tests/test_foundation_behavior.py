@@ -11,8 +11,10 @@ from pathlib import Path
 from aec.resolver import ResolutionDecision, resolve
 from tools.prove_foundation_behavior import (
     EXPECTED_AGGREGATE,
+    TEN_DECISION_AGGREGATE,
     decision_aggregate,
     prove_behavior,
+    ten_decision_aggregate,
 )
 
 
@@ -23,6 +25,9 @@ class FoundationBehaviorTests(unittest.TestCase):
     """Prove exact resolver behavior after base-owned admission."""
 
     def test_ten_decisions_match_frozen_aggregate(self) -> None:
+        self.assertEqual(TEN_DECISION_AGGREGATE, ten_decision_aggregate(ROOT))
+
+    def test_current_identity_extends_the_ten_decision_aggregate(self) -> None:
         self.assertEqual(EXPECTED_AGGREGATE, decision_aggregate(ROOT))
 
     def test_two_hash_seeds_and_two_runs_are_byte_identical(self) -> None:
