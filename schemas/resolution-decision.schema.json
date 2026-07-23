@@ -264,6 +264,84 @@
           "required_evidence": {"minItems": 1}
         }
       }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "AUTHORITY_CONFLICT"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "AUTHORITY_CONFLICT"}
+            }
+          },
+          "required_evidence": {"const": ["authority-resolution"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "PRIVATE_INPUT_INCLUDED"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "PRIVATE_INPUT_INCLUDED"}
+            }
+          },
+          "required_evidence": {"const": ["private-input-exclusion"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "POLICY_CONFLICT"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "POLICY_CONFLICT"}
+            }
+          },
+          "required_evidence": {"const": ["policy-resolution"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "LIFECYCLE_STATE_STALE"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "LIFECYCLE_STATE_STALE"}
+            }
+          },
+          "required_evidence": {"const": ["current-lifecycle-state"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "EVIDENCE_CONTRADICTED"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "EVIDENCE_CONTRADICTED"}
+            }
+          },
+          "required_evidence": {"const": ["contradiction-resolution"]}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"reason_code": {"const": "SKILL_UNAVAILABLE"}}},
+      "then": {
+        "properties": {
+          "primary_blocker": {
+            "properties": {
+              "reason_code": {"const": "SKILL_UNAVAILABLE"}
+            }
+          },
+          "required_evidence": {"const": ["procedure-availability"]}
+        }
+      }
     }
   ],
   "title": "AEC Resolver Decision",

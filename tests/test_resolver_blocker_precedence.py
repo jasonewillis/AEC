@@ -68,6 +68,39 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
             first.errors,
         )
 
+    def test_decision_schema_binds_each_blocker_reason_and_evidence(self) -> None:
+        schema = load_json(ROOT / "schemas/resolution-decision.schema.json")
+        contracts = {}
+        for rule in schema["allOf"]:
+            condition = rule.get("if", {}).get("properties", {}).get(
+                "reason_code", {}
+            )
+            reason_code = condition.get("const")
+            if reason_code is None:
+                continue
+            properties = rule["then"]["properties"]
+            contracts[reason_code] = {
+                "primary_reason": properties["primary_blocker"]["properties"][
+                    "reason_code"
+                ]["const"],
+                "required_evidence": properties["required_evidence"]["const"],
+            }
+
+        expected = {
+            reason_code: {
+                "primary_reason": reason_code,
+                "required_evidence": BLOCKER_REASON_REGISTRY[reason_code][
+                    "required_evidence"
+                ],
+            }
+            for reason_code in BLOCKER_PRECEDENCE
+        }
+        expected["SKILL_UNAVAILABLE"] = {
+            "primary_reason": "SKILL_UNAVAILABLE",
+            "required_evidence": ["procedure-availability"],
+        }
+        self.assertEqual(expected, contracts)
+
     def test_inactive_blockers_do_not_override_evidence_gate(self) -> None:
         self.request["blockers"] = [
             {

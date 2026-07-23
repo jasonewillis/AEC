@@ -362,8 +362,13 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append("caller-blocked decisions require a primary blocker")
         elif primary_blocker["reason_code"] != reason_code:
             errors.append("primary_blocker.reason_code must equal reason_code")
-        if not isinstance(required_evidence, list) or not required_evidence:
-            errors.append("caller-blocked decisions must require evidence")
+        expected_evidence = BLOCKER_REASON_REGISTRY[reason_code][
+            "required_evidence"
+        ]
+        if required_evidence != expected_evidence:
+            errors.append(
+                "caller-blocked decision evidence must match its blocker reason"
+            )
     elif not isinstance(primary_procedure, str) or not primary_procedure:
         errors.append("primary_procedure must identify the selected procedure")
     elif primary_blocker is not None:
