@@ -87,6 +87,7 @@ REVIEW_ATTESTATION_CALL_ATTRIBUTES = frozenset(
 REVIEW_ATTESTATION_FORBIDDEN_REFERENCES = frozenset(
     {
         "__import__",
+        "__builtins__",
         "breakpoint",
         "compile",
         "eval",
@@ -943,6 +944,12 @@ def validate_review_attestation_purity(source: str) -> list[str]:
             errors.append(
                 f"review attestation admitted module is mutated: json.{node.attr}"
             )
+        elif isinstance(node, ast.Attribute) and node.attr == "__dict__":
+            errors.append("review attestation __dict__ capability is not admitted")
+        elif isinstance(node, ast.Subscript) and isinstance(
+            node.ctx, (ast.Store, ast.Del)
+        ):
+            errors.append("review attestation subscript mutation is not admitted")
     if imports != REVIEW_ATTESTATION_IMPORTS:
         errors.append("review attestation imports do not match the exact allowlist")
     return errors

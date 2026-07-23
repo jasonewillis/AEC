@@ -360,6 +360,16 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
             "mutated-module-call": (
                 "\njson.dumps = open\njson.dumps('/tmp/aec-purity-bypass', 'w')\n"
             ),
+            "subscript-mutated-module-call": (
+                '\njson.__dict__["dumps"] = __builtins__["open"]\n'
+                "json.dumps('/tmp/aec-purity-bypass', 'w')\n"
+            ),
+            "builtins-subscript-mutation": '\n__builtins__["open"] = all\n',
+            "temporary-module-dict-alias": (
+                "\nmodule_dict = json.__dict__\n"
+                'module_dict["dumps"] = __builtins__["open"]\n'
+                "json.dumps('/tmp/aec-purity-bypass', 'w')\n"
+            ),
         }
         for case_id, mutation in mutations.items():
             with self.subTest(case_id=case_id):
