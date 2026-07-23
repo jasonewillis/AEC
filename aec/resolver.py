@@ -31,9 +31,7 @@ REQUIRED_REQUEST_FIELDS = {
 }
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
-PROCEDURE_REVISION = re.compile(
-    r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$"
-)
+PROCEDURE_REVISION = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROCEDURE_VERSION = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PROCEDURE_FIELDS = {
     "anti_example",
@@ -62,6 +60,52 @@ STAGE_PHASES = {
     "Design": {"Plan", "Spec"},
     "Execute": {"Build", "Verify"},
     "Understand": {"Framing", "Intake"},
+}
+BLOCKER_REASON_PRECEDENCE = (
+    "AUTHORITY_CONFLICT",
+    "PRIVATE_INPUT_INCLUDED",
+    "POLICY_CONFLICT",
+    "LIFECYCLE_STATE_STALE",
+    "EVIDENCE_CONTRADICTED",
+)
+BLOCKER_REASON_REGISTRY = {
+    "AUTHORITY_CONFLICT": {
+        "anti_example": "Conflicting authorities are allowed to mutate the same state.",
+        "finished": ["Exactly one authorized owner remains for the contested state."],
+        "good": ["Authority is singular, explicit, and supported by current evidence."],
+        "rationale_summary": "Conflicting authority facts prevent safe progression.",
+        "required_evidence": ["authority-resolution"],
+    },
+    "PRIVATE_INPUT_INCLUDED": {
+        "anti_example": "Private input is forwarded into shared mentoring evidence.",
+        "finished": [
+            "Private input is excluded before the request crosses its boundary."
+        ],
+        "good": ["Only authorized project-neutral facts reach the resolver."],
+        "rationale_summary": "Private input crossed the normalized request boundary.",
+        "required_evidence": ["private-input-exclusion"],
+    },
+    "POLICY_CONFLICT": {
+        "anti_example": "Conflicting policy is ignored because other evidence is green.",
+        "finished": ["The applicable policy facts no longer conflict."],
+        "good": ["Policy facts agree before progression is recommended."],
+        "rationale_summary": "Applicable policy facts conflict.",
+        "required_evidence": ["policy-resolution"],
+    },
+    "LIFECYCLE_STATE_STALE": {
+        "anti_example": "A stale lifecycle snapshot is treated as current.",
+        "finished": ["Lifecycle facts are refreshed from the authoritative owner."],
+        "good": ["Lifecycle facts identify the current authoritative revision."],
+        "rationale_summary": "The normalized lifecycle state is stale.",
+        "required_evidence": ["current-lifecycle-state"],
+    },
+    "EVIDENCE_CONTRADICTED": {
+        "anti_example": "A readiness signal overrides contradictory evidence.",
+        "finished": ["Contradictory evidence is resolved for the exact revision."],
+        "good": ["Readiness and evidence agree for the exact revision."],
+        "rationale_summary": "Current evidence contradicts progression.",
+        "required_evidence": ["contradiction-resolution"],
+    },
 }
 
 
@@ -246,6 +290,13 @@ def _validate_blockers(value: object) -> list[str]:
                 ("identity", "reason_code"),
             )
         )
+        reason_code = normalized.get("reason_code")
+        if (
+            isinstance(reason_code, str)
+            and reason_code
+            and reason_code not in BLOCKER_REASON_REGISTRY
+        ):
+            errors.append(f"blockers[{index}].reason_code is unsupported")
     return errors
 
 
@@ -539,6 +590,28 @@ def _accepted_evidence(request: dict[str, Any]) -> set[str]:
     }
 
 
+def _primary_active_blocker(request: dict[str, Any]) -> dict[str, str] | None:
+    """Return the single deterministic primary caller blocker."""
+    precedence = {
+        reason_code: index
+        for index, reason_code in enumerate(BLOCKER_REASON_PRECEDENCE)
+    }
+    active = [blocker for blocker in request["blockers"] if blocker["active"] is True]
+    if not active:
+        return None
+    selected = min(
+        active,
+        key=lambda blocker: (
+            precedence[blocker["reason_code"]],
+            blocker["identity"],
+        ),
+    )
+    return {
+        "identity": selected["identity"],
+        "reason_code": selected["reason_code"],
+    }
+
+
 def resolve(
     request: object, procedures: object
 ) -> ResolutionDecision | ResolutionRejection:
@@ -600,29 +673,36 @@ def resolve(
 
     procedure = matches[0]
     skill_unavailable = required_identity not in available
+    caller_blocker = _primary_active_blocker(request)
     accepted_evidence = _accepted_evidence(request)
     required_evidence = sorted(
         kind for kind in procedure["required_evidence"] if kind not in accepted_evidence
     )
     outcomes = RESOLVER_PROGRAM["outcomes"]
     outcome = (
-        outcomes["skill_unavailable"]
+        BLOCKER_REASON_REGISTRY[caller_blocker["reason_code"]]
+        if caller_blocker is not None
+        else outcomes["skill_unavailable"]
         if skill_unavailable
         else outcomes["evidence_incomplete"]
         if required_evidence
         else outcomes["evidence_complete"]
     )
-    allowed = outcome["allowed"]
+    allowed = False if caller_blocker is not None else outcome["allowed"]
     anti_example = procedure["anti_example"]
     finished = procedure["finished"]
-    gate = outcome["gate"]
+    gate = "Blocked" if caller_blocker is not None else outcome["gate"]
     good = procedure["good"]
     rationale = {
         "principle_ids": sorted(procedure["rationale"]["principle_ids"]),
         "summary": procedure["rationale"]["summary"],
     }
-    reason_code = outcome["reason_code"] or procedure["reason_code"]
-    if skill_unavailable:
+    reason_code = (
+        caller_blocker["reason_code"]
+        if caller_blocker is not None
+        else outcome["reason_code"] or procedure["reason_code"]
+    )
+    if caller_blocker is not None or skill_unavailable:
         anti_example = outcome["anti_example"]
         finished = outcome["finished"]
         good = outcome["good"]
@@ -651,14 +731,20 @@ def resolve(
         "phase": request["phase"],
         "policy_version": policy["revision"],
         "primary_blocker": (
-            {
+            caller_blocker
+            if caller_blocker is not None
+            else {
                 "identity": required_procedure["identity"],
                 "reason_code": "SKILL_UNAVAILABLE",
             }
             if skill_unavailable
             else None
         ),
-        "primary_procedure": None if skill_unavailable else procedure["identity"],
+        "primary_procedure": (
+            None
+            if caller_blocker is not None or skill_unavailable
+            else procedure["identity"]
+        ),
         "project_profile_version": consumer_profile["profile_version"],
         "rationale": rationale,
         "reason_code": reason_code,

@@ -273,9 +273,7 @@ class ResolverTracerTests(unittest.TestCase):
 
         for identity in ("bad identity", "bad:identity"):
             with self.subTest(identity=identity):
-                procedures = load_json(
-                    ROOT / "config/procedures/ticket-to-pr.json"
-                )
+                procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
                 procedures["procedures"][0]["identity"] = identity
                 procedures["procedures"][0]["revision"] = f"{identity}:1.0.0"
 
@@ -464,8 +462,16 @@ class ResolverTracerTests(unittest.TestCase):
             }
         )
         request["blockers"] = [
-            {"active": False, "identity": "second", "reason_code": "SECOND"},
-            {"active": False, "identity": "first", "reason_code": "FIRST"},
+            {
+                "active": False,
+                "identity": "second",
+                "reason_code": "POLICY_CONFLICT",
+            },
+            {
+                "active": False,
+                "identity": "first",
+                "reason_code": "LIFECYCLE_STATE_STALE",
+            },
         ]
         request["capability_profile"]["capabilities"].append("browser")
         request["consumer_profile"]["agent_adapters"].append("other-adapter")
