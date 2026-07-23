@@ -360,6 +360,9 @@ print(verify_offline_review(evidence).canonical_bytes.hex())
             "mutated-module-call": (
                 "\njson.dumps = open\njson.dumps('/tmp/aec-purity-bypass', 'w')\n"
             ),
+            "plain-module-alias-mutation": (
+                "\nmodule = json\nmodule.dumps = all\nmodule.dumps([])\n"
+            ),
             "subscript-mutated-module-call": (
                 '\njson.__dict__["dumps"] = __builtins__["open"]\n'
                 "json.dumps('/tmp/aec-purity-bypass', 'w')\n"

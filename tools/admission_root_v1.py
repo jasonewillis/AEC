@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:bcf4699382eca1dd3aa77163b88d62a4b52c515662613cf3b91d90d973a9357f"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:48c97fb519cb927a5e00157202ddcb8e802cfabe392d45fe1d098fb005b89c02"
+    "sha256:4aaebd08e0e53157ae012851df7e2b8aacb33df9db2fed6d132d108032c157ac"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -237,7 +237,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tests/test_review_attestation.py": FileBaseline(
         REGULAR_MODE,
-        "d2ab53d641f34929c1ac3a382f351ecdb9c8b6cdfd91b7e54eef38861f986e9e",
+        "bcd35221f35c11f8225e7b9577a1fd7d66763f1fec0e0c22164ea1e452edb9c2",
     ),
     "tools/__init__.py": FileBaseline(
         REGULAR_MODE,
@@ -257,7 +257,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "ef8fdd27d62587417bcafc0a630e7bc6ce3cd156d4e92b5b5ccf4dd13a47afdf",
+        "f3d31c094db9dcf4ba212ca70afae2e131fdac4971cef66804f0bd577a13e1df",
     ),
 }
 PYTHON_PATHS = frozenset(
