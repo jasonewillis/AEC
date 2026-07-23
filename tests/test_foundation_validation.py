@@ -199,8 +199,11 @@ class SourceContractTests(unittest.TestCase):
             set(blocker_schema["required"]),
         )
         self.assertEqual(
-            "SKILL_UNAVAILABLE",
-            blocker_schema["properties"]["reason_code"]["const"],
+            SUPPORTED_REASON_CODES - {
+                "ACCEPTANCE_EVIDENCE_COMPLETE",
+                "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+            },
+            set(blocker_schema["properties"]["reason_code"]["enum"]),
         )
         self.assertEqual(
             SUPPORTED_REASON_CODES,

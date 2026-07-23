@@ -22,7 +22,16 @@
         "properties": {
           "active": {"type": "boolean"},
           "identity": {"minLength": 1, "type": "string"},
-          "reason_code": {"minLength": 1, "type": "string"}
+          "reason_code": {
+            "enum": [
+              "AUTHORITY_CONFLICT",
+              "EVIDENCE_CONTRADICTED",
+              "LIFECYCLE_STATE_STALE",
+              "POLICY_CONFLICT",
+              "PRIVATE_INPUT_INCLUDED"
+            ],
+            "type": "string"
+          }
         },
         "required": ["active", "identity", "reason_code"],
         "type": "object"

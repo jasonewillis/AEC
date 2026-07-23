@@ -464,8 +464,16 @@ class ResolverTracerTests(unittest.TestCase):
             }
         )
         request["blockers"] = [
-            {"active": False, "identity": "second", "reason_code": "SECOND"},
-            {"active": False, "identity": "first", "reason_code": "FIRST"},
+            {
+                "active": False,
+                "identity": "second",
+                "reason_code": "POLICY_CONFLICT",
+            },
+            {
+                "active": False,
+                "identity": "first",
+                "reason_code": "LIFECYCLE_STATE_STALE",
+            },
         ]
         request["capability_profile"]["capabilities"].append("browser")
         request["consumer_profile"]["agent_adapters"].append("other-adapter")

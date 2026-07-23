@@ -21,6 +21,7 @@ from aec.consumer import (  # noqa: E402
     validate_consumer_state,
 )
 from aec.resolver import (  # noqa: E402
+    BLOCKER_REASON_REGISTRY,
     compute_resolution_hash,
     validate_procedure_catalog,
     validate_resolution_request,
@@ -40,6 +41,7 @@ SUPPORTED_REASON_CODES = {
     "ACCEPTANCE_EVIDENCE_COMPLETE",
     "ACCEPTANCE_EVIDENCE_INCOMPLETE",
     "SKILL_UNAVAILABLE",
+    *BLOCKER_REASON_REGISTRY,
 }
 
 GATES = {"Blocked", "Needs review", "Evidence needed", "Ready"}
@@ -334,6 +336,10 @@ def validate_resolution(resolution: object) -> list[str]:
         resolution.get("gate") == "Blocked"
         and resolution.get("reason_code") == "SKILL_UNAVAILABLE"
     )
+    caller_blocked = (
+        resolution.get("gate") == "Blocked"
+        and resolution.get("reason_code") in BLOCKER_REASON_REGISTRY
+    )
     if unavailable:
         if resolution.get("allowed") is not False:
             errors.append("SKILL_UNAVAILABLE decisions must set allowed=false")
@@ -347,6 +353,17 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append(
                 "unavailable required procedure needs exactly procedure-availability evidence"
             )
+    elif caller_blocked:
+        if resolution.get("allowed") is not False:
+            errors.append("caller-blocked decisions must set allowed=false")
+        if primary_procedure is not None:
+            errors.append("caller-blocked decisions cannot select a procedure")
+        if not valid_primary_blocker:
+            errors.append("caller-blocked decisions require a primary blocker")
+        elif primary_blocker["reason_code"] != reason_code:
+            errors.append("primary_blocker.reason_code must equal reason_code")
+        if not isinstance(required_evidence, list) or not required_evidence:
+            errors.append("caller-blocked decisions must require evidence")
     elif not isinstance(primary_procedure, str) or not primary_procedure:
         errors.append("primary_procedure must identify the selected procedure")
     elif primary_blocker is not None:
@@ -369,8 +386,8 @@ def validate_resolution(resolution: object) -> list[str]:
             )
         if not isinstance(required_evidence, list) or not required_evidence:
             errors.append("Evidence needed decisions must require evidence")
-    elif gate == "Blocked" and reason_code != "SKILL_UNAVAILABLE":
-        errors.append("Blocked decisions currently support only SKILL_UNAVAILABLE")
+    elif gate == "Blocked" and not (unavailable or caller_blocked):
+        errors.append("Blocked decision reason is unsupported")
 
     if valid_required_procedure and valid_available_procedures:
         required_reference = (
@@ -384,9 +401,17 @@ def validate_resolution(resolution: object) -> list[str]:
             errors.append(
                 "unavailable required procedure is present in availability facts"
             )
-        if not unavailable and required_reference not in available_references:
+        if (
+            not unavailable
+            and not caller_blocked
+            and required_reference not in available_references
+        ):
             errors.append("selected procedure is absent from availability facts")
-        if not unavailable and primary_procedure != required_procedure["identity"]:
+        if (
+            not unavailable
+            and not caller_blocked
+            and primary_procedure != required_procedure["identity"]
+        ):
             errors.append("selected procedure must equal the required procedure")
         if (
             unavailable
