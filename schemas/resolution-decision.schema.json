@@ -269,6 +269,8 @@
       "if": {"properties": {"reason_code": {"const": "AUTHORITY_CONFLICT"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "AUTHORITY_CONFLICT"}
@@ -282,6 +284,8 @@
       "if": {"properties": {"reason_code": {"const": "PRIVATE_INPUT_INCLUDED"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "PRIVATE_INPUT_INCLUDED"}
@@ -295,6 +299,8 @@
       "if": {"properties": {"reason_code": {"const": "POLICY_CONFLICT"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "POLICY_CONFLICT"}
@@ -308,6 +314,8 @@
       "if": {"properties": {"reason_code": {"const": "LIFECYCLE_STATE_STALE"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "LIFECYCLE_STATE_STALE"}
@@ -321,6 +329,8 @@
       "if": {"properties": {"reason_code": {"const": "EVIDENCE_CONTRADICTED"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "EVIDENCE_CONTRADICTED"}
@@ -334,6 +344,8 @@
       "if": {"properties": {"reason_code": {"const": "SKILL_UNAVAILABLE"}}},
       "then": {
         "properties": {
+          "allowed": {"const": false},
+          "gate": {"const": "Blocked"},
           "primary_blocker": {
             "properties": {
               "reason_code": {"const": "SKILL_UNAVAILABLE"}

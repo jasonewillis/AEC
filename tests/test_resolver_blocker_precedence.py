@@ -80,6 +80,8 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
                 continue
             properties = rule["then"]["properties"]
             contracts[reason_code] = {
+                "allowed": properties["allowed"]["const"],
+                "gate": properties["gate"]["const"],
                 "primary_reason": properties["primary_blocker"]["properties"][
                     "reason_code"
                 ]["const"],
@@ -88,6 +90,8 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
 
         expected = {
             reason_code: {
+                "allowed": False,
+                "gate": "Blocked",
                 "primary_reason": reason_code,
                 "required_evidence": BLOCKER_REASON_REGISTRY[reason_code][
                     "required_evidence"
@@ -96,6 +100,8 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
             for reason_code in BLOCKER_PRECEDENCE
         }
         expected["SKILL_UNAVAILABLE"] = {
+            "allowed": False,
+            "gate": "Blocked",
             "primary_reason": "SKILL_UNAVAILABLE",
             "required_evidence": ["procedure-availability"],
         }
