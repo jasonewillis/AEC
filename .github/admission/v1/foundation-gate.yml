@@ -1,6 +1,7 @@
 name: Foundation gate
 
 on:
+  pull_request:
   push:
     branches:
       - main
@@ -14,6 +15,7 @@ concurrency:
 
 jobs:
   validate:
+    name: foundation-validate
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

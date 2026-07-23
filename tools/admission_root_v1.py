@@ -18,7 +18,7 @@ ARTIFACT_MANIFEST_ROOT = (
     "sha256:686ece3d31618e22961acd8fe2d8e72d35ae30e750bf86d4efcaa9ad5b3890ef"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:ce099d7a3d32e6dbc2b788c6aa950fad09b61b49f8b08048ed33cf86806d1c84"
+    "sha256:eaa9b73c40fb8df85fc0ad64a5cfe58f94dfc6c74f4a22ca94f7c3bfbdf459de"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -216,7 +216,7 @@ WORKFLOW_TRANSITION_BASELINE: dict[str, str] = {
         "2d0229163087c649042e0f4af0060ab269af036c84df398745f8cb7802ac9068"
     ),
     ".github/workflows/foundation-gate.yml": (
-        "75d940adee48523e8c4163cc78b2cb16cc2f8d80317a026677f4b52adb70459b"
+        "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556"
     ),
 }
 WORKFLOW_TRANSITION_BUNDLES: dict[str, str] = {
@@ -234,7 +234,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     ".github/admission/v1/foundation-gate.yml": FileBaseline(
         REGULAR_MODE,
-        "75d940adee48523e8c4163cc78b2cb16cc2f8d80317a026677f4b52adb70459b",
+        "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
     ),
     "aec/consumer.py": FileBaseline(
         REGULAR_MODE,
