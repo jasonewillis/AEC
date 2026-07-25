@@ -21,6 +21,12 @@ from aec.consumer import (  # noqa: E402
     resolve_consumer_state,
     validate_consumer_state,
 )
+from aec.outcomes import (  # noqa: E402
+    OutcomeReceiptRejection,
+    evaluate_outcomes,
+    verify_outcome_receipt,
+    verify_outcome_record,
+)
 from aec.resolver import (  # noqa: E402
     BLOCKER_REASON_REGISTRY,
     compute_resolution_hash,
@@ -235,8 +241,10 @@ MENTORING_FIELDS = {
 DECISION_CONTEXT_FIELDS = {
     "authority",
     "choices",
+    "context",
     "question",
     "recommendation",
+    "schema_version",
 }
 TRADEOFF_FIELDS = {
     "maintainability",
@@ -245,11 +253,55 @@ TRADEOFF_FIELDS = {
     "risk",
     "scope",
 }
+RECOMMENDATION_FIELDS = {
+    "choice",
+    "confidence",
+    "expected_result",
+    "principal_uncertainty",
+    "revisit_when",
+    "why",
+}
+SUPPORTING_EVIDENCE_QUALITY = {
+    "high": {"direct-verified"},
+    "medium": {"direct-verified", "indirect"},
+    "low": {"direct-verified", "indirect", "assumed"},
+}
+SLUG_IDENTITY = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
+# An independent statement of the closed integer encoding. JSON Schema accepts
+# 1.0 as an integer, so every exact integer crosses the contract as a canonical
+# signed decimal string instead of a JSON number.
+CANONICAL_DECIMAL = re.compile(r"(?:0|-?[1-9][0-9]*)")
+PUBLIC_CARD_SCHEMA_VERSION = "3.0.0"
+PUBLIC_CARD_FIELDS = {
+    "anti_example",
+    "authoritative",
+    "card_hash",
+    "decision_support",
+    "finished",
+    "gate",
+    "good",
+    "lane",
+    "mentoring",
+    "phase",
+    "rail_position",
+    "rationale",
+    "required_proof",
+    "resolution_hash",
+    "schema_version",
+    "transition_request",
+}
+EFFECT_FIELDS = ("authoritative", "executes", "mutates")
 
 
 def _non_empty_string(value: object) -> bool:
     """Return whether a value is an exact non-empty string."""
     return type(value) is str and bool(value.strip())
+
+
+def _canonical_integer(value: object) -> bool:
+    """Independently accept one canonical signed decimal integer string."""
+    return type(value) is str and bool(CANONICAL_DECIMAL.fullmatch(value))
 
 
 def _validate_mentoring(value: object) -> list[str]:
@@ -263,6 +315,36 @@ def _validate_mentoring(value: object) -> list[str]:
     ]
 
 
+def _validate_expected_numbers(expected: dict[str, Any]) -> list[str]:
+    """Independently validate one machine-comparable expected result."""
+    errors: list[str] = []
+    for name in ("measure", "unit"):
+        identity = expected.get(name)
+        if not isinstance(identity, str) or not SLUG_IDENTITY.fullmatch(identity):
+            errors.append(f"decision_support expected {name} is invalid")
+    direction = expected.get("direction")
+    if direction not in RESULT_DIRECTIONS:
+        errors.append("decision_support expected direction is unsupported")
+    if not _non_empty_string(expected.get("threshold")):
+        errors.append("decision_support expected threshold is invalid")
+    baseline = expected.get("baseline")
+    target = expected.get("target")
+    if not _canonical_integer(baseline) or not _canonical_integer(target):
+        return errors + [
+            "decision_support expected baseline and target must be canonical integers"
+        ]
+    if errors:
+        return errors
+    baseline, target = int(baseline), int(target)
+    if (
+        (direction == "decrease" and not target < baseline)
+        or (direction == "increase" and not target > baseline)
+        or (direction == "hold" and target != baseline)
+    ):
+        errors.append("decision_support expected target contradicts its direction")
+    return errors
+
+
 def _validate_decision_support(value: object) -> list[str]:
     """Independently validate the closed optional decision brief."""
     if value is None:
@@ -270,8 +352,20 @@ def _validate_decision_support(value: object) -> list[str]:
     if type(value) is not dict or set(value) != DECISION_CONTEXT_FIELDS:
         return ["decision_support fields do not match the contract"]
     errors: list[str] = []
+    if value.get("schema_version") != "2.0.0":
+        errors.append("decision_support.schema_version must equal 2.0.0")
     if not _non_empty_string(value.get("question")):
         errors.append("decision_support.question must be a non-empty string")
+    context = value.get("context")
+    if type(context) is not dict or set(context) != {"evidence_quality", "revision"}:
+        errors.append("decision_support.context fields do not match the contract")
+        context = {}
+    else:
+        revision = context.get("revision")
+        if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
+            errors.append("decision_support.context.revision is invalid")
+        if context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY["low"]:
+            errors.append("decision_support.context.evidence_quality is unsupported")
     authority = value.get("authority")
     if type(authority) is not dict or set(authority) != {"owner", "reason"}:
         errors.append("decision_support.authority fields do not match the contract")
@@ -294,7 +388,7 @@ def _validate_decision_support(value: object) -> list[str]:
                 errors.append("decision_support choice fields do not match the contract")
                 continue
             identity = choice.get("identity")
-            if _non_empty_string(identity):
+            if isinstance(identity, str) and SLUG_IDENTITY.fullmatch(identity):
                 identities.append(identity)
             else:
                 errors.append("decision_support choice identity is invalid")
@@ -308,17 +402,34 @@ def _validate_decision_support(value: object) -> list[str]:
         if len(identities) != len(set(identities)):
             errors.append("decision_support choice identities must be unique")
     recommendation = value.get("recommendation")
-    if type(recommendation) is not dict or set(recommendation) != {
-        "choice",
-        "revisit_when",
-        "why",
-    }:
+    if type(recommendation) is not dict or set(recommendation) != RECOMMENDATION_FIELDS:
         errors.append("decision_support recommendation fields do not match the contract")
     else:
         if recommendation.get("choice") not in identities:
             errors.append("decision_support recommendation must name a declared choice")
         if not _non_empty_string(recommendation.get("why")):
             errors.append("decision_support recommendation reason is invalid")
+        if not _non_empty_string(recommendation.get("principal_uncertainty")):
+            errors.append("decision_support principal uncertainty is invalid")
+        confidence = recommendation.get("confidence")
+        if confidence not in SUPPORTING_EVIDENCE_QUALITY:
+            errors.append("decision_support recommendation confidence is unsupported")
+        elif context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY[
+            confidence
+        ]:
+            errors.append("decision_support confidence exceeds its evidence quality")
+        expected = recommendation.get("expected_result")
+        if type(expected) is not dict or set(expected) != {
+            "baseline",
+            "direction",
+            "measure",
+            "target",
+            "threshold",
+            "unit",
+        }:
+            errors.append("decision_support expected result fields are invalid")
+        else:
+            errors.extend(_validate_expected_numbers(expected))
         revisit_when = recommendation.get("revisit_when")
         if (
             type(revisit_when) is not list
@@ -327,6 +438,124 @@ def _validate_decision_support(value: object) -> list[str]:
             or len(revisit_when) != len(set(revisit_when))
         ):
             errors.append("decision_support revisit evidence is invalid")
+    return errors
+
+
+def independent_card_hash(card: dict[str, Any]) -> str:
+    """Recompute the card hash over the complete card except card_hash."""
+    covered = {name: value for name, value in card.items() if name != "card_hash"}
+    payload = json.dumps(
+        covered,
+        allow_nan=False,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8", errors="strict")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def validate_public_card(card: object) -> list[str]:
+    """Independently validate one closed public card and its own hash."""
+    if not isinstance(card, dict) or set(card) != PUBLIC_CARD_FIELDS:
+        return ["public card fields do not match the contract"]
+
+    errors: list[str] = []
+    if card.get("schema_version") != PUBLIC_CARD_SCHEMA_VERSION:
+        errors.append(f"public card schema_version must equal {PUBLIC_CARD_SCHEMA_VERSION}")
+    if card.get("authoritative") is not False:
+        errors.append("public card must set authoritative=false")
+    gate = card.get("gate")
+    if gate not in GATES:
+        errors.append("public card gate is unsupported")
+    phase = card.get("phase")
+    if phase not in EXPECTED_PHASES:
+        errors.append("public card phase is unsupported")
+    for field in ("anti_example", "lane"):
+        if not _non_empty_string(card.get(field)):
+            errors.append(f"public card {field} must be a non-empty string")
+    for field in ("finished", "good"):
+        value = card.get(field)
+        if not isinstance(value, list) or not value or not all(
+            _non_empty_string(item) for item in value
+        ):
+            errors.append(f"public card {field} must be a non-empty string list")
+    required_proof = card.get("required_proof")
+    if not isinstance(required_proof, list) or not all(
+        _non_empty_string(item) for item in required_proof
+    ):
+        errors.append("public card required_proof must be a string list")
+    resolution_hash = card.get("resolution_hash")
+    if not isinstance(resolution_hash, str) or not HASH_VALUE.fullmatch(
+        resolution_hash
+    ):
+        errors.append("public card resolution_hash must be a SHA-256 binding")
+    rationale = card.get("rationale")
+    if not isinstance(rationale, dict) or set(rationale) != {
+        "principle_ids",
+        "summary",
+    }:
+        errors.append("public card rationale fields do not match the contract")
+    errors.extend(_validate_mentoring(card.get("mentoring")))
+
+    rail = card.get("rail_position")
+    if not isinstance(rail, dict) or set(rail) != {
+        "phase",
+        "phase_total",
+        "rail",
+        "rail_total",
+        "stage",
+    }:
+        errors.append("public card rail_position fields do not match the contract")
+    elif rail.get("stage") not in STAGE_PHASES or phase not in STAGE_PHASES.get(
+        rail.get("stage"), set()
+    ):
+        errors.append("public card rail_position stage does not contain its phase")
+    elif rail != {
+        "phase": sorted(STAGE_PHASES[rail["stage"]], key=EXPECTED_PHASES.index).index(
+            phase
+        )
+        + 1,
+        "phase_total": len(STAGE_PHASES[rail["stage"]]),
+        "rail": EXPECTED_PHASES.index(phase) + 1,
+        "rail_total": len(EXPECTED_PHASES),
+        "stage": rail["stage"],
+    }:
+        errors.append("public card rail_position does not match its phase")
+
+    transition = card.get("transition_request")
+    revision: object = None
+    if not isinstance(transition, dict) or set(transition) != {
+        "authoritative",
+        "environment",
+        "executes",
+        "mutates",
+        "requested_gate",
+        "revision",
+    }:
+        errors.append("public card transition_request fields do not match the contract")
+    else:
+        revision = transition.get("revision")
+        if any(transition.get(field) is not False for field in EFFECT_FIELDS):
+            errors.append("public card transition_request must remain a draft")
+        if not _non_empty_string(transition.get("environment")):
+            errors.append("public card transition_request environment is invalid")
+        if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
+            errors.append("public card transition_request revision is invalid")
+        if transition.get("requested_gate") != gate:
+            errors.append("public card transition_request gate must equal the card gate")
+
+    support = card.get("decision_support")
+    errors.extend(_validate_decision_support(support))
+    if isinstance(support, dict):
+        context = support.get("context")
+        if isinstance(context, dict) and context.get("revision") != revision:
+            errors.append("public card decision context binds a foreign revision")
+
+    card_hash = card.get("card_hash")
+    if not isinstance(card_hash, str) or not HASH_VALUE.fullmatch(card_hash):
+        errors.append("public card card_hash must be a SHA-256 binding")
+    elif card_hash != independent_card_hash(card):
+        errors.append("public card card_hash does not match the card bytes")
     return errors
 
 
@@ -1037,6 +1266,22 @@ def materialize_consumer_state_case(
     return value
 
 
+def materialize_outcome_receipt_case(
+    receipt: dict[str, Any], case: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply one bounded red-fixture operation to an outcome receipt."""
+    value = copy.deepcopy(receipt)
+    path = case["path"]
+    target: dict[str, Any] = value
+    for part in path[:-1]:
+        target = target[part]
+    if case["operation"] == "remove":
+        del target[path[-1]]
+    elif case["operation"] == "replace":
+        target[path[-1]] = case["value"]
+    return value
+
+
 def main() -> int:
     """Validate the complete foundation bootstrap contract."""
     course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
@@ -1267,6 +1512,230 @@ def main() -> int:
                 else ["consumer-state canary did not fail closed"],
             )
         )
+
+    proposal = load_json(ROOT / "tests" / "fixtures" / "outcomes" / "proposal.json")
+    checks.append(
+        report_errors(
+            "consumer-state.material-decision",
+            validate_consumer_state(proposal),
+        )
+    )
+    for name, path, value in (
+        ("stale-context", ["decision_context", "context", "revision"], "f" * 40),
+        (
+            "insufficient-context",
+            ["decision_context", "context", "evidence_quality"],
+            "assumed",
+        ),
+    ):
+        drifted = materialize_consumer_state_case(
+            proposal, {"operation": "replace", "path": path, "value": value}
+        )
+        checks.append(
+            report_errors(
+                f"red-canary.decision-context.{name}",
+                []
+                if validate_consumer_state(drifted)
+                else ["decision-context canary did not fail closed"],
+            )
+        )
+
+    outcomes = load_json(ROOT / "tests" / "fixtures" / "outcomes" / "golden.json")
+    record = outcomes["records"][0]
+    receipt = record["receipt"]
+    card = record["card"]
+    decision = record["decision"]
+    report = evaluate_outcomes(outcomes["records"])
+    checks.append(
+        report_errors(
+            "outcome-record.decision-snapshot-bound",
+            validate_resolution(decision)
+            + (
+                []
+                if decision["resolution_hash"] == compute_resolution_hash(decision)
+                else ["golden decision hash does not match its recomputed payload"]
+            ),
+        )
+    )
+    for name, mutate in (
+        ("forged-decision", lambda value: value["decision"].update({"gate": "Ready"})),
+        (
+            "unprojected-card",
+            lambda value: value["card"].update({"lane": "REWRITTEN"}),
+        ),
+        (
+            "foreign-decision-prose",
+            lambda value: value["decision"]["rationale"].update(
+                {"summary": "A summary nobody resolved."}
+            ),
+        ),
+    ):
+        forged = copy.deepcopy(record)
+        mutate(forged)
+        # Recompute every self-declared identity the way a forger would.
+        forged["decision"]["resolution_hash"] = compute_resolution_hash(
+            forged["decision"]
+        )
+        forged["receipt"]["decision"]["resolution_hash"] = forged["decision"][
+            "resolution_hash"
+        ]
+        if "card_hash" in forged["card"]:
+            forged["card"]["card_hash"] = independent_card_hash(forged["card"])
+        result = verify_outcome_record(forged)
+        checks.append(
+            report_errors(
+                f"red-canary.outcome-record.{name}",
+                []
+                if isinstance(result, OutcomeReceiptRejection)
+                and result.code
+                in {
+                    "OUTCOME_RECORD_DECISION_INVALID",
+                    "OUTCOME_RECORD_CARD_NOT_PROJECTED",
+                }
+                else ["a recomputed forgery was accepted as an outcome record"],
+            )
+        )
+    missing_decision = {"card": card, "receipt": receipt}
+    checks.append(
+        report_errors(
+            "red-canary.outcome-record.missing-decision",
+            []
+            if isinstance(
+                verify_outcome_record(missing_decision), OutcomeReceiptRejection
+            )
+            else ["a record without its decision was accepted"],
+        )
+    )
+    rendered_report = json.dumps(report, sort_keys=True)
+    # Prose and the decision's own identities are the content a report must
+    # never echo. Shared structural field names are not decision content.
+    decision_content = [
+        text for text in _nested_strings(decision) if " " in text
+    ] + [decision["resolution_hash"], decision["revision"], decision["task_id"]]
+    leaked = sorted(text for text in decision_content if text in rendered_report)
+    checks.append(
+        report_errors(
+            "outcome-report.no-decision-content",
+            [] if not leaked else ["outcome report echoed decision content"],
+        )
+    )
+    checks.append(
+        report_errors(
+            "outcome-receipt.golden",
+            []
+            if report["verified"] == len(outcomes["records"]) and not report["rejected"]
+            else ["golden outcome receipts did not verify"],
+        )
+    )
+    checks.append(
+        report_errors(
+            "outcome-report.non-causal",
+            []
+            if report["authoritative"] is False and report["causal_claim"] is False
+            else ["outcome report claimed authority or causation"],
+        )
+    )
+    outcome_cases = load_json(
+        ROOT / "tests" / "fixtures" / "outcomes" / "red-cases.json"
+    )["cases"]
+    for case in outcome_cases:
+        result = verify_outcome_receipt(
+            materialize_outcome_receipt_case(receipt, case), card
+        )
+        checks.append(
+            report_errors(
+                f"red-canary.outcome-receipt.{case['name']}",
+                []
+                if isinstance(result, OutcomeReceiptRejection)
+                and result.code == case["code"]
+                else ["outcome-receipt canary did not fail closed"],
+            )
+        )
+    checks.append(report_errors("public-card.golden", validate_public_card(card)))
+    for name, mutate in (
+        ("tampered-gate", lambda value: value.update({"gate": "Ready"})),
+        ("dropped-field", lambda value: value.pop("mentoring")),
+        (
+            "foreign-decision-revision",
+            lambda value: value["decision_support"]["context"].update(
+                {"revision": "f" * 40}
+            ),
+        ),
+        (
+            "contradicted-expected-result",
+            lambda value: value["decision_support"]["recommendation"][
+                "expected_result"
+            ].update({"target": 9}),
+        ),
+    ):
+        broken = copy.deepcopy(card)
+        mutate(broken)
+        card_errors = validate_public_card(broken)
+        rejection = verify_outcome_receipt(receipt, broken)
+        checks.append(
+            report_errors(
+                f"red-canary.public-card.{name}",
+                []
+                if card_errors
+                and isinstance(rejection, OutcomeReceiptRejection)
+                and rejection.code == "OUTCOME_RECEIPT_CARD_INVALID"
+                else ["public-card canary did not fail closed"],
+            )
+        )
+    rehashed = copy.deepcopy(card)
+    rehashed["gate"] = "Ready"
+    rehashed["card_hash"] = independent_card_hash(rehashed)
+    checks.append(
+        report_errors(
+            "red-canary.public-card.rehashed-tamper",
+            []
+            if "public card transition_request gate must equal the card gate"
+            in validate_public_card(rehashed)
+            else ["a rehashed card hid an internally inconsistent gate"],
+        )
+    )
+    # The golden receipt declares "supported"; every other derived outcome must
+    # reject that declaration and accept only the verdict its own facts derive.
+    for verdict, value in (
+        ("partially-supported", "2"),
+        ("unsupported", "4"),
+        ("harmful", "9"),
+        ("inconclusive", None),
+    ):
+        lying = copy.deepcopy(receipt)
+        if value is None:
+            for fact in lying["verification"]:
+                fact["accepted"] = False
+        else:
+            lying["observed_result"]["value"] = value
+        honest = copy.deepcopy(lying)
+        honest["verdict"] = verdict
+        lied = verify_outcome_receipt(lying, card)
+        checks.append(
+            report_errors(
+                f"red-canary.outcome-receipt.lying-verdict.{verdict}",
+                []
+                if isinstance(lied, OutcomeReceiptRejection)
+                and lied.code == "OUTCOME_RECEIPT_VERDICT_CONTRADICTED"
+                and not isinstance(
+                    verify_outcome_receipt(honest, card), OutcomeReceiptRejection
+                )
+                else ["a declared verdict did not have to match the derived verdict"],
+            )
+        )
+    routine = copy.deepcopy(card)
+    routine["decision_support"] = None
+    routine["card_hash"] = independent_card_hash(routine)
+    routine_result = verify_outcome_receipt(receipt, routine)
+    checks.append(
+        report_errors(
+            "red-canary.outcome-receipt.routine-work",
+            []
+            if isinstance(routine_result, OutcomeReceiptRejection)
+            and routine_result.code == "OUTCOME_RECEIPT_NO_DECISION"
+            else ["routine work accepted an outcome receipt"],
+        )
+    )
     return 0 if all(checks) else 1
 
 

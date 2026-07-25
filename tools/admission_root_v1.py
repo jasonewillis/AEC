@@ -15,10 +15,10 @@ BEHAVIOR_IDENTITY = (
     "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
 ARTIFACT_MANIFEST_ROOT = (
-    "sha256:686ece3d31618e22961acd8fe2d8e72d35ae30e750bf86d4efcaa9ad5b3890ef"
+    "sha256:83fdc2c88dde6e4196c822e475461e5d82896f5ed7e37f8ffd5794abb4a3bdfb"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:eaa9b73c40fb8df85fc0ad64a5cfe58f94dfc6c74f4a22ca94f7c3bfbdf459de"
+    "sha256:bd1bef63d9f51c3a70059209df0465092336e48c9fa6088e44fff0fe9f0f3cc3"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -50,15 +50,21 @@ SOURCE_BASELINE: dict[str, str] = {
     "aec/_generated/resolver_program.py": (
         "4cf7aa4c831abe910d88bb23bf344beaa6dcfa11d0317e63048bb4a05508c270"
     ),
-    "aec/contracts.py": "077f7225b232d04ab02e5d908b5af0fb9243ed20def359ac739baefd1ddbedc1",
+    "aec/cards.py": (
+        "d28d23cfd2775dd881291c9ac2bf28e108691b17ec35da75c325ae2504acd5f5"
+    ),
+    "aec/contracts.py": "becbc8a60685f96474ac01d4821612357e237e64b3ae0259267abbdce3d5b87b",
     "aec/mentoring.py": (
-        "06590eec08ef9210b9dd2488d30bd1b6e1e4a2df1fed997fa4b7c0077bd40331"
+        "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e"
+    ),
+    "aec/outcomes.py": (
+        "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9"
     ),
     "aec/review_attestation.py": (
         "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
     ),
     "aec/resolver.py": (
-        "5a0b9701eaa8621adca55ac23c92394ec30b026bf6161da9f822e0abfb3cdb14"
+        "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39"
     ),
 }
 ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
@@ -92,7 +98,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/consumer-state.schema.json": ArtifactBaseline(
         "schema",
-        "12ff738f9b4cb0fefcfebfbf91ceafe0f28631fda415f1c162bcd2d02a2e3f5d",
+        "c24e11e68689d579ac464e0d8d329027ba86495879224e9dacec04720ac97ba8",
     ),
     "schemas/course-inventory.schema.json": ArtifactBaseline(
         "schema",
@@ -118,9 +124,13 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
         "schema",
         "abec6e2d28fb25c2f261f0b43224987a3491423bcec5c476eee8537b3a380ece",
     ),
+    "schemas/outcome-receipt.schema.json": ArtifactBaseline(
+        "schema",
+        "5262aac8a76668e548742142acd966c0dc55367a618da06040024573ba0f72b0",
+    ),
     "schemas/resolution-request.schema.json": ArtifactBaseline(
         "schema",
-        "28c54ac54fa8c4dd782e881e7f49d0ecfda8a97aeed15fc07886c34a259c1247",
+        "8248955a8ba1e8d094847f91ef4197b62e337370df97313d685aad82dd8cc632",
     ),
     "schemas/resolver-program.schema.json": ArtifactBaseline(
         "schema",
@@ -145,6 +155,18 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     "tests/fixtures/course-boundary/runtime-authority-course-id.json": ArtifactBaseline(
         "test-fixture",
         "75446a2b3b50921f975e6e35ac1783bb039785808f065e575c7927ebd8d2be9f",
+    ),
+    "tests/fixtures/outcomes/golden.json": ArtifactBaseline(
+        "test-fixture",
+        "055dfbc4b8d903069c556ff6fc3f04724ec060ed6af3b909bb8e57a7d33c1690",
+    ),
+    "tests/fixtures/outcomes/proposal.json": ArtifactBaseline(
+        "test-fixture",
+        "7a407012f3a41d5c558f70ed31e92bcb1d85350ddb824e117a00e3fa0247f1a3",
+    ),
+    "tests/fixtures/outcomes/red-cases.json": ArtifactBaseline(
+        "test-fixture",
+        "013bf47bb2cd6bf2d541cf6a6348e2ba5b2596f883436e042f0b8a2f67dedb4c",
     ),
     "tests/fixtures/private-mentor-lens/valid.json": ArtifactBaseline(
         "test-fixture",
@@ -238,7 +260,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "aec/consumer.py": FileBaseline(
         REGULAR_MODE,
-        "39d5ac572f140e2d45f9c0304b4bf5f4a5315159a7e6243a06b07e3fd79e635a",
+        "337fb0b9e2fb3b237ce7dfa664baaefbc4a664505a341a42fba6f44471bafcdf",
     ),
     "tests/test_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
@@ -251,6 +273,10 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     "tools/__init__.py": FileBaseline(
         REGULAR_MODE,
         "24fcc84ad8324d8ab9da5493c183e7ae307a1508cdbc4dc2efde04f18ba18811",
+    ),
+    "tools/evaluate_outcomes.py": FileBaseline(
+        REGULAR_MODE,
+        "91af67b6ed0b08661686a293ad6936edea78138d459f644a75a941c837c5fb37",
     ),
     "tools/generate_resolver.py": FileBaseline(
         REGULAR_MODE,
@@ -266,7 +292,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "e9e29cd5a22068e4239c7d1febb4d5355e2a1ae46770df0d6ab4f129e202b5e0",
+        "9a277933cf173fcb88fc9be87efc3c26aa6192e87bf34518ca969f832b798b75",
     ),
 }
 PYTHON_PATHS = frozenset(
@@ -284,13 +310,16 @@ PYTHON_PATHS = frozenset(
         "tests/test_exact_json.py",
         "tests/test_foundation_validation.py",
         "tests/test_foundation_behavior.py",
+        "tests/test_outcome_receipts.py",
         "tests/test_private_mentor_lens.py",
+        "tests/test_public_card.py",
         "tests/test_resolver.py",
         "tests/test_resolver_blocker_precedence.py",
         "tests/test_resolver_program.py",
         "tests/test_review_attestation.py",
         "tools/__init__.py",
         "tools/admission_root_v1.py",
+        "tools/evaluate_outcomes.py",
         "tools/generate_resolver.py",
         "tools/prove_agent_adapter_parity.py",
         "tools/prove_foundation_behavior.py",

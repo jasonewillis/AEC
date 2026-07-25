@@ -1,0 +1,119 @@
+{
+  "blockers": [],
+  "capabilities": {
+    "capabilities": ["normalized-resolution"],
+    "identity": "portable-python",
+    "version": "portable-python:1.0.0"
+  },
+  "consumer_profile": {
+    "aec_mode": "read-only-mentor",
+    "agent_adapters": ["example-adapter"],
+    "lifecycle_authority": "consumer-owned",
+    "profile_version": "example:1.0.0",
+    "project": "example-owner/example-repo",
+    "schema_version": "1.0.0",
+    "workflow": "ticket-to-pr"
+  },
+  "decision_context": {
+    "authority": {
+      "owner": "consumer-owner",
+      "reason": "The repository owner controls dependency and environment policy."
+    },
+    "choices": [
+      {
+        "identity": "isolate-import-boundary",
+        "summary": "Move the optional dependency behind an explicit runtime boundary.",
+        "tradeoffs": {
+          "maintainability": "Keeps an optional dependency out of unrelated paths.",
+          "quality": "Preserves real proof without replacing the production path.",
+          "reversibility": "Reverts as one bounded adapter change.",
+          "risk": "Requires care to preserve existing behavior at the boundary.",
+          "scope": "One import boundary and focused regression coverage."
+        }
+      },
+      {
+        "identity": "install-everywhere",
+        "summary": "Install the optional dependency in every test environment.",
+        "tradeoffs": {
+          "maintainability": "Couples every test path to a platform-specific stack.",
+          "quality": "Exercises the production import path directly.",
+          "reversibility": "Dependency changes can be rolled back.",
+          "risk": "Hides an unnecessary eager import instead of removing it.",
+          "scope": "Environment and dependency configuration changes."
+        }
+      }
+    ],
+    "context": {
+      "evidence_quality": "direct-verified",
+      "revision": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "question": "How should the optional dependency be isolated for the focused proof?",
+    "recommendation": {
+      "choice": "isolate-import-boundary",
+      "confidence": "high",
+      "expected_result": {
+        "baseline": "4",
+        "direction": "decrease",
+        "measure": "unrelated-import-failures",
+        "target": "0",
+        "threshold": "Zero unrelated import failures in the focused proof run.",
+        "unit": "failures"
+      },
+      "principal_uncertainty": "Whether another entry point still imports it eagerly.",
+      "revisit_when": [
+        "The optional dependency becomes required for every application entry point.",
+        "A second unrelated import failure appears outside the isolated boundary."
+      ],
+      "why": "It removes the unrelated import failure at the narrowest durable seam."
+    },
+    "schema_version": "2.0.0"
+  },
+  "effects": {
+    "executes": false,
+    "mutates": false
+  },
+  "environment": {
+    "identity": "test"
+  },
+  "evidence": [],
+  "expires_at": "2026-01-01T01:00:00Z",
+  "observed_at": "2026-01-01T00:00:00Z",
+  "policy": {
+    "facts": {
+      "require_exact_environment": true,
+      "require_exact_revision": true
+    },
+    "identity": "default-delivery",
+    "revision": "default-delivery:1.0.0"
+  },
+  "procedures": {
+    "available": [
+      {
+        "identity": "plan-vertical-delivery",
+        "revision": "plan-vertical-delivery:1.0.0"
+      }
+    ],
+    "required": {
+      "identity": "plan-vertical-delivery",
+      "revision": "plan-vertical-delivery:1.0.0"
+    }
+  },
+  "provider": {
+    "identity": "consumer-state-provider",
+    "revision": "consumer-state-provider:1.0.0"
+  },
+  "revision": {
+    "identity": "0123456789abcdef0123456789abcdef01234567"
+  },
+  "schema_version": "1.0.0",
+  "task": {
+    "identity": "task-124"
+  },
+  "workflow_position": {
+    "lane": "GENERAL",
+    "phase": "Plan",
+    "stage": "Design",
+    "workflow": "ticket-to-pr",
+    "workflow_revision": "ticket-to-pr:1.0.0"
+  }
+}

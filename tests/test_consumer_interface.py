@@ -54,7 +54,12 @@ class ConsumerStateContractTests(unittest.TestCase):
         self.assertEqual("1.0.0", schema["properties"]["schema_version"]["const"])
         self.assertEqual(set(schema["required"]), set(self.state))
         self.assertEqual(
-            {"consumer_profile", "decision_context", "procedure_reference"},
+            {
+                "canonical_integer",
+                "consumer_profile",
+                "decision_context",
+                "procedure_reference",
+            },
             set(schema["$defs"]),
         )
         self.assertFalse(schema["$defs"]["consumer_profile"]["additionalProperties"])
@@ -131,7 +136,21 @@ class ConsumerStateContractTests(unittest.TestCase):
 
         self.assertIsInstance(result, ConsumerCard)
         card = result.to_dict()
-        self.assertEqual(MATERIAL_DECISION_CONTEXT, card["decision_support"])
+        support = card["decision_support"]
+        self.assertEqual(MATERIAL_DECISION_CONTEXT, support)
+        self.assertIn(len(support["choices"]), (2, 3))
+        for choice in support["choices"]:
+            self.assertEqual(
+                {"maintainability", "quality", "reversibility", "risk", "scope"},
+                set(choice["tradeoffs"]),
+            )
+        self.assertEqual("consumer-owner", support["authority"]["owner"])
+        self.assertEqual(
+            {"baseline", "direction", "measure", "target", "threshold", "unit"},
+            set(support["recommendation"]["expected_result"]),
+        )
+        self.assertEqual("high", support["recommendation"]["confidence"])
+        self.assertTrue(support["recommendation"]["principal_uncertainty"])
         self.assertFalse(card["authoritative"])
         self.assertFalse(card["transition_request"]["executes"])
         self.assertFalse(card["transition_request"]["mutates"])

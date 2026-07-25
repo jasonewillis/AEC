@@ -1,0 +1,250 @@
+{
+  "cases": [
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "prompt",
+      "operation": "replace",
+      "path": ["prompt"],
+      "value": "you-are-an-agent"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "nested-diff",
+      "operation": "replace",
+      "path": ["decision", "diff"],
+      "value": "a"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "repository",
+      "operation": "replace",
+      "path": ["repository"],
+      "value": "owner/repo"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "issue-title",
+      "operation": "replace",
+      "path": ["title"],
+      "value": "fix"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "user-identity",
+      "operation": "replace",
+      "path": ["coaching", "email"],
+      "value": "a@b.c"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "health",
+      "operation": "replace",
+      "path": ["coaching", "health"],
+      "value": "ok"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_PROHIBITED_FIELD",
+      "name": "secret",
+      "operation": "replace",
+      "path": ["decision", "token"],
+      "value": "abc"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "unknown-field",
+      "operation": "replace",
+      "path": ["telemetry_endpoint"],
+      "value": true
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "unknown-nested-field",
+      "operation": "replace",
+      "path": ["observed_result", "confidence"],
+      "value": "high"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "boolean-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": true
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "fractional-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 0.5
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "json-number-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 0
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "float-integer-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 1.0
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "decimal-point-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1.0"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "signed-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "+1"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "leading-zero-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "01"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "negative-zero-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "-0"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "whitespace-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": " 1"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "trailing-newline-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1\n"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "exponent-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1e3"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "missing-observed-revision",
+      "operation": "remove",
+      "path": ["observed_revision"]
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "malformed-observed-revision",
+      "operation": "replace",
+      "path": ["observed_revision"],
+      "value": "HEAD"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_CHOICE_NOT_RECOMMENDED",
+      "name": "declared-but-unrecommended-choice",
+      "operation": "replace",
+      "path": ["decision", "selected_choice"],
+      "value": "install-everywhere"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_VERIFICATION_STALE",
+      "name": "accepted-verification-at-another-revision",
+      "operation": "replace",
+      "path": ["verification"],
+      "value": [
+        {
+          "accepted": true,
+          "kind": "focused-test-report",
+          "revision": "0123456789abcdef0123456789abcdef01234567"
+        }
+      ]
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "missing-verdict",
+      "operation": "remove",
+      "path": ["verdict"]
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "unsupported-schema-version",
+      "operation": "replace",
+      "path": ["schema_version"],
+      "value": "2.0.0"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "unsupported-burden",
+      "operation": "replace",
+      "path": ["coaching", "burden"],
+      "value": "extreme"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "unsupported-verdict",
+      "operation": "replace",
+      "path": ["verdict"],
+      "value": "great"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "malformed-resolution-hash",
+      "operation": "replace",
+      "path": ["decision", "resolution_hash"],
+      "value": "sha256:not-a-digest"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "malformed-revision",
+      "operation": "replace",
+      "path": ["decision", "revision"],
+      "value": "HEAD"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "free-text-choice",
+      "operation": "replace",
+      "path": ["decision", "selected_choice"],
+      "value": "Isolate the import boundary because the reviewer said so"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "empty-verification",
+      "operation": "replace",
+      "path": ["verification"],
+      "value": []
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "duplicate-verification",
+      "operation": "replace",
+      "path": ["verification"],
+      "value": [
+        {
+          "accepted": true,
+          "kind": "focused-test-report",
+          "revision": "0123456789abcdef0123456789abcdef01234567"
+        },
+        {
+          "accepted": true,
+          "kind": "focused-test-report",
+          "revision": "0123456789abcdef0123456789abcdef01234567"
+        }
+      ]
+    }
+  ]
+}
