@@ -114,13 +114,13 @@ productization work is called out in the gap map below.
                                                                        +------------------+-------------------+
                                                                                           |
                                                                                           v
-                                                                      +---------------------------------------+
-                                                                      | 5. RENDER HUMAN COACHING             |
-                                                                      |                                       |
-                                                                      | [AEC Project] action and proof        |
-                                                                      | [AEC Mentor] lesson and recognition   |
-                                                                      | Machine JSON only by explicit request |
-                                                                      +-------------------+-------------------+
+                                                                      +------------------------------------------+
+                                                                      | 5. RENDER HUMAN COACHING                 |
+                                                                      |                                          |
+                                                                      | [AEC: Project Guidance] action and proof |
+                                                                      | [AEC: Mentoring] lesson and recognition  |
+                                                                      | Machine JSON only by explicit request    |
+                                                                      +-------------------+----------------------+
                                                                                           |
                                                                                           v
 +---------------------------+       project executes       +-----------------------------+
@@ -204,6 +204,11 @@ productization work is called out in the gap map below.
                                                                                          +----------------------+
 ```
 
+Steps 1 through 4 and steps 6 through 10 describe behavior AEC provides today. Step 5 is
+target state: the public adapter currently returns structured card data and depends on a
+consuming agent to teach it back, so no shipped code renders the two headings itself. The
+gap map below records that difference and its exit gate.
+
 ## Human interaction
 
 Normal use must render both project guidance and student mentoring from the same
@@ -211,12 +216,12 @@ validated card.
 
 ```text
 +-------------------------------------+  +-------------------------------------+
-| [AEC Project]                       |  | [AEC Mentor]                        |
+| [AEC: Project Guidance]             |  | [AEC: Mentoring]                    |
 |                                     |  |                                     |
 | Position and workflow rail          |  | Transferable concept                |
 | Earliest unmet gate                 |  | Why the gate exists                 |
 | Recommended next procedure          |  | Recognition heuristic               |
-| Required proof                      |  | Material tradeoff                    |
+| Required proof                      |  | Material tradeoff                   |
 | Exact finished condition            |  | One optional reflection question    |
 | Consumer authority boundary         |  | Learner-appropriate explanation     |
 +------------------+------------------+  +------------------+------------------+
@@ -235,7 +240,7 @@ evidence requirement, or authority owner.
 At a material fork, the same response adds a decision block:
 
 ```text
-[AEC Decision]
+[AEC: Decision]
     |
     +--> Option 1: five tradeoff dimensions
     |
@@ -337,7 +342,7 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 | Framework admission | Source-changing PRs cannot currently satisfy the base-owned admission job. | A legitimate source transition passes its own admission and a tampered transition still fails. |
 | Consumer compatibility | A routine connection probe can pass while a material-decision consumer test fails. | Pin validation proves routine and material cards, rejection paths, and the human renderer. |
 | State construction | Consumers manually assemble a large state document. | One command builds ignored local state from proven facts and rejects missing facts. |
-| Human coaching | The public adapter returns structured card data and relies on an agent to teach it back. | Default output contains both `[AEC Project]` and `[AEC Mentor]`; raw JSON is explicit. |
+| Human coaching | The public adapter returns structured card data and relies on an agent to teach it back. | Default output contains both `[AEC: Project Guidance]` and `[AEC: Mentoring]`; raw JSON is explicit. |
 | Learner adaptation | AEC has static teaching but no local learner profile. | Explanation depth can adapt without changing any engineering decision or authority fact. |
 | Reflection | Outcome receipts record closed coaching values, but no normal interaction collects them. | One local command records project impact and coaching value without sensitive content. |
 | Agent parity | Claude and Codex bind the same normalized decision. Human coaching parity is not proven. | Both agents render semantically identical project, mentor, and decision blocks. |
