@@ -5,20 +5,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, NamedTuple
+from typing import Mapping, NamedTuple, Protocol
 
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
 BEHAVIOR_IDENTITY = (
     "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
-ARTIFACT_MANIFEST_ROOT = (
-    "sha256:83fdc2c88dde6e4196c822e475461e5d82896f5ed7e37f8ffd5794abb4a3bdfb"
-)
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:bd1bef63d9f51c3a70059209df0465092336e48c9fa6088e44fff0fe9f0f3cc3"
+    "sha256:33588f0e16ad9894b0e9808d584774211bbf789a2791e29e75886681cf403659"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -42,294 +40,166 @@ class FileBaseline(NamedTuple):
     sha256: str
 
 
-SOURCE_BASELINE: dict[str, str] = {
-    "aec/__init__.py": "6eb9af014892dc51902c32b0e1fcac89836e194831f023a5e341d636a1e78173",
-    "aec/_generated/__init__.py": (
-        "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
-    ),
-    "aec/_generated/resolver_program.py": (
-        "4cf7aa4c831abe910d88bb23bf344beaa6dcfa11d0317e63048bb4a05508c270"
-    ),
-    "aec/cards.py": (
-        "d28d23cfd2775dd881291c9ac2bf28e108691b17ec35da75c325ae2504acd5f5"
-    ),
-    "aec/contracts.py": "becbc8a60685f96474ac01d4821612357e237e64b3ae0259267abbdce3d5b87b",
-    "aec/mentoring.py": (
-        "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e"
-    ),
-    "aec/outcomes.py": (
-        "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9"
-    ),
-    "aec/review_attestation.py": (
-        "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
-    ),
-    "aec/resolver.py": (
-        "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39"
-    ),
-}
-ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
-    "config/principles/aec-engineering.json": ArtifactBaseline(
-        "configuration",
-        "730cf21a28ece2ec7389ac7ada1188358d9a02544cc360bb752f7f9c65a11e5f",
-    ),
-    "config/procedures/ticket-to-pr.json": ArtifactBaseline(
-        "configuration",
-        "5725ee4a2f905770602950059e9afa2835cf4da648225eff487117555ea8a777",
-    ),
-    "config/resolver/resolver-program.json": ArtifactBaseline(
-        "configuration",
-        "da560799943cc99b9bfa68c0ba531f26a815065e7d1b1632a67bc9249f6f97e9",
-    ),
-    "config/workflows/ticket-to-pr.json": ArtifactBaseline(
-        "configuration",
-        "6c8a24bde4fb4f0d4c919ce8d7ae3f30b5d6187c6578cd218c300fe1e51c9569",
-    ),
-    "provenance/blueprint-skills.json": ArtifactBaseline(
-        "provenance",
-        "a5c23ba937a00aee0e01fe77669dde0cbce72892b8287d0541a4ee3f730f198f",
-    ),
-    "provenance/course-inventory.json": ArtifactBaseline(
-        "provenance",
-        "22c775840cbbaca8c9ed77dde00ba1517326c7ab16392f909afe6bbac889d834",
-    ),
-    "provenance/upstream-lock.json": ArtifactBaseline(
-        "provenance",
-        "b432bab429f3025351bcd2bae8a4450263ea00951efbb0b20d563b865b19364b",
-    ),
-    "schemas/consumer-state.schema.json": ArtifactBaseline(
-        "schema",
-        "c24e11e68689d579ac464e0d8d329027ba86495879224e9dacec04720ac97ba8",
-    ),
-    "schemas/course-inventory.schema.json": ArtifactBaseline(
-        "schema",
-        "3f7dd4afa33cd2fd29089582b20b8fbf2dd6329296bbf96471f9f11ebbd4f45b",
-    ),
-    "schemas/principle-registry.schema.json": ArtifactBaseline(
-        "schema",
-        "c300d600856010f82cc2312a8689d45a175ea7f008ce0039b0bfd733707741b5",
-    ),
-    "schemas/private-mentor-lens.schema.json": ArtifactBaseline(
-        "schema",
-        "64bc1deef531e7fd00a76fa38a403dbbfe4b6df57ca86fee1c8c9d668560d0fa",
-    ),
-    "schemas/procedure-catalog.schema.json": ArtifactBaseline(
-        "schema",
-        "e8652016c71607f68f3b6db09a9994d994a13b568f1a09721c4c2b3b8dcdf027",
-    ),
-    "schemas/resolution-decision.schema.json": ArtifactBaseline(
-        "schema",
-        "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679",
-    ),
-    "schemas/resolution-rejection.schema.json": ArtifactBaseline(
-        "schema",
-        "abec6e2d28fb25c2f261f0b43224987a3491423bcec5c476eee8537b3a380ece",
-    ),
-    "schemas/outcome-receipt.schema.json": ArtifactBaseline(
-        "schema",
-        "5262aac8a76668e548742142acd966c0dc55367a618da06040024573ba0f72b0",
-    ),
-    "schemas/resolution-request.schema.json": ArtifactBaseline(
-        "schema",
-        "8248955a8ba1e8d094847f91ef4197b62e337370df97313d685aad82dd8cc632",
-    ),
-    "schemas/resolver-program.schema.json": ArtifactBaseline(
-        "schema",
-        "ec1bd9ba3ee66e11d6aba7c6b3ecb6367b122df756fd13092ea070a92f9944fb",
-    ),
-    "skills-lock.json": ArtifactBaseline(
-        "skill-lock",
-        "077eae10654ada27885194ffd3ef4c238168a1a9a8b4bc8f84cbdf7a3b63746b",
-    ),
-    "tests/fixtures/consumer-state/red-cases.json": ArtifactBaseline(
-        "test-fixture",
-        "74ca60bf0080dbc35c610eb18f2f981d140574529694ebfbc2241de2c82ea29e",
-    ),
-    "tests/fixtures/consumer-state/valid.json": ArtifactBaseline(
-        "test-fixture",
-        "3d09721fd1a453c9c89a154b82bf31fd2ef8e34a664e6bdc847c02c526290afa",
-    ),
-    "tests/fixtures/course-boundary/course-inventory-expressive.json": ArtifactBaseline(
-        "test-fixture",
-        "4a8bb764e0ef1c93168515ca10ab8fcb121bac839dcca6baef2b80bab26a73ce",
-    ),
-    "tests/fixtures/course-boundary/runtime-authority-course-id.json": ArtifactBaseline(
-        "test-fixture",
-        "75446a2b3b50921f975e6e35ac1783bb039785808f065e575c7927ebd8d2be9f",
-    ),
-    "tests/fixtures/outcomes/golden.json": ArtifactBaseline(
-        "test-fixture",
-        "055dfbc4b8d903069c556ff6fc3f04724ec060ed6af3b909bb8e57a7d33c1690",
-    ),
-    "tests/fixtures/outcomes/proposal.json": ArtifactBaseline(
-        "test-fixture",
-        "7a407012f3a41d5c558f70ed31e92bcb1d85350ddb824e117a00e3fa0247f1a3",
-    ),
-    "tests/fixtures/outcomes/red-cases.json": ArtifactBaseline(
-        "test-fixture",
-        "013bf47bb2cd6bf2d541cf6a6348e2ba5b2596f883436e042f0b8a2f67dedb4c",
-    ),
-    "tests/fixtures/private-mentor-lens/valid.json": ArtifactBaseline(
-        "test-fixture",
-        "1c38ed99df6239cd269f0cab32d4a3f393e6c57f0b32f366a9da5c8a79d002cb",
-    ),
-    "tests/fixtures/resolution.mutating-aec.json": ArtifactBaseline(
-        "test-fixture",
-        "cbb97de814da1f70da025fa08860c5f7cc021033de8734c6c4617d41c35953f7",
-    ),
-    "tests/fixtures/resolution.valid.json": ArtifactBaseline(
-        "test-fixture",
-        "96789f3fd42b90f943845a0f0c36b7fa4d2815e3da371d89e7b86d57ab95600b",
-    ),
-    "tests/fixtures/resolution.wrong-hash.json": ArtifactBaseline(
-        "test-fixture",
-        "e4513e12685b394b6130c4610b054b3d84e056fa843e97a557f516b310bfc84b",
-    ),
-    "tests/fixtures/resolver/golden/build.json": ArtifactBaseline(
-        "test-fixture",
-        "98d2818184f161f45749f45efcb4ac88af4bf382ecd66c60f4330e80e536a533",
-    ),
-    "tests/fixtures/resolver/golden/deploy.json": ArtifactBaseline(
-        "test-fixture",
-        "7d47893f5a131096bec8696f8cae6ad8bbb16b5a5902373980539b2afa5776ba",
-    ),
-    "tests/fixtures/resolver/golden/framing.json": ArtifactBaseline(
-        "test-fixture",
-        "cb319d2973e756f769397105fea5cf3a7d8d8a4f3681da52166106d6314ea7b6",
-    ),
-    "tests/fixtures/resolver/golden/intake.json": ArtifactBaseline(
-        "test-fixture",
-        "37f5f62ab17d8a58461934293050e5ffd3393d6388364168a712dcac0a2c772f",
-    ),
-    "tests/fixtures/resolver/golden/plan.json": ArtifactBaseline(
-        "test-fixture",
-        "ccfcc7c9d4bd99827ee52a3ce5b9f99cd2c9efdffad71e54ef8ccf38756c7afb",
-    ),
-    "tests/fixtures/resolver/golden/pr.json": ArtifactBaseline(
-        "test-fixture",
-        "4c6fddf3f53525158a2a80d3eacb7f9bc392f3f56f00b089cdb2e08829646e3d",
-    ),
-    "tests/fixtures/resolver/golden/review.json": ArtifactBaseline(
-        "test-fixture",
-        "b2e9c6eb168bc14df172ffa00707fc69b34de34df96e54e6ed2a295f4859b7ec",
-    ),
-    "tests/fixtures/resolver/golden/spec.json": ArtifactBaseline(
-        "test-fixture",
-        "afbe8d1d9a806d669ad30206ebcb0328022c5f77b79f9f4987373f85cfe00686",
-    ),
-    "tests/fixtures/resolver/golden/verify.json": ArtifactBaseline(
-        "test-fixture",
-        "ec92d009129b7e93f2f41ea9e826815e03c941d86a981280520eb5e3031156f0",
-    ),
-    "tests/fixtures/resolver/red/malformed-available-procedure.json": ArtifactBaseline(
-        "test-fixture",
-        "438c86e6320743fe33b7af09710291a8ff46092bc797cab1e42306c445935e37",
-    ),
-    "tests/fixtures/resolver/red/malformed-procedure-catalog.json": ArtifactBaseline(
-        "test-fixture",
-        "97cc0519e22d73b16a714c54c2283774ab196b14a7414bb2d38bbd22d8382450",
-    ),
-    "tests/fixtures/resolver/red/unavailable-skill.json": ArtifactBaseline(
-        "test-fixture",
-        "8931bd287eb29dd439a1e657a586c3d0b395bd778d765fbf3ab1a41a00b00c33",
-    ),
-}
-WORKFLOW_TRANSITION_BASELINE: dict[str, str] = {
-    ".github/workflows/candidate-admission.yml": (
-        "2d0229163087c649042e0f4af0060ab269af036c84df398745f8cb7802ac9068"
-    ),
-    ".github/workflows/foundation-gate.yml": (
-        "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556"
-    ),
-}
-WORKFLOW_TRANSITION_BUNDLES: dict[str, str] = {
-    ".github/workflows/candidate-admission.yml": (
-        ".github/workflows/candidate-admission.yml"
-    ),
-    ".github/workflows/foundation-gate.yml": (
-        ".github/admission/v1/foundation-gate.yml"
-    ),
-}
-PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
-    ".claude/skills/milestone": FileBaseline(
-        "120000",
-        "179787e57e206baeb8719792db0ef2b0ed38bba71ac395db51e83cf02b98724c",
-    ),
-    ".github/admission/v1/foundation-gate.yml": FileBaseline(
-        REGULAR_MODE,
-        "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
-    ),
-    "aec/consumer.py": FileBaseline(
-        REGULAR_MODE,
-        "337fb0b9e2fb3b237ce7dfa664baaefbc4a664505a341a42fba6f44471bafcdf",
-    ),
-    "tests/test_foundation_behavior.py": FileBaseline(
-        REGULAR_MODE,
-        "25f544e69b7b66ca768c3a0272ea8448c58f50ae880fa860c1bac828e7533519",
-    ),
-    "tests/test_review_attestation.py": FileBaseline(
-        REGULAR_MODE,
-        "033c5f835c55ea4bffb7dd3700d6b562f42efaa329f4f74f24860f1ff18c06c6",
-    ),
-    "tools/__init__.py": FileBaseline(
-        REGULAR_MODE,
-        "24fcc84ad8324d8ab9da5493c183e7ae307a1508cdbc4dc2efde04f18ba18811",
-    ),
-    "tools/evaluate_outcomes.py": FileBaseline(
-        REGULAR_MODE,
-        "91af67b6ed0b08661686a293ad6936edea78138d459f644a75a941c837c5fb37",
-    ),
-    "tools/generate_resolver.py": FileBaseline(
-        REGULAR_MODE,
-        "d2fa950f2572fb213eade309f5763739fea1fff4d1f859bb5b85d22cfcf68676",
-    ),
-    "tools/prove_foundation_behavior.py": FileBaseline(
-        REGULAR_MODE,
-        "a53aab66774a61e1982229c04c954be36f7cc705a9ee76783b22bfe6148a9291",
-    ),
-    "tools/validate_blueprint_skills.py": FileBaseline(
-        REGULAR_MODE,
-        "951d722c12a33903b119fff9ed11c3c6563e09a6f786d348fbab451b1daee77f",
-    ),
-    "tools/validate_foundation.py": FileBaseline(
-        REGULAR_MODE,
-        "9a277933cf173fcb88fc9be87efc3c26aa6192e87bf34518ca969f832b798b75",
-    ),
-}
-PYTHON_PATHS = frozenset(
-    {
-        *SOURCE_BASELINE,
-        "aec/adapters.py",
-        "aec/consumer.py",
-        "aec/mentor.py",
-        "aec/mentoring.py",
-        "tests/test_admission_root_v1.py",
-        "tests/test_agent_adapters.py",
-        "tests/test_authority_v2_hostile_corpus.py",
-        "tests/test_blueprint_skills.py",
-        "tests/test_consumer_interface.py",
-        "tests/test_exact_json.py",
-        "tests/test_foundation_validation.py",
-        "tests/test_foundation_behavior.py",
-        "tests/test_outcome_receipts.py",
-        "tests/test_private_mentor_lens.py",
-        "tests/test_public_card.py",
-        "tests/test_resolver.py",
-        "tests/test_resolver_blocker_precedence.py",
-        "tests/test_resolver_program.py",
-        "tests/test_review_attestation.py",
-        "tools/__init__.py",
-        "tools/admission_root_v1.py",
-        "tools/evaluate_outcomes.py",
-        "tools/generate_resolver.py",
-        "tools/prove_agent_adapter_parity.py",
-        "tools/prove_foundation_behavior.py",
-        "tools/prove_private_mentor_lens.py",
-        "tools/validate_blueprint_skills.py",
-        "tools/validate_foundation.py",
-    }
-)
 VALIDATOR_PATH = "tools/admission_root_v1.py"
 ACTIVE_WORKFLOW_PATH = ".github/workflows/candidate-admission.yml"
+
+DECLARATION_PATH = ".github/admission/v1/source-declaration.json"
+DECLARATION_SCHEMA_VERSION = "1.0.0"
+DECLARATION_FIELDS = {
+    "artifacts",
+    "proof_closure",
+    "python_paths",
+    "schema_version",
+    "sources",
+    "workflow_bundles",
+    "workflows",
+}
+
+
+@dataclass(frozen=True)
+class SourceDeclaration:
+    """One candidate-declared statement of the exact tree it ships.
+
+    The declaration is parsed as data. It is never imported and never executed,
+    so reading it cannot run candidate code. It states what the candidate claims
+    to contain; admission proves the tree agrees with that claim exactly. It is
+    not a claim that the declared content is correct, which review still owns.
+    """
+
+    sources: dict[str, str]
+    artifacts: dict[str, ArtifactBaseline]
+    proof_closure: dict[str, FileBaseline]
+    python_paths: frozenset[str]
+    workflows: dict[str, str]
+    workflow_bundles: dict[str, str]
+
+
+def _digest(value: object) -> bool:
+    """Return whether a value is one lowercase SHA-256 hexadecimal digest.
+
+    Self-contained rather than reusing _hex, because the declaration loads at
+    import time and must not depend on definition order further down the module.
+    """
+    return (
+        type(value) is str
+        and len(value) == 64
+        and all(char in "0123456789abcdef" for char in value)
+    )
+
+
+def _relative_path(value: object) -> bool:
+    """Return whether a value is one safe repository-relative path."""
+    return (
+        type(value) is str
+        and bool(value)
+        and not value.startswith("/")
+        and "\\" not in value
+        and ".." not in value.split("/")
+    )
+
+
+def parse_declaration(raw: bytes) -> SourceDeclaration:
+    """Parse one declaration as closed data without importing candidate code."""
+    try:
+        payload = json.loads(raw.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise ValueError("Declaration must be strict UTF-8 JSON") from error
+    if type(payload) is not dict or set(payload) != DECLARATION_FIELDS:
+        raise ValueError("Declaration fields do not match the contract")
+    if payload["schema_version"] != DECLARATION_SCHEMA_VERSION:
+        raise ValueError("Declaration schema_version is unsupported")
+
+    sources = payload["sources"]
+    if type(sources) is not dict or not all(
+        _relative_path(path) and _digest(digest) for path, digest in sources.items()
+    ):
+        raise ValueError("Declaration sources are invalid")
+
+    artifacts: dict[str, ArtifactBaseline] = {}
+    if type(payload["artifacts"]) is not dict:
+        raise ValueError("Declaration artifacts are invalid")
+    for path, row in payload["artifacts"].items():
+        if (
+            not _relative_path(path)
+            or type(row) is not list
+            or len(row) != 2
+            or type(row[0]) is not str
+            or not row[0]
+            or not _digest(row[1])
+        ):
+            raise ValueError("Declaration artifacts are invalid")
+        artifacts[path] = ArtifactBaseline(row[0], row[1])
+
+    proof_closure: dict[str, FileBaseline] = {}
+    if type(payload["proof_closure"]) is not dict:
+        raise ValueError("Declaration proof_closure is invalid")
+    for path, row in payload["proof_closure"].items():
+        if (
+            not _relative_path(path)
+            or type(row) is not list
+            or len(row) != 2
+            or row[0] not in {"100644", "100755", "120000"}
+            or not _digest(row[1])
+        ):
+            raise ValueError("Declaration proof_closure is invalid")
+        proof_closure[path] = FileBaseline(row[0], row[1])
+
+    python_paths = payload["python_paths"]
+    if (
+        type(python_paths) is not list
+        or not all(_relative_path(path) for path in python_paths)
+        or len(set(python_paths)) != len(python_paths)
+    ):
+        raise ValueError("Declaration python_paths are invalid")
+
+    workflows = payload["workflows"]
+    if type(workflows) is not dict or not all(
+        _relative_path(path) and _digest(digest) for path, digest in workflows.items()
+    ):
+        raise ValueError("Declaration workflows are invalid")
+
+    bundles = payload["workflow_bundles"]
+    if (
+        type(bundles) is not dict
+        or set(bundles) != set(workflows)
+        or not all(_relative_path(path) for path in bundles.values())
+    ):
+        raise ValueError("Declaration workflow_bundles are invalid")
+
+    if ACTIVE_WORKFLOW_PATH not in workflows:
+        raise ValueError("Declaration must cover the active admission workflow")
+    # The validator's primary integrity anchor is the base-owned blob identity
+    # below, which a candidate cannot restate. It also carries a declared
+    # digest like any other tracked .py path, so the coverage clause in
+    # validate_candidate needs no special case for it either.
+    if VALIDATOR_PATH not in python_paths:
+        raise ValueError("Declaration must track the admission validator")
+    return SourceDeclaration(
+        sources=dict(sources),
+        artifacts=artifacts,
+        proof_closure=proof_closure,
+        python_paths=frozenset(python_paths),
+        workflows=dict(workflows),
+        workflow_bundles=dict(bundles),
+    )
+
+
+def load_declaration(root: Path) -> SourceDeclaration:
+    """Load the declaration that one checked-out revision ships."""
+    return parse_declaration((root / DECLARATION_PATH).read_bytes())
+
+
+_BASE_ROOT = Path(__file__).resolve().parents[1]
+BASE_DECLARATION = load_declaration(_BASE_ROOT)
+# Retained module names so existing callers keep one vocabulary. These describe
+# the base revision this validator ships inside, not a frozen forever-baseline.
+SOURCE_BASELINE: dict[str, str] = BASE_DECLARATION.sources
+ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = BASE_DECLARATION.artifacts
+PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = BASE_DECLARATION.proof_closure
+PYTHON_PATHS = BASE_DECLARATION.python_paths
+WORKFLOW_TRANSITION_BASELINE: dict[str, str] = BASE_DECLARATION.workflows
+WORKFLOW_TRANSITION_BUNDLES: dict[str, str] = BASE_DECLARATION.workflow_bundles
+
 
 
 @dataclass(frozen=True)
@@ -429,6 +299,12 @@ def artifact_manifest_root(
     return "sha256:" + hashlib.sha256(payload).hexdigest()
 
 
+# Derived from the base declaration rather than pinned. Tracked content can now
+# change without forcing this validator to change, which is what let a source
+# transition be admitted at all.
+ARTIFACT_MANIFEST_ROOT = artifact_manifest_root(ARTIFACT_BASELINE)
+
+
 def _authority_valid(authority: BaseAuthority) -> bool:
     """Validate explicit immutable-base authority identities."""
     return (
@@ -438,6 +314,194 @@ def _authority_valid(authority: BaseAuthority) -> bool:
         and _hex(authority.validator_sha256, {64})
         and _hex(authority.workflow_sha256, {64})
     )
+
+
+class TreeEntry(NamedTuple):
+    """One resolved (mode, content) pair, from either kind of tree view."""
+
+    mode: str
+    content: bytes
+
+
+class TreeView(Protocol):
+    """Uniform path -> (mode, content) view over one candidate tree.
+
+    validate_candidate and self_check judge two physically different things
+    (parsed Git tree records + blob bytes, vs. a checked-out filesystem root)
+    with the same set of locally-computable rules. This is the seam: each
+    side adapts its own data source to this shape once, and _verify_local
+    below stays ignorant of which kind it was handed.
+    """
+
+    def paths(self) -> frozenset[bytes]: ...
+
+    def get(self, path: bytes) -> TreeEntry | None: ...
+
+
+class GitRecordTreeView:
+    """One candidate Git tree, addressed by parsed records and blob bytes."""
+
+    def __init__(
+        self, by_path: Mapping[bytes, GitRecord], blobs: Mapping[str, bytes]
+    ) -> None:
+        self._by_path = by_path
+        self._blobs = blobs
+
+    def paths(self) -> frozenset[bytes]:
+        return frozenset(self._by_path)
+
+    def get(self, path: bytes) -> TreeEntry | None:
+        record = self._by_path.get(path)
+        if record is None:
+            return None
+        content = self._blobs.get(record.object_id)
+        if content is None or git_blob_oid(
+            content, len(record.object_id)
+        ) != record.object_id:
+            return None
+        return TreeEntry(record.mode, content)
+
+
+class FilesystemTreeView:
+    """Git-tracked paths under one checked-out root, read straight off disk.
+
+    Path membership comes from `git ls-files`, so self-check judges exactly
+    the tracked universe validate_candidate would see in a Git tree - stray
+    untracked or ignored files never enter the comparison. Mode and content
+    are read from the filesystem itself, not the Git index, so a chmod or a
+    regular-file-to-symlink flip with unchanged bytes is still caught even
+    when nothing was staged.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        self._paths: frozenset[bytes] | None = None
+
+    def paths(self) -> frozenset[bytes]:
+        if self._paths is None:
+            output = subprocess.run(
+                ["git", "ls-files", "-z"],
+                cwd=self._root,
+                check=True,
+                capture_output=True,
+            ).stdout
+            self._paths = frozenset(
+                entry for entry in output.split(b"\0") if entry
+            )
+        return self._paths
+
+    def get(self, path: bytes) -> TreeEntry | None:
+        try:
+            candidate = self._root / path.decode("utf-8")
+            if candidate.is_symlink():
+                return TreeEntry("120000", candidate.readlink().as_posix().encode())
+            if not candidate.is_file():
+                return None
+            mode = "100755" if candidate.stat().st_mode & 0o111 else REGULAR_MODE
+            return TreeEntry(mode, candidate.read_bytes())
+        except OSError:
+            return None
+
+
+def _verify_local(view: TreeView) -> tuple[tuple[str, ...], SourceDeclaration]:
+    """Run every admission check computable from one tree view alone.
+
+    Shared by validate_candidate (a parsed Git tree) and self_check (a
+    checked-out filesystem root): declaration presence and parse at the
+    checked root, structural coverage (python_paths / tracked .json / tracked
+    workflow completeness, and the python_paths-subset-of-sources|
+    proof_closure invariant), the expected-path subset check, and a
+    byte-exact mode+digest match for every path the declaration binds.
+    Excludes the three checks that need CI-supplied base authority (argument
+    well-formedness, validator identity, workflow identity) - those have no
+    local analogue and stay in validate_candidate only.
+
+    Falls back to BASE_DECLARATION when the view's own declaration is
+    missing, non-regular, or unparseable, so every other check still runs
+    against a trusted baseline instead of silently no-op'ing.
+    """
+    findings: list[str] = []
+    declared = BASE_DECLARATION
+    declaration_entry = view.get(DECLARATION_PATH.encode())
+    if declaration_entry is None or declaration_entry.mode != REGULAR_MODE:
+        findings.append(DECLARATION_PATH)
+    else:
+        try:
+            declared = parse_declaration(declaration_entry.content)
+        except ValueError:
+            findings.append(DECLARATION_PATH)
+
+    paths = view.paths()
+    tracked_python = {
+        path.decode()
+        for path in paths
+        if path.endswith(b".py")
+        and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
+    }
+    if tracked_python != declared.python_paths:
+        findings.append("python_paths")
+    # A .py path can be listed in python_paths yet omitted from every digest
+    # source (sources/proof_closure), in which case the loop below never
+    # hashes it at all: it is declared but never actually verified. Coverage
+    # is derived from the tree's own python_paths, so a deleted file simply
+    # drops out of tracked_python above and needs no special case here.
+    if not declared.python_paths <= (
+        set(declared.sources) | set(declared.proof_closure)
+    ):
+        findings.append("python_paths-coverage")
+
+    expected_sources = {
+        path.encode(): digest for path, digest in declared.sources.items()
+    }
+    expected_artifacts = {
+        path.encode(): artifact.sha256 for path, artifact in declared.artifacts.items()
+    }
+    expected_closure = {
+        path.encode(): baseline for path, baseline in declared.proof_closure.items()
+    }
+    expected_workflows = {
+        path.encode(): digest for path, digest in declared.workflows.items()
+    }
+
+    # The declaration cannot carry its own digest, so it is the one tracked JSON
+    # file excluded from the artifact set. Its bytes are still bound to the tree
+    # record above, so a swapped declaration is still caught.
+    tracked_json = {
+        path for path in paths if path.endswith(b".json") and path != DECLARATION_PATH.encode()
+    }
+    if tracked_json != set(expected_artifacts):
+        findings.append("artifacts")
+
+    tracked_workflows = {
+        path
+        for path in paths
+        if path.startswith(b".github/workflows/")
+        and (path.endswith(b".yml") or path.endswith(b".yaml"))
+    }
+    if tracked_workflows != set(expected_workflows):
+        findings.append("workflows")
+
+    expected = (
+        expected_sources
+        | expected_artifacts
+        | expected_workflows
+        | {path: baseline.sha256 for path, baseline in expected_closure.items()}
+    )
+    if not set(expected).issubset(paths):
+        findings.append("expected-paths")
+    for path, digest in expected.items():
+        expected_mode = expected_closure.get(
+            path, FileBaseline(REGULAR_MODE, digest)
+        ).mode
+        entry = view.get(path)
+        if (
+            entry is None
+            or entry.mode != expected_mode
+            or hashlib.sha256(entry.content).hexdigest() != digest
+        ):
+            findings.append(path.decode())
+
+    return tuple(findings), declared
 
 
 def validate_candidate(
@@ -457,62 +521,14 @@ def validate_candidate(
         records = ()
         findings.add("ADMISSION-001 EXACT_BASELINE")
     by_path = {record.path: record for record in records}
-    expected_sources = {
-        path.encode(): digest for path, digest in SOURCE_BASELINE.items()
-    }
-    expected_artifacts = {
-        path.encode(): artifact.sha256 for path, artifact in ARTIFACT_BASELINE.items()
-    }
-    expected_closure = {
-        path.encode(): baseline for path, baseline in PROOF_CLOSURE_BASELINE.items()
-    }
-    tracked_python = {
-        path.decode()
-        for path in by_path
-        if path.endswith(b".py")
-        and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
-    }
-    if tracked_python != PYTHON_PATHS:
+
+    # The candidate states the exact tree it ships. This is read as data only.
+    # Nothing here imports or executes candidate code, so ADMISSION-002 holds.
+    # The base still owns the validator and workflow identities checked below,
+    # so a candidate cannot restate the gate that judges it.
+    local_findings, _declared = _verify_local(GitRecordTreeView(by_path, blobs))
+    if local_findings:
         findings.add("ADMISSION-001 EXACT_BASELINE")
-    tracked_json = {path for path in by_path if path.endswith(b".json")}
-    if tracked_json != set(expected_artifacts):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    expected_workflows = {
-        path.encode(): digest for path, digest in WORKFLOW_TRANSITION_BASELINE.items()
-    }
-    tracked_workflows = {
-        path
-        for path in by_path
-        if path.startswith(b".github/workflows/")
-        and (path.endswith(b".yml") or path.endswith(b".yaml"))
-    }
-    if tracked_workflows != set(expected_workflows):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    expected = (
-        expected_sources
-        | expected_artifacts
-        | expected_workflows
-        | {path: baseline.sha256 for path, baseline in expected_closure.items()}
-    )
-    if not set(expected).issubset(by_path):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    for path, digest in expected.items():
-        record = by_path.get(path)
-        expected_mode = expected_closure.get(
-            path, FileBaseline(REGULAR_MODE, digest)
-        ).mode
-        if record is None or record.mode != expected_mode:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        content = blobs.get(record.object_id)
-        if content is None:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        if git_blob_oid(content, len(record.object_id)) != record.object_id:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        if hashlib.sha256(content).hexdigest() != digest:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
     validator_record = by_path.get(VALIDATOR_PATH.encode())
     validator_content = (
         None if validator_record is None else blobs.get(validator_record.object_id)
@@ -535,8 +551,6 @@ def validate_candidate(
         != WORKFLOW_TRANSITION_BASELINE[ACTIVE_WORKFLOW_PATH]
     ):
         findings.add("ADMISSION-001 EXACT_BASELINE")
-    if artifact_manifest_root(ARTIFACT_BASELINE) != ARTIFACT_MANIFEST_ROOT:
-        findings.add("ADMISSION-001 EXACT_BASELINE")
     ordered = tuple(outcome for outcome in OUTCOMES if outcome in findings)
     return AdmissionReport(
         base_authority=authority,
@@ -547,38 +561,38 @@ def validate_candidate(
 
 
 def self_check(root: Path) -> tuple[str, ...]:
-    """Verify current base bytes against the installed dormant trust root."""
-    findings: list[str] = []
-    for path, digest in SOURCE_BASELINE.items():
-        if hashlib.sha256((root / path).read_bytes()).hexdigest() != digest:
-            findings.append(path)
-    for path, artifact in ARTIFACT_BASELINE.items():
-        if hashlib.sha256((root / path).read_bytes()).hexdigest() != artifact.sha256:
-            findings.append(path)
-    for path, baseline in PROOF_CLOSURE_BASELINE.items():
-        candidate = root / path
-        content = (
-            candidate.readlink().as_posix().encode()
-            if baseline.mode == "120000"
-            else candidate.read_bytes()
-        )
-        if hashlib.sha256(content).hexdigest() != baseline.sha256:
-            findings.append(path)
-    for target, bundle in WORKFLOW_TRANSITION_BUNDLES.items():
-        digest = hashlib.sha256((root / bundle).read_bytes()).hexdigest()
-        if digest != WORKFLOW_TRANSITION_BASELINE[target]:
+    """Verify the checked-out filesystem against its own trusted declaration.
+
+    Runs every locally-computable admission check (_verify_local, shared with
+    validate_candidate) directly against `root`, then layers two checks that
+    have no candidate analogue: the staged future-workflow-bundle content
+    match, and the validator's own frozen protocol-identity lock. This proves
+    the checked-out bytes are internally consistent with their own
+    declaration; it does NOT prove admissibility, which additionally needs
+    the CI-supplied base authority that only validate_candidate receives (see
+    main()'s printed self-check line).
+    """
+    view = FilesystemTreeView(root)
+    local_findings, declared = _verify_local(view)
+    findings: list[str] = list(local_findings)
+    for target, bundle in declared.workflow_bundles.items():
+        entry = view.get(bundle.encode())
+        digest = hashlib.sha256(entry.content).hexdigest() if entry is not None else None
+        if digest != declared.workflows.get(target):
             findings.append(bundle)
-    if artifact_manifest_root(ARTIFACT_BASELINE) != ARTIFACT_MANIFEST_ROOT:
-        findings.append("artifact-manifest-root")
+    # The lock covers only what must never move. Tracked content now lives in
+    # the declaration, so pinning content here would force this validator to
+    # change on every content change, and a changed validator can never pass the
+    # base-owned blob identity above. That circularity is what issue #49 fixed.
     lock_payload = json.dumps(
         [
             ADMISSION_PROTOCOL,
             BEHAVIOR_IDENTITY,
-            ARTIFACT_MANIFEST_ROOT,
-            sorted(SOURCE_BASELINE.items()),
-            sorted(PROOF_CLOSURE_BASELINE.items()),
-            sorted(PYTHON_PATHS),
-            sorted(WORKFLOW_TRANSITION_BASELINE.items()),
+            DECLARATION_PATH,
+            DECLARATION_SCHEMA_VERSION,
+            VALIDATOR_PATH,
+            ACTIVE_WORKFLOW_PATH,
+            list(OUTCOMES),
         ],
         separators=(",", ":"),
     ).encode("utf-8")
@@ -595,7 +609,7 @@ def _required_paths() -> tuple[str, ...]:
             | ARTIFACT_BASELINE
             | PROOF_CLOSURE_BASELINE
             | WORKFLOW_TRANSITION_BASELINE
-            | {VALIDATOR_PATH: ""}
+            | {VALIDATOR_PATH: "", DECLARATION_PATH: ""}
         )
     )
 
@@ -638,7 +652,16 @@ def main(argv: list[str] | None = None) -> int:
             for finding in findings:
                 print(f"FAIL {finding}")
             return 1
-        print(f"PASS {ADMISSION_PROTOCOL} {ARTIFACT_MANIFEST_ROOT}")
+        # Deliberately NOT shaped like validate_candidate's PASS line (which
+        # carries an authority-bound behavior_identity) and NOT a digest over
+        # only part of what was checked (the old artifact_manifest_root line
+        # stayed byte-identical while a source file was dropped from the
+        # declaration and tampered - see issue #49). This line instead names,
+        # in one machine-greppable sentence, what self-check does not prove.
+        print(
+            f"PASS {ADMISSION_PROTOCOL} SELF-CHECK-ONLY "
+            "admissibility-not-proven:validator+workflow-base-authority-unverified"
+        )
         return 0
     candidate_values = (
         arguments.records,

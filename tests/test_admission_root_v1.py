@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -12,6 +15,7 @@ from tools.admission_root_v1 import (
     ARTIFACT_BASELINE,
     ARTIFACT_MANIFEST_ROOT,
     BEHAVIOR_IDENTITY,
+    DECLARATION_PATH,
     PROOF_CLOSURE_BASELINE,
     PYTHON_PATHS,
     SOURCE_BASELINE,
@@ -62,6 +66,8 @@ class AdmissionRootV1Tests(unittest.TestCase):
         for path in PYTHON_PATHS:
             if path.encode() not in cls.entries:
                 cls._add_bytes(path, (ROOT / path).read_bytes())
+        # The candidate states the tree it ships, so a real snapshot carries it.
+        cls._add_bytes(DECLARATION_PATH, (ROOT / DECLARATION_PATH).read_bytes())
 
     @classmethod
     def _add_baseline(cls, path: str, digest: str, source: str | None = None) -> None:
@@ -293,6 +299,44 @@ class AdmissionRootV1Tests(unittest.TestCase):
         )
         self.assertEqual(future_gate, transitioned_gate)
 
+    def test_uncovered_python_path_lets_tampering_slip_without_coverage_clause(
+        self,
+    ) -> None:
+        """RED CANARY: a .py path omitted from sources/proof_closure must be caught.
+
+        Builds a synthetic declaration identical to the real one except one
+        python_paths entry ("aec/mentor.py") is dropped from `sources` and is
+        not picked up by `proof_closure` either. That path's bytes are then
+        mutated with no matching digest left anywhere in the declaration.
+        Admission must still reject it via the python_paths coverage clause,
+        even though tracked_python set equality and the expected-digest loop
+        have nothing left to compare that one path against.
+        """
+        payload = json.loads((ROOT / DECLARATION_PATH).read_text(encoding="utf-8"))
+        self.assertIn("aec/mentor.py", payload["sources"])
+        self.assertNotIn("aec/mentor.py", payload["proof_closure"])
+        del payload["sources"]["aec/mentor.py"]
+        tampered_declaration = json.dumps(payload).encode("utf-8")
+
+        entries = dict(self.entries)
+        blobs = dict(self.blobs)
+        declaration_oid = git_blob_oid(tampered_declaration)
+        entries[DECLARATION_PATH.encode()] = ("100644", declaration_oid)
+        blobs[declaration_oid] = tampered_declaration
+
+        mutated_mentor = (
+            self.blobs[self.entries[b"aec/mentor.py"][1]]
+            + b"\n# tampered, uncovered\n"
+        )
+        mentor_oid = git_blob_oid(mutated_mentor)
+        entries[b"aec/mentor.py"] = ("100644", mentor_oid)
+        blobs[mentor_oid] = mutated_mentor
+
+        report = self.prove(entries=entries, blobs=blobs)
+
+        self.assertFalse(report.passed, report.findings)
+        self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
+
     def test_base_constants_and_current_bytes_self_check(self) -> None:
         self.assertEqual(
             ARTIFACT_MANIFEST_ROOT, artifact_manifest_root(ARTIFACT_BASELINE)
@@ -327,6 +371,56 @@ class AdmissionRootV1Tests(unittest.TestCase):
                 for path in expected
             },
         )
+
+
+class SelfCheckCoverageCanaryTests(unittest.TestCase):
+    """RED CANARIES: self-check must catch a tracked .py path dropped from the
+    declaration while its file stays on disk - the issue #49 gap where
+    self-check only walked what the declaration claimed and never walked
+    disk to see what it omitted.
+
+    Each test clones ROOT into a disposable temp directory (self_check reads
+    real files via a real `git ls-files`, so it needs an actual checkout,
+    not in-memory data) and never mutates the real repository.
+    """
+
+    def _cloned_root(self) -> Path:
+        clone = Path(self.enterContext(tempfile.TemporaryDirectory())) / "clone"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--local", str(ROOT), str(clone)],
+            check=True,
+        )
+        return clone
+
+    def _drop_from_declaration(self, root: Path, path: str) -> None:
+        declaration_path = root / DECLARATION_PATH
+        payload = json.loads(declaration_path.read_text(encoding="utf-8"))
+        del payload["sources"][path]
+        payload["python_paths"] = [
+            entry for entry in payload["python_paths"] if entry != path
+        ]
+        declaration_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_clean_clone_passes_self_check(self) -> None:
+        self.assertEqual((), self_check(self._cloned_root()))
+
+    def test_undeclared_tracked_python_file_fails_self_check(self) -> None:
+        root = self._cloned_root()
+        self._drop_from_declaration(root, "aec/mentor.py")
+
+        findings = self_check(root)
+
+        self.assertIn("python_paths", findings)
+
+    def test_undeclared_and_tampered_python_file_fails_self_check(self) -> None:
+        root = self._cloned_root()
+        self._drop_from_declaration(root, "aec/mentor.py")
+        mentor = root / "aec" / "mentor.py"
+        mentor.write_bytes(mentor.read_bytes() + b"\n# tampered, undeclared\n")
+
+        findings = self_check(root)
+
+        self.assertIn("python_paths", findings)
 
 
 if __name__ == "__main__":
