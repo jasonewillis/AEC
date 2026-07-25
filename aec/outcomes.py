@@ -7,8 +7,9 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from aec.cards import validate_public_card
-from aec.contracts import normalize_exact_json
+from aec.cards import project_card, validate_public_card
+from aec.contracts import canonical_integer, normalize_exact_json
+from aec.resolver import compute_resolution_hash
 
 
 OUTCOME_RECEIPT_SCHEMA_VERSION = "1.0.0"
@@ -26,7 +27,7 @@ DECISION_FIELDS = {"resolution_hash", "revision", "selected_choice"}
 OBSERVED_RESULT_FIELDS = {"measure", "unit", "value"}
 COACHING_FIELDS = {"burden", "transfer"}
 VERIFICATION_FIELDS = {"accepted", "kind", "revision"}
-RECORD_FIELDS = {"card", "receipt"}
+RECORD_FIELDS = {"card", "decision", "receipt"}
 BURDENS = ("high", "low", "moderate")
 TRANSFERS = ("full", "none", "partial")
 VERDICTS = (
@@ -206,9 +207,10 @@ def _validate_receipt_shape(receipt: dict[str, Any]) -> list[str]:
             errors.append("observed_result.measure must be a measure identity")
         if not _slug(observed.get("unit")):
             errors.append("observed_result.unit must be a unit identity")
-        # bool is a subclass of int, and a float cannot be compared exactly.
-        if type(observed.get("value")) is not int:
-            errors.append("observed_result.value must be an exact integer")
+        if not canonical_integer(observed.get("value")):
+            errors.append(
+                "observed_result.value must be one canonical signed decimal integer"
+            )
 
     coaching = receipt.get("coaching")
     if type(coaching) is not dict or set(coaching) != COACHING_FIELDS:
@@ -266,9 +268,10 @@ def _derived_verdict(receipt: dict[str, Any], expected: dict[str, Any]) -> str:
     """Derive the only verdict the receipt's own facts support."""
     if not any(fact["accepted"] is True for fact in receipt["verification"]):
         return "inconclusive"
-    value = receipt["observed_result"]["value"]
-    baseline = expected["baseline"]
-    target = expected["target"]
+    # Every number was closed-validated as a canonical decimal string first.
+    value = int(receipt["observed_result"]["value"])
+    baseline = int(expected["baseline"])
+    target = int(expected["target"])
     if expected["direction"] == "hold":
         return "supported" if value == target else "harmful"
     # Increase is the exact inverse of decrease, so compare on one oriented axis.
@@ -281,11 +284,81 @@ def _derived_verdict(receipt: dict[str, Any], expected: dict[str, Any]) -> str:
     return "unsupported" if value == baseline else "harmful"
 
 
+def _decision_errors(decision: object) -> list[str]:
+    """Validate one complete decision and recompute its own resolution hash."""
+    # Imported inside the call because the repository's independent decision
+    # validator imports this module. There is exactly one such validator and
+    # this contract reuses it rather than restating the decision rules.
+    from tools.validate_foundation import validate_resolution
+
+    errors = list(validate_resolution(decision))
+    try:
+        recomputed = compute_resolution_hash(decision)
+    except (KeyError, TypeError, ValueError):
+        return errors or ["decision cannot be canonicalized"]
+    if type(decision) is not dict or decision.get("resolution_hash") != recomputed:
+        errors.append("decision resolution_hash does not match its recomputed payload")
+    return errors
+
+
+def verify_outcome_record(
+    record: object,
+) -> OutcomeReceiptVerification | OutcomeReceiptRejection:
+    """Authenticate one local record before evaluating any receipt fact.
+
+    A record carries the complete decision that produced its card. The decision
+    is validated by the independent decision validator, its resolution hash is
+    recomputed, and the card must be the exact deterministic projection of that
+    decision. Only then are the receipt's own facts read.
+    """
+    try:
+        normalized = normalize_exact_json(record)
+    except (TypeError, ValueError):
+        return _rejection(
+            "OUTCOME_RECORD_INVALID",
+            "outcome record must contain only exact JSON values",
+        )
+    if type(normalized) is not dict or set(normalized) != RECORD_FIELDS:
+        return _rejection(
+            "OUTCOME_RECORD_INVALID",
+            "outcome record fields do not match the contract",
+        )
+    decision = normalized["decision"]
+    decision_errors = _decision_errors(decision)
+    if decision_errors:
+        return OutcomeReceiptRejection(
+            code="OUTCOME_RECORD_DECISION_INVALID",
+            errors=tuple(decision_errors),
+            canonical_bytes=_canonical_bytes(
+                {"code": "OUTCOME_RECORD_DECISION_INVALID", "errors": decision_errors}
+            ),
+        )
+    try:
+        projected = project_card(decision)
+    except (KeyError, TypeError, ValueError):
+        return _rejection(
+            "OUTCOME_RECORD_DECISION_INVALID",
+            "decision cannot be projected into a public card",
+        )
+    if projected != normalized["card"]:
+        return _rejection(
+            "OUTCOME_RECORD_CARD_NOT_PROJECTED",
+            "the public card is not the exact projection of its own decision",
+        )
+    return verify_outcome_receipt(normalized["receipt"], normalized["card"])
+
+
 def verify_outcome_receipt(
     receipt: object,
     card: object,
 ) -> OutcomeReceiptVerification | OutcomeReceiptRejection:
-    """Verify one local outcome receipt against the exact decision it cites."""
+    """Verify one receipt against one card, after the card was authenticated.
+
+    This is the receipt stage of the record contract. It reads receipt facts
+    against an already rendered card and does not itself authenticate the card
+    against a decision. `verify_outcome_record` is the authenticated entry
+    point, and it is the only path `evaluate_outcomes` and the CLI take.
+    """
     try:
         normalized = normalize_exact_json(receipt)
     except (TypeError, ValueError):
@@ -417,7 +490,7 @@ def evaluate_outcomes(records: object) -> dict[str, Any]:
     rejected: list[dict[str, Any]] = []
     verified = 0
     for index, record in enumerate(normalized):
-        result = verify_outcome_receipt(record["receipt"], record["card"])
+        result = verify_outcome_record(record)
         if isinstance(result, OutcomeReceiptRejection):
             rejected.append({"code": result.code, "index": index})
             continue

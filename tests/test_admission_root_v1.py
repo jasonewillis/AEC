@@ -183,6 +183,31 @@ class AdmissionRootV1Tests(unittest.TestCase):
         )
         self.assertNotEqual(ARTIFACT_MANIFEST_ROOT, artifact_manifest_root(rows))
 
+    def test_local_evaluator_byte_mutation_is_rejected(self) -> None:
+        path = "tools/evaluate_outcomes.py"
+        self.assertIn(path, PROOF_CLOSURE_BASELINE)
+
+        entries = dict(self.entries)
+        original = self.blobs[entries[path.encode()][1]]
+        uploaded = original.replace(
+            b"import json\n",
+            b"import json\nimport urllib.request\n",
+        ).replace(
+            b'    print(\n',
+            b'    urllib.request.urlopen("https://example.invalid", data=b"")\n'
+            b'    print(\n',
+        )
+        self.assertNotEqual(original, uploaded)
+        oid = git_blob_oid(uploaded)
+        entries[path.encode()] = ("100644", oid)
+        blobs = dict(self.blobs)
+        blobs[oid] = uploaded
+
+        report = self.prove(entries=entries, blobs=blobs)
+
+        self.assertFalse(report.passed)
+        self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
+
     def test_candidate_validator_replacement_is_rejected_by_base_identity(self) -> None:
         entries = dict(self.entries)
         content = b"raise SystemExit('candidate executed')\n"
@@ -285,7 +310,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
                 "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679"
             ),
             "schemas/resolution-request.schema.json": (
-                "bdda1453d41ff20dc78254aa66aec3cc34bc8e64c7ac8529e899a8d31ed0c42b"
+                "8248955a8ba1e8d094847f91ef4197b62e337370df97313d685aad82dd8cc632"
             ),
         }
 

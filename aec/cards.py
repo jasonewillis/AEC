@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from typing import Any
 
 from aec.contracts import normalize_exact_json
 from aec.mentoring import validate_decision_context, validate_mentoring
@@ -67,6 +68,53 @@ STAGE_PHASES = {
 CARD_HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 RESOLUTION_HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+
+def project_card(decision: object) -> dict[str, Any]:
+    """Project one resolver decision into the exact public card it renders.
+
+    This is the single deterministic projection. The consumer renderer and the
+    outcome verifier both call it, so a card can be proven to be the exact
+    projection of the decision that produced it. It reads an already resolved
+    decision and holds no resolver, policy, or lifecycle authority of its own.
+    """
+    resolved = normalize_exact_json(decision)
+    if type(resolved) is not dict:
+        raise TypeError("resolution decision must be an object")
+    phase = resolved["phase"]
+    stage_phases = STAGE_PHASES[resolved["workflow_stage"]]
+    card = {
+        "anti_example": resolved["anti_example"],
+        "authoritative": False,
+        "decision_support": resolved["decision_support"],
+        "finished": resolved["finished"],
+        "gate": resolved["gate"],
+        "good": resolved["good"],
+        "lane": resolved["lane"],
+        "mentoring": resolved["mentoring"],
+        "phase": phase,
+        "rail_position": {
+            "phase": stage_phases.index(phase) + 1,
+            "phase_total": len(stage_phases),
+            "rail": PHASE_RAIL.index(phase) + 1,
+            "rail_total": len(PHASE_RAIL),
+            "stage": resolved["workflow_stage"],
+        },
+        "rationale": resolved["rationale"],
+        "required_proof": resolved["required_evidence"],
+        "resolution_hash": resolved["resolution_hash"],
+        "schema_version": PUBLIC_CARD_SCHEMA_VERSION,
+        "transition_request": {
+            "authoritative": False,
+            "environment": resolved["environment"],
+            "executes": False,
+            "mutates": False,
+            "requested_gate": resolved["gate"],
+            "revision": resolved["revision"],
+        },
+    }
+    card["card_hash"] = compute_card_hash(card)
+    return card
 
 
 def compute_card_hash(card: object) -> str:

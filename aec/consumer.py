@@ -8,12 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from aec.cards import (
-    PHASE_RAIL,
-    PUBLIC_CARD_SCHEMA_VERSION,
-    STAGE_PHASES,
-    compute_card_hash,
-)
+from aec.cards import STAGE_PHASES, project_card
 from aec.contracts import normalize_exact_json, validate_project_profile
 from aec.mentoring import validate_decision_context
 from aec.resolver import (
@@ -421,42 +416,7 @@ def _normalized_request(state: dict[str, Any]) -> dict[str, Any]:
 
 def _render_card(decision: ResolutionDecision) -> ConsumerCard:
     """Render one normalized, non-authoritative card from a resolver decision."""
-    resolved = decision.to_dict()
-    phase = resolved["phase"]
-    stage = resolved["workflow_stage"]
-    stage_phases = STAGE_PHASES[stage]
-    card = {
-        "anti_example": resolved["anti_example"],
-        "authoritative": False,
-        "finished": resolved["finished"],
-        "gate": resolved["gate"],
-        "good": resolved["good"],
-        "mentoring": resolved["mentoring"],
-        "lane": resolved["lane"],
-        "phase": phase,
-        "rail_position": {
-            "phase": stage_phases.index(phase) + 1,
-            "phase_total": len(stage_phases),
-            "rail": PHASE_RAIL.index(phase) + 1,
-            "rail_total": len(PHASE_RAIL),
-            "stage": stage,
-        },
-        "rationale": resolved["rationale"],
-        "required_proof": resolved["required_evidence"],
-        "resolution_hash": resolved["resolution_hash"],
-        "schema_version": PUBLIC_CARD_SCHEMA_VERSION,
-        "decision_support": resolved["decision_support"],
-        "transition_request": {
-            "authoritative": False,
-            "environment": resolved["environment"],
-            "executes": False,
-            "mutates": False,
-            "requested_gate": resolved["gate"],
-            "revision": resolved["revision"],
-        },
-    }
-    card["card_hash"] = compute_card_hash(card)
-    return ConsumerCard(_canonical_bytes(card))
+    return ConsumerCard(_canonical_bytes(project_card(decision.to_dict())))
 
 
 def resolve_consumer_state(

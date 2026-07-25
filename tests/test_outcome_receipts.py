@@ -1,20 +1,24 @@
 import copy
 import json
+import re
 import subprocess
 import sys
 import unittest
 from pathlib import Path
 from typing import Any
 
-from aec.cards import compute_card_hash, validate_public_card
+from aec.cards import compute_card_hash, project_card, validate_public_card
 from aec.consumer import ConsumerCard, resolve_consumer_state
+from aec.contracts import CANONICAL_INTEGER
 from aec.outcomes import (
     VERDICTS,
     OutcomeReceiptRejection,
     OutcomeReceiptVerification,
     evaluate_outcomes,
     verify_outcome_receipt,
+    verify_outcome_record,
 )
+from aec.resolver import compute_resolution_hash
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -110,7 +114,9 @@ class OutcomeReceiptContractTests(unittest.TestCase):
         )
         observed = schema["properties"]["observed_result"]
         self.assertEqual({"measure", "unit", "value"}, set(observed["required"]))
-        self.assertEqual("integer", observed["properties"]["value"]["type"])
+        self.assertEqual(
+            {"$ref": "#/$defs/canonical_integer"}, observed["properties"]["value"]
+        )
 
     def test_routine_work_cannot_carry_an_outcome_receipt(self) -> None:
         routine = copy.deepcopy(self.card)
@@ -148,13 +154,14 @@ class OutcomeReceiptContractTests(unittest.TestCase):
 
     def test_inconsistent_expected_result_on_the_card_fails_closed(self) -> None:
         for name, value in (
-            ("target", 4),
-            ("target", 9),
+            ("target", "4"),
+            ("target", "9"),
             ("direction", "increase"),
             ("direction", "hold"),
+            ("baseline", 4),
             ("baseline", 4.0),
             ("baseline", True),
-            ("target", "0"),
+            ("target", "0.0"),
             ("unit", "Failures Per Run"),
         ):
             with self.subTest(field=name, value=value):
@@ -220,15 +227,10 @@ class OutcomeReceiptContractTests(unittest.TestCase):
             verify_outcome_receipt(ignored, self.card), OutcomeReceiptVerification
         )
 
-    def test_non_integer_metric_values_fail_closed(self) -> None:
-        for value in (True, False, 0.0, 1.5, "0", None, [0], {"value": 0}):
-            with self.subTest(value=value):
-                self.reject(self.observed(value), "OUTCOME_RECEIPT_INVALID")
-
     def test_the_declared_verdict_must_equal_the_derived_verdict(self) -> None:
-        for value, verdict in ((0, "supported"), (-2, "supported"),
-                               (1, "partially-supported"), (3, "partially-supported"),
-                               (4, "unsupported"), (5, "harmful")):
+        for value, verdict in (("0", "supported"), ("-2", "supported"),
+                               ("1", "partially-supported"), ("3", "partially-supported"),
+                               ("4", "unsupported"), ("5", "harmful")):
             with self.subTest(value=value):
                 honest = self.observed(value)
                 honest["verdict"] = verdict
@@ -244,10 +246,10 @@ class OutcomeReceiptContractTests(unittest.TestCase):
 
     def test_increase_is_the_exact_inverse_and_hold_admits_one_value(self) -> None:
         cases = (
-            ("increase", 4, 9, ((9, "supported"), (11, "supported"),
-                                (5, "partially-supported"), (4, "unsupported"),
-                                (3, "harmful"))),
-            ("hold", 4, 4, ((4, "supported"), (3, "harmful"), (5, "harmful"))),
+            ("increase", "4", "9", (("9", "supported"), ("11", "supported"),
+                                    ("5", "partially-supported"), ("4", "unsupported"),
+                                    ("3", "harmful"))),
+            ("hold", "4", "4", (("4", "supported"), ("3", "harmful"), ("5", "harmful"))),
         )
         for direction, baseline, target, outcomes in cases:
             card = copy.deepcopy(self.card)
@@ -314,6 +316,266 @@ class OutcomeReceiptContractTests(unittest.TestCase):
                 self.assertNotIn(" ", text)
 
 
+class CanonicalIntegerEncodingTests(unittest.TestCase):
+    """Prove the schema pattern and the Python validator accept the same values."""
+
+    REJECTED = (
+        "1.0",
+        1.0,
+        1,
+        0,
+        True,
+        False,
+        "+1",
+        "01",
+        "-0",
+        "-01",
+        " 1",
+        "1 ",
+        "\n1",
+        "1\n",
+        "1e3",
+        "1E3",
+        "",
+        "-",
+        "0x1",
+        "one",
+        None,
+    )
+    ACCEPTED = ("0", "1", "7", "-7", "12345", "-12345")
+
+    def setUp(self) -> None:
+        records = load_json(FIXTURES / "golden.json")
+        assert isinstance(records, dict)
+        record = records["records"][0]
+        self.card = record["card"]
+        self.receipt = record["receipt"]
+
+    def schema_pattern(self, path: Path, *names: str) -> str:
+        """Return the canonical-integer pattern one schema binds to a field."""
+        schema = load_json(path)
+        assert isinstance(schema, dict)
+        node: Any = schema
+        for name in names:
+            node = node[name]
+        if "$ref" in node:
+            node = schema["$defs"][node["$ref"].rsplit("/", 1)[-1]]
+        self.assertEqual("string", node["type"])
+        return str(node["pattern"])
+
+    def test_every_schema_binds_the_same_canonical_integer_pattern(self) -> None:
+        patterns = {
+            self.schema_pattern(
+                ROOT / "schemas/outcome-receipt.schema.json",
+                "properties",
+                "observed_result",
+                "properties",
+                "value",
+            ),
+            self.schema_pattern(
+                ROOT / "schemas/consumer-state.schema.json",
+                "$defs",
+                "decision_context",
+                "properties",
+                "recommendation",
+                "properties",
+                "expected_result",
+                "properties",
+                "baseline",
+            ),
+            self.schema_pattern(
+                ROOT / "schemas/resolution-request.schema.json",
+                "$defs",
+                "decision_context",
+                "properties",
+                "recommendation",
+                "properties",
+                "expected_result",
+                "properties",
+                "target",
+            ),
+        }
+
+        self.assertEqual(1, len(patterns))
+
+    def test_the_schema_pattern_and_the_python_regex_agree_exactly(self) -> None:
+        pattern = re.compile(
+            self.schema_pattern(
+                ROOT / "schemas/outcome-receipt.schema.json",
+                "properties",
+                "observed_result",
+                "properties",
+                "value",
+            )
+        )
+
+        for value in self.REJECTED:
+            with self.subTest(rejected=value):
+                self.assertIsNone(
+                    CANONICAL_INTEGER.fullmatch(value)
+                    if type(value) is str
+                    else None
+                )
+                if type(value) is str:
+                    self.assertIsNone(pattern.search(value))
+        for value in self.ACCEPTED:
+            with self.subTest(accepted=value):
+                self.assertIsNotNone(CANONICAL_INTEGER.fullmatch(value))
+                self.assertIsNotNone(pattern.search(value))
+
+    def test_only_canonical_metric_values_are_accepted(self) -> None:
+        for value in self.REJECTED:
+            with self.subTest(rejected=value):
+                receipt = copy.deepcopy(self.receipt)
+                receipt["observed_result"]["value"] = value
+                result = verify_outcome_receipt(receipt, self.card)
+                self.assertIsInstance(result, OutcomeReceiptRejection)
+                assert isinstance(result, OutcomeReceiptRejection)
+                self.assertEqual("OUTCOME_RECEIPT_INVALID", result.code)
+
+        # baseline "4" and target "0" decreasing: 0 and every negative value support it.
+        for value, verdict in (("0", "supported"), ("-7", "supported"),
+                               ("2", "partially-supported"), ("4", "unsupported"),
+                               ("12345", "harmful")):
+            with self.subTest(accepted=value):
+                receipt = copy.deepcopy(self.receipt)
+                receipt["observed_result"]["value"] = value
+                receipt["verdict"] = verdict
+                result = verify_outcome_receipt(receipt, self.card)
+                self.assertIsInstance(result, OutcomeReceiptVerification)
+                assert isinstance(result, OutcomeReceiptVerification)
+                self.assertEqual(verdict, result.verdict)
+
+    def test_only_canonical_expected_result_numbers_are_accepted(self) -> None:
+        expected = self.card["decision_support"]["recommendation"]["expected_result"]
+        self.assertEqual("4", expected["baseline"])
+        self.assertEqual("0", expected["target"])
+
+        for name in ("baseline", "target"):
+            for value in self.REJECTED:
+                with self.subTest(field=name, rejected=value):
+                    card = copy.deepcopy(self.card)
+                    card["decision_support"]["recommendation"]["expected_result"][
+                        name
+                    ] = value
+                    card["card_hash"] = compute_card_hash(card)
+                    self.assertTrue(validate_public_card(card))
+
+
+class OutcomeRecordAuthenticationTests(unittest.TestCase):
+    """Prove one record authenticates its card as a projection of its decision."""
+
+    def setUp(self) -> None:
+        records = load_json(FIXTURES / "golden.json")
+        assert isinstance(records, dict)
+        self.record = records["records"][0]
+        self.decision = self.record["decision"]
+
+    def reject(self, record: object, code: str) -> None:
+        result = verify_outcome_record(record)
+        self.assertIsInstance(result, OutcomeReceiptRejection)
+        assert isinstance(result, OutcomeReceiptRejection)
+        self.assertEqual(code, result.code)
+
+    def forge(self, **changes: Any) -> dict[str, Any]:
+        """Rebuild one internally consistent record around a changed decision."""
+        decision = copy.deepcopy(self.decision)
+        decision.update(changes)
+        decision["resolution_hash"] = compute_resolution_hash(decision)
+        receipt = copy.deepcopy(self.record["receipt"])
+        receipt["decision"]["resolution_hash"] = decision["resolution_hash"]
+        receipt["decision"]["revision"] = decision["revision"]
+        return {
+            "card": project_card(decision),
+            "decision": decision,
+            "receipt": receipt,
+        }
+
+    def test_the_record_carries_the_decision_that_produced_the_card(self) -> None:
+        self.assertEqual({"card", "decision", "receipt"}, set(self.record))
+        self.assertEqual(
+            self.decision["resolution_hash"],
+            compute_resolution_hash(self.decision),
+        )
+        self.assertEqual(self.record["card"], project_card(self.decision))
+
+        result = verify_outcome_record(self.record)
+
+        self.assertIsInstance(result, OutcomeReceiptVerification)
+        assert isinstance(result, OutcomeReceiptVerification)
+        self.assertEqual("supported", result.verdict)
+
+    def test_a_recomputed_self_consistent_forgery_still_fails_closed(self) -> None:
+        forged = self.forge(gate="Ready")
+
+        # The forgery is internally consistent: its own hash and card both agree.
+        self.assertEqual(
+            forged["decision"]["resolution_hash"],
+            compute_resolution_hash(forged["decision"]),
+        )
+        self.assertEqual(forged["card"], project_card(forged["decision"]))
+        self.assertEqual(
+            forged["card"]["card_hash"], compute_card_hash(forged["card"])
+        )
+        self.assertNotEqual(
+            self.record["card"]["card_hash"], forged["card"]["card_hash"]
+        )
+
+        self.reject(forged, "OUTCOME_RECORD_DECISION_INVALID")
+
+    def test_a_decision_that_does_not_produce_the_card_fails_closed(self) -> None:
+        edited = copy.deepcopy(self.record)
+        edited["card"]["good"] = ["A Good the decision never stated."]
+        edited["card"]["card_hash"] = compute_card_hash(edited["card"])
+        self.assertEqual([], validate_public_card(edited["card"]))
+        self.reject(edited, "OUTCOME_RECORD_CARD_NOT_PROJECTED")
+
+        prose = copy.deepcopy(self.record)
+        prose["decision"]["rationale"]["summary"] = "A summary nobody resolved."
+        prose["decision"]["resolution_hash"] = compute_resolution_hash(
+            prose["decision"]
+        )
+        prose["receipt"]["decision"]["resolution_hash"] = prose["decision"][
+            "resolution_hash"
+        ]
+        self.reject(prose, "OUTCOME_RECORD_CARD_NOT_PROJECTED")
+
+    def test_a_decision_hash_that_is_not_recomputed_fails_closed(self) -> None:
+        stale = copy.deepcopy(self.record)
+        stale["decision"]["resolution_hash"] = f"sha256:{'0' * 64}"
+        self.reject(stale, "OUTCOME_RECORD_DECISION_INVALID")
+
+    def test_malformed_records_and_decisions_fail_closed(self) -> None:
+        for record in ({}, [], None, {"card": {}, "receipt": {}}):
+            with self.subTest(record=record):
+                self.reject(record, "OUTCOME_RECORD_INVALID")
+
+        for decision in (None, [], "decision", {}, {"schema_version": "4.0.0"}):
+            with self.subTest(decision=decision):
+                broken = copy.deepcopy(self.record)
+                broken["decision"] = decision
+                self.reject(broken, "OUTCOME_RECORD_DECISION_INVALID")
+
+    def test_the_evaluator_never_echoes_decision_content(self) -> None:
+        report = evaluate_outcomes([self.record, self.forge(gate="Ready")])
+
+        self.assertEqual(1, report["verified"])
+        self.assertEqual(
+            [{"code": "OUTCOME_RECORD_DECISION_INVALID", "index": 1}],
+            report["rejected"],
+        )
+        rendered = json.dumps(report, sort_keys=True)
+        content = [text for text in _strings(self.decision) if " " in text]
+        content += [
+            self.decision["resolution_hash"],
+            self.decision["revision"],
+            self.decision["task_id"],
+        ]
+        self.assertTrue(content)
+        for text in content:
+            self.assertNotIn(text, rendered)
+
+
 class OutcomeEvaluatorTests(unittest.TestCase):
     def setUp(self) -> None:
         records = load_json(FIXTURES / "golden.json")
@@ -355,7 +617,7 @@ class OutcomeEvaluatorTests(unittest.TestCase):
     def test_evaluator_reports_rejected_records_without_counting_them(self) -> None:
         records = copy.deepcopy(self.records)
         records[0]["receipt"]["verdict"] = "supported"
-        records[0]["receipt"]["observed_result"]["value"] = 9
+        records[0]["receipt"]["observed_result"]["value"] = "9"
 
         report = evaluate_outcomes(records)
 

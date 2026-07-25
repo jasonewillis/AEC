@@ -54,7 +54,12 @@ class ConsumerStateContractTests(unittest.TestCase):
         self.assertEqual("1.0.0", schema["properties"]["schema_version"]["const"])
         self.assertEqual(set(schema["required"]), set(self.state))
         self.assertEqual(
-            {"consumer_profile", "decision_context", "procedure_reference"},
+            {
+                "canonical_integer",
+                "consumer_profile",
+                "decision_context",
+                "procedure_reference",
+            },
             set(schema["$defs"]),
         )
         self.assertFalse(schema["$defs"]["consumer_profile"]["additionalProperties"])

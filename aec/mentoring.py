@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from aec.contracts import canonical_integer
+
 
 MENTORING_FIELDS = {
     "lesson",
@@ -93,11 +95,6 @@ def _validate_context(value: object, field: str, revision: object) -> list[str]:
     return errors
 
 
-def _exact_integer(value: object) -> bool:
-    """Return whether a value is an exact integer and not a boolean."""
-    return type(value) is int
-
-
 def _validate_expected_result(value: object, field: str) -> list[str]:
     """Validate one declared measurable result for the recommendation."""
     if type(value) is not dict or set(value) != EXPECTED_RESULT_FIELDS:
@@ -114,13 +111,16 @@ def _validate_expected_result(value: object, field: str) -> list[str]:
         errors.append(f"{field}.direction is unsupported")
     if not _non_empty_string(value.get("threshold")):
         errors.append(f"{field}.threshold must be a non-empty string")
-    baseline = value.get("baseline")
-    target = value.get("target")
-    for name, number in (("baseline", baseline), ("target", target)):
-        if not _exact_integer(number):
-            errors.append(f"{field}.{name} must be an exact integer")
+    for name in ("baseline", "target"):
+        if not canonical_integer(value.get(name)):
+            errors.append(
+                f"{field}.{name} must be one canonical signed decimal integer"
+            )
     if errors or direction not in RESULT_DIRECTIONS:
         return errors
+    # Parsed only after the closed encoding accepted both numbers.
+    baseline = int(value["baseline"])
+    target = int(value["target"])
     # A direction that disagrees with its own numbers cannot be compared later.
     if (
         (direction == "decrease" and not target < baseline)

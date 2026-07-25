@@ -52,10 +52,10 @@
       "choice": "isolate-import-boundary",
       "confidence": "high",
       "expected_result": {
-        "baseline": 4,
+        "baseline": "4",
         "direction": "decrease",
         "measure": "unrelated-import-failures",
-        "target": 0,
+        "target": "0",
         "threshold": "Zero unrelated import failures in the focused proof run.",
         "unit": "failures"
       },

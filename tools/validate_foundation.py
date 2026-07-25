@@ -25,6 +25,7 @@ from aec.outcomes import (  # noqa: E402
     OutcomeReceiptRejection,
     evaluate_outcomes,
     verify_outcome_receipt,
+    verify_outcome_record,
 )
 from aec.resolver import (  # noqa: E402
     BLOCKER_REASON_REGISTRY,
@@ -267,6 +268,10 @@ SUPPORTING_EVIDENCE_QUALITY = {
 }
 SLUG_IDENTITY = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
+# An independent statement of the closed integer encoding. JSON Schema accepts
+# 1.0 as an integer, so every exact integer crosses the contract as a canonical
+# signed decimal string instead of a JSON number.
+CANONICAL_DECIMAL = re.compile(r"(?:0|-?[1-9][0-9]*)")
 PUBLIC_CARD_SCHEMA_VERSION = "3.0.0"
 PUBLIC_CARD_FIELDS = {
     "anti_example",
@@ -294,6 +299,11 @@ def _non_empty_string(value: object) -> bool:
     return type(value) is str and bool(value.strip())
 
 
+def _canonical_integer(value: object) -> bool:
+    """Independently accept one canonical signed decimal integer string."""
+    return type(value) is str and bool(CANONICAL_DECIMAL.fullmatch(value))
+
+
 def _validate_mentoring(value: object) -> list[str]:
     """Independently validate the closed teaching record."""
     if type(value) is not dict or set(value) != MENTORING_FIELDS:
@@ -319,10 +329,13 @@ def _validate_expected_numbers(expected: dict[str, Any]) -> list[str]:
         errors.append("decision_support expected threshold is invalid")
     baseline = expected.get("baseline")
     target = expected.get("target")
-    if type(baseline) is not int or type(target) is not int:
-        return errors + ["decision_support expected baseline and target must be integers"]
+    if not _canonical_integer(baseline) or not _canonical_integer(target):
+        return errors + [
+            "decision_support expected baseline and target must be canonical integers"
+        ]
     if errors:
         return errors
+    baseline, target = int(baseline), int(target)
     if (
         (direction == "decrease" and not target < baseline)
         or (direction == "increase" and not target > baseline)
@@ -1528,9 +1541,84 @@ def main() -> int:
         )
 
     outcomes = load_json(ROOT / "tests" / "fixtures" / "outcomes" / "golden.json")
-    receipt = outcomes["records"][0]["receipt"]
-    card = outcomes["records"][0]["card"]
+    record = outcomes["records"][0]
+    receipt = record["receipt"]
+    card = record["card"]
+    decision = record["decision"]
     report = evaluate_outcomes(outcomes["records"])
+    checks.append(
+        report_errors(
+            "outcome-record.decision-authenticated",
+            validate_resolution(decision)
+            + (
+                []
+                if decision["resolution_hash"] == compute_resolution_hash(decision)
+                else ["golden decision hash does not match its recomputed payload"]
+            ),
+        )
+    )
+    for name, mutate in (
+        ("forged-decision", lambda value: value["decision"].update({"gate": "Ready"})),
+        (
+            "unprojected-card",
+            lambda value: value["card"].update({"lane": "REWRITTEN"}),
+        ),
+        (
+            "foreign-decision-prose",
+            lambda value: value["decision"]["rationale"].update(
+                {"summary": "A summary nobody resolved."}
+            ),
+        ),
+    ):
+        forged = copy.deepcopy(record)
+        mutate(forged)
+        # Recompute every self-declared identity the way a forger would.
+        forged["decision"]["resolution_hash"] = compute_resolution_hash(
+            forged["decision"]
+        )
+        forged["receipt"]["decision"]["resolution_hash"] = forged["decision"][
+            "resolution_hash"
+        ]
+        if "card_hash" in forged["card"]:
+            forged["card"]["card_hash"] = independent_card_hash(forged["card"])
+        result = verify_outcome_record(forged)
+        checks.append(
+            report_errors(
+                f"red-canary.outcome-record.{name}",
+                []
+                if isinstance(result, OutcomeReceiptRejection)
+                and result.code
+                in {
+                    "OUTCOME_RECORD_DECISION_INVALID",
+                    "OUTCOME_RECORD_CARD_NOT_PROJECTED",
+                }
+                else ["a recomputed forgery was accepted as an outcome record"],
+            )
+        )
+    missing_decision = {"card": card, "receipt": receipt}
+    checks.append(
+        report_errors(
+            "red-canary.outcome-record.missing-decision",
+            []
+            if isinstance(
+                verify_outcome_record(missing_decision), OutcomeReceiptRejection
+            )
+            else ["a record without its decision was accepted"],
+        )
+    )
+    rendered_report = json.dumps(report, sort_keys=True)
+    # Prose and the decision's own identities are the content a report must
+    # never echo. Shared structural field names are not decision content.
+    decision_content = [
+        text for text in _nested_strings(decision) if " " in text
+    ] + [decision["resolution_hash"], decision["revision"], decision["task_id"]]
+    leaked = sorted(text for text in decision_content if text in rendered_report)
+    checks.append(
+        report_errors(
+            "outcome-report.no-decision-content",
+            [] if not leaked else ["outcome report echoed decision content"],
+        )
+    )
     checks.append(
         report_errors(
             "outcome-receipt.golden",
@@ -1609,9 +1697,9 @@ def main() -> int:
     # The golden receipt declares "supported"; every other derived outcome must
     # reject that declaration and accept only the verdict its own facts derive.
     for verdict, value in (
-        ("partially-supported", 2),
-        ("unsupported", 4),
-        ("harmful", 9),
+        ("partially-supported", "2"),
+        ("unsupported", "4"),
+        ("harmful", "9"),
         ("inconclusive", None),
     ):
         lying = copy.deepcopy(receipt)

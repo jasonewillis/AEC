@@ -79,6 +79,69 @@
     },
     {
       "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "json-number-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 0
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "float-integer-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 1.0
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "decimal-point-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1.0"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "signed-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "+1"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "leading-zero-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "01"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "negative-zero-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "-0"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "whitespace-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": " 1"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "trailing-newline-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1\n"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "exponent-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": "1e3"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
       "name": "missing-observed-revision",
       "operation": "remove",
       "path": ["observed_revision"]

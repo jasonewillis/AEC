@@ -77,10 +77,10 @@ MATERIAL_DECISION_CONTEXT = {
         "choice": "isolate-import-boundary",
         "confidence": "high",
         "expected_result": {
-            "baseline": 4,
+            "baseline": "4",
             "direction": "decrease",
             "measure": "unrelated-import-failures",
-            "target": 0,
+            "target": "0",
             "threshold": "Zero unrelated import failures in the focused UI proof run.",
             "unit": "failures",
         },
@@ -312,13 +312,17 @@ class ResolverTracerTests(unittest.TestCase):
 
         # An expected result is comparable only when baseline, target, and direction agree.
         for field, value in (
-            ("target", 4),
-            ("target", 9),
+            ("target", "4"),
+            ("target", "9"),
             ("direction", "increase"),
             ("direction", "hold"),
+            ("baseline", 4),
             ("baseline", 4.0),
             ("baseline", True),
-            ("target", "0"),
+            ("target", "0.0"),
+            ("target", "+0"),
+            ("target", "-0"),
+            ("target", "00"),
             ("unit", "Failures Per Run"),
             ("unit", ""),
         ):
@@ -333,7 +337,7 @@ class ResolverTracerTests(unittest.TestCase):
 
         held = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
         held["recommendation"]["expected_result"].update(
-            {"baseline": 4, "direction": "hold", "target": 4}
+            {"baseline": "4", "direction": "hold", "target": "4"}
         )
         self.assertEqual(
             [],

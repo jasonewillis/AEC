@@ -8,6 +8,13 @@ from typing import Any
 
 
 GITHUB_REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+# One closed encoding for every exact integer that crosses a public contract.
+# JSON Schema draft 2020-12 accepts 1.0 as an integer, so a JSON number cannot
+# express the exact-integer rule that Python enforces. A canonical signed
+# decimal string can: no plus sign, no whitespace, no exponent, no decimal
+# point, no leading zero except "0" itself, and no negative zero.
+CANONICAL_INTEGER = re.compile(r"(?:0|-?[1-9][0-9]*)")
+CANONICAL_INTEGER_PATTERN = r"^(?:0|-?[1-9][0-9]*)$(?![\s\S])"
 PROJECT_PROFILE_FIELDS = {
     "aec_mode",
     "agent_adapters",
@@ -17,6 +24,11 @@ PROJECT_PROFILE_FIELDS = {
     "schema_version",
     "workflow",
 }
+
+
+def canonical_integer(value: object) -> bool:
+    """Return whether a value is one canonical signed decimal integer string."""
+    return type(value) is str and bool(CANONICAL_INTEGER.fullmatch(value))
 
 
 def normalize_exact_json(value: object) -> Any:

@@ -93,9 +93,9 @@ supplied, it must contain two or three choices. Every choice carries a lowercase
 hyphenated identity an outcome receipt can cite exactly, and names quality, risk,
 reversibility, maintainability, and scope tradeoffs. The recommendation must identify
 one declared choice, explain why, name its principal uncertainty, declare a confidence,
-declare one expected measurable result — a measure, a unit, an exact integer baseline and
-target, a direction that agrees with those numbers, and a readable threshold — and name
-observable evidence that would justify revisiting it. `context.revision` must equal the
+declare one expected measurable result (a measure, a unit, a canonical integer baseline
+and target, a direction that agrees with those numbers, and a readable threshold), and
+name observable evidence that would justify revisiting it. `context.revision` must equal the
 record revision, and
 `context.evidence_quality` must support the declared confidence. The authority owner is
 one of `agent`, `consumer-owner`, or `external`; AEC itself is never an authority owner.
@@ -107,7 +107,9 @@ draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC nev
 submits that draft or acts on the recommendation.
 
 A consumer that acted on a rendered recommendation may later write one local outcome
-receipt binding that exact decision to what was observed. Receipts are never uploaded,
+record holding the card, the complete decision that produced it, and one receipt binding
+that exact decision to what was observed. Verification validates the decision, recomputes
+its resolution hash, and reproduces the card from it before reading any receipt fact. Receipts are never uploaded,
 aggregated remotely, or fed back into policy. See
 [decision outcomes](architecture/decision-outcomes.md) for the receipt contract, the
 derived verdict rules, and the local evaluator.
