@@ -36,7 +36,11 @@ This repository currently provides:
   canonical SHA-256 contract with normalized request and catalog input bindings and
   exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
-- AEC-authored phase teaching plus optional, validated material-decision support;
+- AEC-authored phase teaching plus optional, validated material-decision support with
+  declared evidence quality, confidence, principal uncertainty, and one expected
+  measurable result;
+- a local-only outcome receipt and deterministic evaluator that compare each
+  recommendation with an observed result without telemetry, free text, or causal claims;
 - provenance locks for upstream pattern sources;
 - seven exact, pinned Blueprint skills under one canonical agent-neutral root with
   Claude symlinks and fail-closed hash and discovery-parity validation;
@@ -60,6 +64,7 @@ python3 -m unittest discover -s tests -v
 
 - [Architecture](docs/architecture/overview.md)
 - [Deterministic resolver](docs/architecture/resolver.md)
+- [Decision outcomes](docs/architecture/decision-outcomes.md)
 - [Agent adapter parity](docs/architecture/agent-adapters.md)
 - [Private course lens](docs/architecture/private-course-lens.md)
 - [Operating model](docs/operating-model.md)

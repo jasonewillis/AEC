@@ -81,17 +81,37 @@ rationale, required proof, Good, Finished, one anti-example, and AEC-authored te
 The teaching states the transferable lesson, why the gate exists, and how to recognize
 the situation again.
 
-`decision_context` is optional. Omission means the task has no material fork and the
-card returns `decision_support: null`. When supplied, it must contain two or three
-choices. Every choice names quality, risk, reversibility, maintainability, and scope
-tradeoffs. The recommendation must identify one declared choice, explain why, and name
-observable evidence that would justify revisiting it. The authority owner is one of
-`agent`, `consumer-owner`, or `external`; AEC itself is never an authority owner.
+`decision_context` is optional and versioned at `schema_version: 2.0.0`. Omission means
+the task has no material fork and the card returns `decision_support: null`. When
+supplied, it must contain two or three choices. Every choice carries a lowercase
+hyphenated identity an outcome receipt can cite exactly, and names quality, risk,
+reversibility, maintainability, and scope tradeoffs. The recommendation must identify
+one declared choice, explain why, name its principal uncertainty, declare a confidence,
+declare one expected measurable result, and name observable evidence that would justify
+revisiting it. `context.revision` must equal the record revision, and
+`context.evidence_quality` must support the declared confidence. The authority owner is
+one of `agent`, `consumer-owner`, or `external`; AEC itself is never an authority owner.
+A context missing any of those facts is rejected before a card is rendered.
 
 The complete decision context is normalized, bound into the request hash, copied to
 the decision, and rendered identically on the public card. Its transition request is a
 draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC never
 submits that draft or acts on the recommendation.
+
+A consumer that acted on a rendered recommendation may later write one local outcome
+receipt binding that exact decision to what was observed. Receipts are never uploaded,
+aggregated remotely, or fed back into policy. See
+[decision outcomes](architecture/decision-outcomes.md) for the receipt contract, the
+derived verdict rules, and the local evaluator.
+
+### Versioned transition
+
+The unversioned decision context that shipped before this contract is no longer
+accepted: it cannot state evidence quality, confidence, principal uncertainty, or an
+expected measurable result, so its recommendation could never be compared with a real
+outcome. Records without `decision_context` are unaffected, and every other consumer
+state, request, decision, and card version is unchanged. To migrate, add
+`schema_version`, `context`, and the four new `recommendation` fields.
 
 ## Conformance exit gate
 

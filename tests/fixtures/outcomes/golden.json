@@ -1,0 +1,134 @@
+{
+  "records": [
+    {
+      "card": {
+        "anti_example": "A task list omits ownership, proof, or a stop condition.",
+        "authoritative": false,
+        "decision_support": {
+          "authority": {
+            "owner": "consumer-owner",
+            "reason": "The repository owner controls dependency and environment policy."
+          },
+          "choices": [
+            {
+              "identity": "isolate-import-boundary",
+              "summary": "Move the optional dependency behind an explicit runtime boundary.",
+              "tradeoffs": {
+                "maintainability": "Keeps an optional dependency out of unrelated paths.",
+                "quality": "Preserves real proof without replacing the production path.",
+                "reversibility": "Reverts as one bounded adapter change.",
+                "risk": "Requires care to preserve existing behavior at the boundary.",
+                "scope": "One import boundary and focused regression coverage."
+              }
+            },
+            {
+              "identity": "install-everywhere",
+              "summary": "Install the optional dependency in every test environment.",
+              "tradeoffs": {
+                "maintainability": "Couples every test path to a platform-specific stack.",
+                "quality": "Exercises the production import path directly.",
+                "reversibility": "Dependency changes can be rolled back.",
+                "risk": "Hides an unnecessary eager import instead of removing it.",
+                "scope": "Environment and dependency configuration changes."
+              }
+            }
+          ],
+          "context": {
+            "evidence_quality": "direct-verified",
+            "revision": "0123456789abcdef0123456789abcdef01234567"
+          },
+          "question": "How should the optional dependency be isolated for the focused proof?",
+          "recommendation": {
+            "choice": "isolate-import-boundary",
+            "confidence": "high",
+            "expected_result": {
+              "direction": "decrease",
+              "measure": "unrelated-import-failures",
+              "threshold": "Zero unrelated import failures in the focused proof run."
+            },
+            "principal_uncertainty": "Whether another entry point still imports it eagerly.",
+            "revisit_when": [
+              "The optional dependency becomes required for every application entry point.",
+              "A second unrelated import failure appears outside the isolated boundary."
+            ],
+            "why": "It removes the unrelated import failure at the narrowest durable seam."
+          },
+          "schema_version": "2.0.0"
+        },
+        "finished": [
+          "Vertical slices, dependencies, ownership, proof, and stop rules are defined."
+        ],
+        "gate": "Evidence needed",
+        "good": [
+          "Each bounded slice names its dependency, owner, proof, and stop rule."
+        ],
+        "lane": "GENERAL",
+        "mentoring": {
+          "lesson": "A delivery plan should create small vertical slices that each produce usable evidence and have an explicit stop rule.",
+          "recognition_heuristic": "Use this procedure when work spans dependencies, owners, or proof surfaces that cannot safely change as one slice.",
+          "why_gate_exists": "A task list without dependencies, ownership, and proof hides the critical path and encourages unfinished parallel work."
+        },
+        "phase": "Plan",
+        "rail_position": {
+          "phase": 2,
+          "phase_total": 2,
+          "rail": 4,
+          "rail_total": 9,
+          "stage": "Design"
+        },
+        "rationale": {
+          "principle_ids": [
+            "aec-ticket-to-pr-plan"
+          ],
+          "summary": "Are vertical slices, dependencies, ownership, proof, and stop rules defined?"
+        },
+        "required_proof": [
+          "dependency-and-ownership-map",
+          "proof-and-stop-rules",
+          "vertical-slice-plan"
+        ],
+        "resolution_hash": "sha256:f0f3619932f2fd7dba1eebb4d7e7bfbe091f7ce43baf35fc3122155957934c57",
+        "schema_version": "2.0.0",
+        "transition_request": {
+          "authoritative": false,
+          "environment": "test",
+          "executes": false,
+          "mutates": false,
+          "requested_gate": "Evidence needed",
+          "revision": "0123456789abcdef0123456789abcdef01234567"
+        }
+      },
+      "receipt": {
+        "coaching": {
+          "burden": "low",
+          "transfer": "full"
+        },
+        "decision": {
+          "resolution_hash": "sha256:f0f3619932f2fd7dba1eebb4d7e7bfbe091f7ce43baf35fc3122155957934c57",
+          "revision": "0123456789abcdef0123456789abcdef01234567",
+          "selected_choice": "isolate-import-boundary"
+        },
+        "observed_result": {
+          "direction": "decrease",
+          "expectation": "met",
+          "measure": "unrelated-import-failures"
+        },
+        "schema_version": "1.0.0",
+        "verdict": "supported",
+        "verification": [
+          {
+            "accepted": true,
+            "kind": "focused-test-report",
+            "revision": "0123456789abcdef0123456789abcdef01234567"
+          },
+          {
+            "accepted": true,
+            "kind": "integration-test-report",
+            "revision": "0123456789abcdef0123456789abcdef01234567"
+          }
+        ]
+      }
+    }
+  ],
+  "schema_version": "1.0.0"
+}

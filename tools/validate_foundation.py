@@ -21,6 +21,11 @@ from aec.consumer import (  # noqa: E402
     resolve_consumer_state,
     validate_consumer_state,
 )
+from aec.outcomes import (  # noqa: E402
+    OutcomeReceiptRejection,
+    evaluate_outcomes,
+    verify_outcome_receipt,
+)
 from aec.resolver import (  # noqa: E402
     BLOCKER_REASON_REGISTRY,
     compute_resolution_hash,
@@ -235,8 +240,10 @@ MENTORING_FIELDS = {
 DECISION_CONTEXT_FIELDS = {
     "authority",
     "choices",
+    "context",
     "question",
     "recommendation",
+    "schema_version",
 }
 TRADEOFF_FIELDS = {
     "maintainability",
@@ -245,6 +252,21 @@ TRADEOFF_FIELDS = {
     "risk",
     "scope",
 }
+RECOMMENDATION_FIELDS = {
+    "choice",
+    "confidence",
+    "expected_result",
+    "principal_uncertainty",
+    "revisit_when",
+    "why",
+}
+SUPPORTING_EVIDENCE_QUALITY = {
+    "high": {"direct-verified"},
+    "medium": {"direct-verified", "indirect"},
+    "low": {"direct-verified", "indirect", "assumed"},
+}
+SLUG_IDENTITY = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
 
 
 def _non_empty_string(value: object) -> bool:
@@ -270,8 +292,20 @@ def _validate_decision_support(value: object) -> list[str]:
     if type(value) is not dict or set(value) != DECISION_CONTEXT_FIELDS:
         return ["decision_support fields do not match the contract"]
     errors: list[str] = []
+    if value.get("schema_version") != "2.0.0":
+        errors.append("decision_support.schema_version must equal 2.0.0")
     if not _non_empty_string(value.get("question")):
         errors.append("decision_support.question must be a non-empty string")
+    context = value.get("context")
+    if type(context) is not dict or set(context) != {"evidence_quality", "revision"}:
+        errors.append("decision_support.context fields do not match the contract")
+        context = {}
+    else:
+        revision = context.get("revision")
+        if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
+            errors.append("decision_support.context.revision is invalid")
+        if context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY["low"]:
+            errors.append("decision_support.context.evidence_quality is unsupported")
     authority = value.get("authority")
     if type(authority) is not dict or set(authority) != {"owner", "reason"}:
         errors.append("decision_support.authority fields do not match the contract")
@@ -294,7 +328,7 @@ def _validate_decision_support(value: object) -> list[str]:
                 errors.append("decision_support choice fields do not match the contract")
                 continue
             identity = choice.get("identity")
-            if _non_empty_string(identity):
+            if isinstance(identity, str) and SLUG_IDENTITY.fullmatch(identity):
                 identities.append(identity)
             else:
                 errors.append("decision_support choice identity is invalid")
@@ -308,17 +342,37 @@ def _validate_decision_support(value: object) -> list[str]:
         if len(identities) != len(set(identities)):
             errors.append("decision_support choice identities must be unique")
     recommendation = value.get("recommendation")
-    if type(recommendation) is not dict or set(recommendation) != {
-        "choice",
-        "revisit_when",
-        "why",
-    }:
+    if type(recommendation) is not dict or set(recommendation) != RECOMMENDATION_FIELDS:
         errors.append("decision_support recommendation fields do not match the contract")
     else:
         if recommendation.get("choice") not in identities:
             errors.append("decision_support recommendation must name a declared choice")
         if not _non_empty_string(recommendation.get("why")):
             errors.append("decision_support recommendation reason is invalid")
+        if not _non_empty_string(recommendation.get("principal_uncertainty")):
+            errors.append("decision_support principal uncertainty is invalid")
+        confidence = recommendation.get("confidence")
+        if confidence not in SUPPORTING_EVIDENCE_QUALITY:
+            errors.append("decision_support recommendation confidence is unsupported")
+        elif context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY[
+            confidence
+        ]:
+            errors.append("decision_support confidence exceeds its evidence quality")
+        expected = recommendation.get("expected_result")
+        if type(expected) is not dict or set(expected) != {
+            "direction",
+            "measure",
+            "threshold",
+        }:
+            errors.append("decision_support expected result fields are invalid")
+        else:
+            measure = expected.get("measure")
+            if not isinstance(measure, str) or not SLUG_IDENTITY.fullmatch(measure):
+                errors.append("decision_support expected measure is invalid")
+            if expected.get("direction") not in RESULT_DIRECTIONS:
+                errors.append("decision_support expected direction is unsupported")
+            if not _non_empty_string(expected.get("threshold")):
+                errors.append("decision_support expected threshold is invalid")
         revisit_when = recommendation.get("revisit_when")
         if (
             type(revisit_when) is not list
@@ -1037,6 +1091,22 @@ def materialize_consumer_state_case(
     return value
 
 
+def materialize_outcome_receipt_case(
+    receipt: dict[str, Any], case: dict[str, Any]
+) -> dict[str, Any]:
+    """Apply one bounded red-fixture operation to an outcome receipt."""
+    value = copy.deepcopy(receipt)
+    path = case["path"]
+    target: dict[str, Any] = value
+    for part in path[:-1]:
+        target = target[part]
+    if case["operation"] == "remove":
+        del target[path[-1]]
+    elif case["operation"] == "replace":
+        target[path[-1]] = case["value"]
+    return value
+
+
 def main() -> int:
     """Validate the complete foundation bootstrap contract."""
     course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
@@ -1267,6 +1337,92 @@ def main() -> int:
                 else ["consumer-state canary did not fail closed"],
             )
         )
+
+    proposal = load_json(ROOT / "tests" / "fixtures" / "outcomes" / "proposal.json")
+    checks.append(
+        report_errors(
+            "consumer-state.material-decision",
+            validate_consumer_state(proposal),
+        )
+    )
+    for name, path, value in (
+        ("stale-context", ["decision_context", "context", "revision"], "f" * 40),
+        (
+            "insufficient-context",
+            ["decision_context", "context", "evidence_quality"],
+            "assumed",
+        ),
+    ):
+        drifted = materialize_consumer_state_case(
+            proposal, {"operation": "replace", "path": path, "value": value}
+        )
+        checks.append(
+            report_errors(
+                f"red-canary.decision-context.{name}",
+                []
+                if validate_consumer_state(drifted)
+                else ["decision-context canary did not fail closed"],
+            )
+        )
+
+    outcomes = load_json(ROOT / "tests" / "fixtures" / "outcomes" / "golden.json")
+    receipt = outcomes["records"][0]["receipt"]
+    card = outcomes["records"][0]["card"]
+    report = evaluate_outcomes(outcomes["records"])
+    checks.append(
+        report_errors(
+            "outcome-receipt.golden",
+            []
+            if report["verified"] == len(outcomes["records"]) and not report["rejected"]
+            else ["golden outcome receipts did not verify"],
+        )
+    )
+    checks.append(
+        report_errors(
+            "outcome-report.non-causal",
+            []
+            if report["authoritative"] is False and report["causal_claim"] is False
+            else ["outcome report claimed authority or causation"],
+        )
+    )
+    outcome_cases = load_json(
+        ROOT / "tests" / "fixtures" / "outcomes" / "red-cases.json"
+    )["cases"]
+    for case in outcome_cases:
+        result = verify_outcome_receipt(
+            materialize_outcome_receipt_case(receipt, case), card
+        )
+        checks.append(
+            report_errors(
+                f"red-canary.outcome-receipt.{case['name']}",
+                []
+                if isinstance(result, OutcomeReceiptRejection)
+                and result.code == case["code"]
+                else ["outcome-receipt canary did not fail closed"],
+            )
+        )
+    lying = copy.deepcopy(receipt)
+    lying["observed_result"]["expectation"] = "missed"
+    checks.append(
+        report_errors(
+            "red-canary.outcome-receipt.lying-summary",
+            []
+            if isinstance(verify_outcome_receipt(lying, card), OutcomeReceiptRejection)
+            else ["lying outcome summary was accepted"],
+        )
+    )
+    routine = copy.deepcopy(card)
+    routine["decision_support"] = None
+    checks.append(
+        report_errors(
+            "red-canary.outcome-receipt.routine-work",
+            []
+            if isinstance(
+                verify_outcome_receipt(receipt, routine), OutcomeReceiptRejection
+            )
+            else ["routine work accepted an outcome receipt"],
+        )
+    )
     return 0 if all(checks) else 1
 
 

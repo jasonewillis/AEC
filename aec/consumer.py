@@ -297,7 +297,14 @@ def validate_consumer_state(state: object) -> list[str]:
     )
     errors.extend(_validate_evidence(state.get("evidence")))
     errors.extend(_validate_blockers(state.get("blockers")))
-    errors.extend(validate_decision_context(state.get("decision_context")))
+    errors.extend(
+        validate_decision_context(
+            state.get("decision_context"),
+            revision=revision_record.get("identity")
+            if type(revision_record) is dict
+            else None,
+        )
+    )
 
     procedures, procedure_errors = _exact_object(
         state.get("procedures"), "procedures", {"available", "required"}

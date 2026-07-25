@@ -25,7 +25,12 @@ These rules apply to every agent working in this repository.
   situation again.
 - When a task reaches a material fork, provide two or three bounded choices with
   explicit quality, risk, reversibility, maintainability, and scope tradeoffs. Name one
-  recommendation, what evidence would change it, and who owns the decision.
+  recommendation, what evidence would change it, and who owns the decision. State the
+  evidence quality the recommendation stands on, a confidence that never exceeds it, the
+  principal uncertainty, and one expected measurable result.
+- A recommendation is comparable only if someone can later record what was observed.
+  Keep that record local, closed, and free of free text, and never let an association
+  between a recommendation and an outcome be reported as causation.
 - Keep routine steps free of artificial choice menus. A null decision context is the
   correct representation when no material fork exists.
 

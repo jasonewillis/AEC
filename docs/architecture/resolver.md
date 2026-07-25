@@ -83,11 +83,15 @@ explanation of why the phase gate exists, and a recognition heuristic. This cont
 AEC-authored and remains available even when the gate is blocked.
 
 The request may also include `decision_context` as null or a closed material-decision
-brief. The brief contains two or three choices, five explicit tradeoff dimensions per
-choice, one recommendation, evidence that would justify revisiting it, and the
-decision authority owner. The resolver validates it, binds it into the request hash,
-and returns it as `decision_support`. The resolver does not invent choices, select an
-authority, or execute the recommendation.
+brief at `schema_version: 2.0.0`. The brief contains two or three choices, five explicit
+tradeoff dimensions per choice, the revision and evidence quality the decision was formed
+from, one recommendation with its confidence, principal uncertainty, and expected
+measurable result, evidence that would justify revisiting it, and the decision authority
+owner. The resolver validates it against the request revision, binds it into the request
+hash, and returns it as `decision_support`. The resolver does not invent choices, select
+an authority, or execute the recommendation. See
+[decision outcomes](decision-outcomes.md) for the local receipt that later compares that
+recommendation with an observed result.
 
 ## Lifecycle golden catalog
 

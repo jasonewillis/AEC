@@ -467,7 +467,12 @@ def validate_resolution_request(request: object) -> list[str]:
     if "phase" in request and (not isinstance(phase, str) or phase not in PHASES):
         errors.append("phase is unsupported")
     errors.extend(_validate_evidence(request.get("evidence")))
-    errors.extend(validate_decision_context(request.get("decision_context")))
+    errors.extend(
+        validate_decision_context(
+            request.get("decision_context"),
+            revision=request.get("revision"),
+        )
+    )
     errors.extend(_validate_policy(request.get("policy")))
     errors.extend(
         _validate_procedure_reference(

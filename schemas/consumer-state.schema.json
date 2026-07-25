@@ -204,7 +204,10 @@
           "items": {
             "additionalProperties": false,
             "properties": {
-              "identity": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "identity": {
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
+                "type": "string"
+              },
               "summary": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
               "tradeoffs": {
                 "additionalProperties": false,
@@ -226,11 +229,39 @@
           "minItems": 2,
           "type": "array"
         },
+        "context": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_quality": {"enum": ["direct-verified", "indirect", "assumed"]},
+            "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
+          },
+          "required": ["evidence_quality", "revision"],
+          "type": "object"
+        },
         "question": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
         "recommendation": {
           "additionalProperties": false,
           "properties": {
             "choice": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+            "confidence": {"enum": ["high", "medium", "low"]},
+            "expected_result": {
+              "additionalProperties": false,
+              "properties": {
+                "direction": {"enum": ["increase", "decrease", "hold"]},
+                "measure": {
+                  "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
+                  "type": "string"
+                },
+                "threshold": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+              },
+              "required": ["direction", "measure", "threshold"],
+              "type": "object"
+            },
+            "principal_uncertainty": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            },
             "revisit_when": {
               "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
               "minItems": 1,
@@ -239,11 +270,26 @@
             },
             "why": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
           },
-          "required": ["choice", "revisit_when", "why"],
+          "required": [
+            "choice",
+            "confidence",
+            "expected_result",
+            "principal_uncertainty",
+            "revisit_when",
+            "why"
+          ],
           "type": "object"
-        }
+        },
+        "schema_version": {"const": "2.0.0"}
       },
-      "required": ["authority", "choices", "question", "recommendation"],
+      "required": [
+        "authority",
+        "choices",
+        "context",
+        "question",
+        "recommendation",
+        "schema_version"
+      ],
       "type": "object"
     },
     "procedure_reference": {
