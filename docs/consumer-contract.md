@@ -9,6 +9,12 @@ The public state-provider boundary is the closed, versioned
 supplies one in-memory record plus the expected revision, expected environment, current
 time, and AEC-owned procedure catalog. AEC performs no discovery or I/O at this seam.
 
+This contract governs the runtime boundary between AEC and a consumer project. It is out
+of scope for, and does not change, the separate repository-admission trust boundary that
+gates source-changing pull requests into AEC itself: see
+[handoff-reconciliation.md](handoff-reconciliation.md#what-exact_baseline-proves) for
+what that boundary does and does not guarantee.
+
 ## AEC provides
 
 - workflow and phase vocabulary;
@@ -29,6 +35,19 @@ time, and AEC-owned procedure catalog. AEC performs no discovery or I/O at this 
 - Project or issue projection rules;
 - branch protection, review, merge, deployment, and rollback controls; and
 - telemetry destinations and retention policy.
+
+## Why the boundary sits here
+
+AEC owns what is deterministic and repository-local: vocabulary, schemas, the hash
+contract, and validators. The consumer owns what requires judgment against live state or
+carries authority: what the task means, whether evidence is real, and what ships.
+
+This is why AEC does not encode evidence collection, project projection, merge, or
+deployment as built-in operations. Those steps change often, differ per consumer, and
+must be reconciled against systems AEC does not read. A capability that needs live state
+or carries release authority stays with the consumer even when AEC could compute it. The
+exclusions under [Not wanted](operating-model.md#not-wanted) follow from that rule rather
+than standing as independent prohibitions.
 
 ## Reference example
 
