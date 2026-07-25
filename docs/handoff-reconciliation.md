@@ -84,6 +84,18 @@ complete, and consumer single-writer work remains outside AEC.
 - RESOLVE-009 proves blocker precedence is deterministic and order independent.
 - Claude and Codex parity remains a separate completed Slice 3 proof.
 
+### What EXACT_BASELINE proves
+
+`ADMISSION-001 EXACT_BASELINE` proves the candidate tree matches the candidate's own
+declaration in `.github/admission/v1/source-declaration.json`, not the base tree, and
+that the candidate did not rewrite the validator or the workflow that judges it. It does
+not prove the declared content is trustworthy: a legitimate baseline update and a
+tampered file with a correctly updated digest are byte-identical operations, and intent
+does not appear in the tree. Human review of the diff is the control for content
+trustworthiness. Tampering must appear in the declaration, and therefore in the pull
+request diff, where a human sees it; see
+[#66](https://github.com/jasonewillis/AEC/issues/66).
+
 ## Q6: Owning branch/issue/PR pattern
 
 One issue per slice in `docs/delivery/roadmap.md`, opened against this
