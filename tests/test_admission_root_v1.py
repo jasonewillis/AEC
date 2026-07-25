@@ -5,6 +5,8 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -369,6 +371,56 @@ class AdmissionRootV1Tests(unittest.TestCase):
                 for path in expected
             },
         )
+
+
+class SelfCheckCoverageCanaryTests(unittest.TestCase):
+    """RED CANARIES: self-check must catch a tracked .py path dropped from the
+    declaration while its file stays on disk - the issue #49 gap where
+    self-check only walked what the declaration claimed and never walked
+    disk to see what it omitted.
+
+    Each test clones ROOT into a disposable temp directory (self_check reads
+    real files via a real `git ls-files`, so it needs an actual checkout,
+    not in-memory data) and never mutates the real repository.
+    """
+
+    def _cloned_root(self) -> Path:
+        clone = Path(self.enterContext(tempfile.TemporaryDirectory())) / "clone"
+        subprocess.run(
+            ["git", "clone", "--quiet", "--local", str(ROOT), str(clone)],
+            check=True,
+        )
+        return clone
+
+    def _drop_from_declaration(self, root: Path, path: str) -> None:
+        declaration_path = root / DECLARATION_PATH
+        payload = json.loads(declaration_path.read_text(encoding="utf-8"))
+        del payload["sources"][path]
+        payload["python_paths"] = [
+            entry for entry in payload["python_paths"] if entry != path
+        ]
+        declaration_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    def test_clean_clone_passes_self_check(self) -> None:
+        self.assertEqual((), self_check(self._cloned_root()))
+
+    def test_undeclared_tracked_python_file_fails_self_check(self) -> None:
+        root = self._cloned_root()
+        self._drop_from_declaration(root, "aec/mentor.py")
+
+        findings = self_check(root)
+
+        self.assertIn("python_paths", findings)
+
+    def test_undeclared_and_tampered_python_file_fails_self_check(self) -> None:
+        root = self._cloned_root()
+        self._drop_from_declaration(root, "aec/mentor.py")
+        mentor = root / "aec" / "mentor.py"
+        mentor.write_bytes(mentor.read_bytes() + b"\n# tampered, undeclared\n")
+
+        findings = self_check(root)
+
+        self.assertIn("python_paths", findings)
 
 
 if __name__ == "__main__":

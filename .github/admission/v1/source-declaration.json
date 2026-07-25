@@ -263,7 +263,7 @@
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
     "aec/resolver.py": "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39",
     "aec/review_attestation.py": "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db",
-    "tests/test_admission_root_v1.py": "34041e49e992016cff92724fc585877eac5958b67abc37ddf5117b462b07a860",
+    "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
     "tests/test_authority_v2_hostile_corpus.py": "f996d506036032b080664edd3925dd6e99a782abf9553371e140ef03bf7d6b73",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
@@ -276,7 +276,7 @@
     "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
     "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
-    "tools/admission_root_v1.py": "3a2c133f3154b013c93459835603d8ed648017e70fba06584d8c9ca0c50f09ea",
+    "tools/admission_root_v1.py": "f12017bf1f6dba4c3333dd5049788de5efb812b929f38a6927cad520777e843e",
     "tools/generate_source_declaration.py": "02bd0057b1b3ba6c8410cfd3f6f91bf244b26d374a07196d9ef398d92c900145",
     "tools/prove_agent_adapter_parity.py": "1f55e0d378068bff6b265e5fa15d032b9287a768d03cb580ebafe758cf448000",
     "tools/prove_private_mentor_lens.py": "169948c6fe9c6ff8d517f877cc621a017f6abb6ba6984a3df24569bae7ca5520"

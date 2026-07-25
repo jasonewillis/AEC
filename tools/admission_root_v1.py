@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, NamedTuple
+from typing import Mapping, NamedTuple, Protocol
 
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
@@ -315,6 +316,194 @@ def _authority_valid(authority: BaseAuthority) -> bool:
     )
 
 
+class TreeEntry(NamedTuple):
+    """One resolved (mode, content) pair, from either kind of tree view."""
+
+    mode: str
+    content: bytes
+
+
+class TreeView(Protocol):
+    """Uniform path -> (mode, content) view over one candidate tree.
+
+    validate_candidate and self_check judge two physically different things
+    (parsed Git tree records + blob bytes, vs. a checked-out filesystem root)
+    with the same set of locally-computable rules. This is the seam: each
+    side adapts its own data source to this shape once, and _verify_local
+    below stays ignorant of which kind it was handed.
+    """
+
+    def paths(self) -> frozenset[bytes]: ...
+
+    def get(self, path: bytes) -> TreeEntry | None: ...
+
+
+class GitRecordTreeView:
+    """One candidate Git tree, addressed by parsed records and blob bytes."""
+
+    def __init__(
+        self, by_path: Mapping[bytes, GitRecord], blobs: Mapping[str, bytes]
+    ) -> None:
+        self._by_path = by_path
+        self._blobs = blobs
+
+    def paths(self) -> frozenset[bytes]:
+        return frozenset(self._by_path)
+
+    def get(self, path: bytes) -> TreeEntry | None:
+        record = self._by_path.get(path)
+        if record is None:
+            return None
+        content = self._blobs.get(record.object_id)
+        if content is None or git_blob_oid(
+            content, len(record.object_id)
+        ) != record.object_id:
+            return None
+        return TreeEntry(record.mode, content)
+
+
+class FilesystemTreeView:
+    """Git-tracked paths under one checked-out root, read straight off disk.
+
+    Path membership comes from `git ls-files`, so self-check judges exactly
+    the tracked universe validate_candidate would see in a Git tree - stray
+    untracked or ignored files never enter the comparison. Mode and content
+    are read from the filesystem itself, not the Git index, so a chmod or a
+    regular-file-to-symlink flip with unchanged bytes is still caught even
+    when nothing was staged.
+    """
+
+    def __init__(self, root: Path) -> None:
+        self._root = root
+        self._paths: frozenset[bytes] | None = None
+
+    def paths(self) -> frozenset[bytes]:
+        if self._paths is None:
+            output = subprocess.run(
+                ["git", "ls-files", "-z"],
+                cwd=self._root,
+                check=True,
+                capture_output=True,
+            ).stdout
+            self._paths = frozenset(
+                entry for entry in output.split(b"\0") if entry
+            )
+        return self._paths
+
+    def get(self, path: bytes) -> TreeEntry | None:
+        try:
+            candidate = self._root / path.decode("utf-8")
+            if candidate.is_symlink():
+                return TreeEntry("120000", candidate.readlink().as_posix().encode())
+            if not candidate.is_file():
+                return None
+            mode = "100755" if candidate.stat().st_mode & 0o111 else REGULAR_MODE
+            return TreeEntry(mode, candidate.read_bytes())
+        except OSError:
+            return None
+
+
+def _verify_local(view: TreeView) -> tuple[tuple[str, ...], SourceDeclaration]:
+    """Run every admission check computable from one tree view alone.
+
+    Shared by validate_candidate (a parsed Git tree) and self_check (a
+    checked-out filesystem root): declaration presence and parse at the
+    checked root, structural coverage (python_paths / tracked .json / tracked
+    workflow completeness, and the python_paths-subset-of-sources|
+    proof_closure invariant), the expected-path subset check, and a
+    byte-exact mode+digest match for every path the declaration binds.
+    Excludes the three checks that need CI-supplied base authority (argument
+    well-formedness, validator identity, workflow identity) - those have no
+    local analogue and stay in validate_candidate only.
+
+    Falls back to BASE_DECLARATION when the view's own declaration is
+    missing, non-regular, or unparseable, so every other check still runs
+    against a trusted baseline instead of silently no-op'ing.
+    """
+    findings: list[str] = []
+    declared = BASE_DECLARATION
+    declaration_entry = view.get(DECLARATION_PATH.encode())
+    if declaration_entry is None or declaration_entry.mode != REGULAR_MODE:
+        findings.append(DECLARATION_PATH)
+    else:
+        try:
+            declared = parse_declaration(declaration_entry.content)
+        except ValueError:
+            findings.append(DECLARATION_PATH)
+
+    paths = view.paths()
+    tracked_python = {
+        path.decode()
+        for path in paths
+        if path.endswith(b".py")
+        and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
+    }
+    if tracked_python != declared.python_paths:
+        findings.append("python_paths")
+    # A .py path can be listed in python_paths yet omitted from every digest
+    # source (sources/proof_closure), in which case the loop below never
+    # hashes it at all: it is declared but never actually verified. Coverage
+    # is derived from the tree's own python_paths, so a deleted file simply
+    # drops out of tracked_python above and needs no special case here.
+    if not declared.python_paths <= (
+        set(declared.sources) | set(declared.proof_closure)
+    ):
+        findings.append("python_paths-coverage")
+
+    expected_sources = {
+        path.encode(): digest for path, digest in declared.sources.items()
+    }
+    expected_artifacts = {
+        path.encode(): artifact.sha256 for path, artifact in declared.artifacts.items()
+    }
+    expected_closure = {
+        path.encode(): baseline for path, baseline in declared.proof_closure.items()
+    }
+    expected_workflows = {
+        path.encode(): digest for path, digest in declared.workflows.items()
+    }
+
+    # The declaration cannot carry its own digest, so it is the one tracked JSON
+    # file excluded from the artifact set. Its bytes are still bound to the tree
+    # record above, so a swapped declaration is still caught.
+    tracked_json = {
+        path for path in paths if path.endswith(b".json") and path != DECLARATION_PATH.encode()
+    }
+    if tracked_json != set(expected_artifacts):
+        findings.append("artifacts")
+
+    tracked_workflows = {
+        path
+        for path in paths
+        if path.startswith(b".github/workflows/")
+        and (path.endswith(b".yml") or path.endswith(b".yaml"))
+    }
+    if tracked_workflows != set(expected_workflows):
+        findings.append("workflows")
+
+    expected = (
+        expected_sources
+        | expected_artifacts
+        | expected_workflows
+        | {path: baseline.sha256 for path, baseline in expected_closure.items()}
+    )
+    if not set(expected).issubset(paths):
+        findings.append("expected-paths")
+    for path, digest in expected.items():
+        expected_mode = expected_closure.get(
+            path, FileBaseline(REGULAR_MODE, digest)
+        ).mode
+        entry = view.get(path)
+        if (
+            entry is None
+            or entry.mode != expected_mode
+            or hashlib.sha256(entry.content).hexdigest() != digest
+        ):
+            findings.append(path.decode())
+
+    return tuple(findings), declared
+
+
 def validate_candidate(
     *,
     raw_records: bytes,
@@ -337,97 +526,9 @@ def validate_candidate(
     # Nothing here imports or executes candidate code, so ADMISSION-002 holds.
     # The base still owns the validator and workflow identities checked below,
     # so a candidate cannot restate the gate that judges it.
-    declared = BASE_DECLARATION
-    declaration_record = by_path.get(DECLARATION_PATH.encode())
-    declaration_blob = (
-        None if declaration_record is None else blobs.get(declaration_record.object_id)
-    )
-    if (
-        declaration_record is None
-        or declaration_record.mode != REGULAR_MODE
-        or declaration_blob is None
-        or git_blob_oid(declaration_blob, len(declaration_record.object_id))
-        != declaration_record.object_id
-    ):
+    local_findings, _declared = _verify_local(GitRecordTreeView(by_path, blobs))
+    if local_findings:
         findings.add("ADMISSION-001 EXACT_BASELINE")
-    else:
-        try:
-            declared = parse_declaration(declaration_blob)
-        except ValueError:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-
-    expected_sources = {
-        path.encode(): digest for path, digest in declared.sources.items()
-    }
-    expected_artifacts = {
-        path.encode(): artifact.sha256 for path, artifact in declared.artifacts.items()
-    }
-    expected_closure = {
-        path.encode(): baseline for path, baseline in declared.proof_closure.items()
-    }
-    tracked_python = {
-        path.decode()
-        for path in by_path
-        if path.endswith(b".py")
-        and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
-    }
-    if tracked_python != declared.python_paths:
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    # A .py path can be listed in python_paths yet omitted from every digest
-    # source (sources/proof_closure), in which case the loop below never
-    # hashes it at all: it is declared but never actually verified. Coverage
-    # is derived from the candidate's own python_paths, so a deleted file
-    # simply drops out of tracked_python above and needs no special case here.
-    if not declared.python_paths <= (
-        set(declared.sources) | set(declared.proof_closure)
-    ):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    # The declaration cannot carry its own digest, so it is the one tracked JSON
-    # file excluded from the artifact set. Its bytes are still bound to the tree
-    # record above, so a swapped declaration is still caught.
-    tracked_json = {
-        path
-        for path in by_path
-        if path.endswith(b".json") and path != DECLARATION_PATH.encode()
-    }
-    if tracked_json != set(expected_artifacts):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    expected_workflows = {
-        path.encode(): digest for path, digest in declared.workflows.items()
-    }
-    tracked_workflows = {
-        path
-        for path in by_path
-        if path.startswith(b".github/workflows/")
-        and (path.endswith(b".yml") or path.endswith(b".yaml"))
-    }
-    if tracked_workflows != set(expected_workflows):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    expected = (
-        expected_sources
-        | expected_artifacts
-        | expected_workflows
-        | {path: baseline.sha256 for path, baseline in expected_closure.items()}
-    )
-    if not set(expected).issubset(by_path):
-        findings.add("ADMISSION-001 EXACT_BASELINE")
-    for path, digest in expected.items():
-        record = by_path.get(path)
-        expected_mode = expected_closure.get(
-            path, FileBaseline(REGULAR_MODE, digest)
-        ).mode
-        if record is None or record.mode != expected_mode:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        content = blobs.get(record.object_id)
-        if content is None:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        if git_blob_oid(content, len(record.object_id)) != record.object_id:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
-            continue
-        if hashlib.sha256(content).hexdigest() != digest:
-            findings.add("ADMISSION-001 EXACT_BASELINE")
     validator_record = by_path.get(VALIDATOR_PATH.encode())
     validator_content = (
         None if validator_record is None else blobs.get(validator_record.object_id)
@@ -460,26 +561,24 @@ def validate_candidate(
 
 
 def self_check(root: Path) -> tuple[str, ...]:
-    """Verify current base bytes against the installed dormant trust root."""
-    findings: list[str] = []
-    for path, digest in SOURCE_BASELINE.items():
-        if hashlib.sha256((root / path).read_bytes()).hexdigest() != digest:
-            findings.append(path)
-    for path, artifact in ARTIFACT_BASELINE.items():
-        if hashlib.sha256((root / path).read_bytes()).hexdigest() != artifact.sha256:
-            findings.append(path)
-    for path, baseline in PROOF_CLOSURE_BASELINE.items():
-        candidate = root / path
-        content = (
-            candidate.readlink().as_posix().encode()
-            if baseline.mode == "120000"
-            else candidate.read_bytes()
-        )
-        if hashlib.sha256(content).hexdigest() != baseline.sha256:
-            findings.append(path)
-    for target, bundle in WORKFLOW_TRANSITION_BUNDLES.items():
-        digest = hashlib.sha256((root / bundle).read_bytes()).hexdigest()
-        if digest != WORKFLOW_TRANSITION_BASELINE[target]:
+    """Verify the checked-out filesystem against its own trusted declaration.
+
+    Runs every locally-computable admission check (_verify_local, shared with
+    validate_candidate) directly against `root`, then layers two checks that
+    have no candidate analogue: the staged future-workflow-bundle content
+    match, and the validator's own frozen protocol-identity lock. This proves
+    the checked-out bytes are internally consistent with their own
+    declaration; it does NOT prove admissibility, which additionally needs
+    the CI-supplied base authority that only validate_candidate receives (see
+    main()'s printed self-check line).
+    """
+    view = FilesystemTreeView(root)
+    local_findings, declared = _verify_local(view)
+    findings: list[str] = list(local_findings)
+    for target, bundle in declared.workflow_bundles.items():
+        entry = view.get(bundle.encode())
+        digest = hashlib.sha256(entry.content).hexdigest() if entry is not None else None
+        if digest != declared.workflows.get(target):
             findings.append(bundle)
     # The lock covers only what must never move. Tracked content now lives in
     # the declaration, so pinning content here would force this validator to
@@ -553,7 +652,16 @@ def main(argv: list[str] | None = None) -> int:
             for finding in findings:
                 print(f"FAIL {finding}")
             return 1
-        print(f"PASS {ADMISSION_PROTOCOL} {artifact_manifest_root(ARTIFACT_BASELINE)}")
+        # Deliberately NOT shaped like validate_candidate's PASS line (which
+        # carries an authority-bound behavior_identity) and NOT a digest over
+        # only part of what was checked (the old artifact_manifest_root line
+        # stayed byte-identical while a source file was dropped from the
+        # declaration and tampered - see issue #49). This line instead names,
+        # in one machine-greppable sentence, what self-check does not prove.
+        print(
+            f"PASS {ADMISSION_PROTOCOL} SELF-CHECK-ONLY "
+            "admissibility-not-proven:validator+workflow-base-authority-unverified"
+        )
         return 0
     candidate_values = (
         arguments.records,
