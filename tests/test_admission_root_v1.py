@@ -12,6 +12,7 @@ from tools.admission_root_v1 import (
     ARTIFACT_BASELINE,
     ARTIFACT_MANIFEST_ROOT,
     BEHAVIOR_IDENTITY,
+    DECLARATION_PATH,
     PROOF_CLOSURE_BASELINE,
     PYTHON_PATHS,
     SOURCE_BASELINE,
@@ -62,6 +63,8 @@ class AdmissionRootV1Tests(unittest.TestCase):
         for path in PYTHON_PATHS:
             if path.encode() not in cls.entries:
                 cls._add_bytes(path, (ROOT / path).read_bytes())
+        # The candidate states the tree it ships, so a real snapshot carries it.
+        cls._add_bytes(DECLARATION_PATH, (ROOT / DECLARATION_PATH).read_bytes())
 
     @classmethod
     def _add_baseline(cls, path: str, digest: str, source: str | None = None) -> None:

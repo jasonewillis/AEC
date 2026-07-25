@@ -35,10 +35,17 @@ jobs:
           git fetch --no-tags --depth=1 origin "${HEAD_SHA}"
           git ls-tree -rz --full-tree "${HEAD_SHA}" > "${RUNNER_TEMP}/candidate-tree.bin"
           mkdir "${RUNNER_TEMP}/candidate-blobs"
-          while IFS= read -r path; do
-            object_id="$(git rev-parse "${HEAD_SHA}:${path}")"
-            git cat-file blob "${object_id}" > "${RUNNER_TEMP}/candidate-blobs/${object_id}"
-          done < <(python3 -m tools.admission_root_v1 --print-required-paths)
+          # Fetch every blob the candidate tree carries. The base cannot know
+          # which paths a candidate adds, so enumerating the candidate tree is
+          # the only way a declared transition can be checked at all. These are
+          # bytes on disk; nothing here imports or executes candidate code.
+          git ls-tree -r --full-tree --format='%(objectname) %(objecttype)' \
+            "${HEAD_SHA}" | while read -r object_id object_type; do
+            [ "${object_type}" = "blob" ] || continue
+            [ -e "${RUNNER_TEMP}/candidate-blobs/${object_id}" ] && continue
+            git cat-file blob "${object_id}" \
+              > "${RUNNER_TEMP}/candidate-blobs/${object_id}"
+          done
           validator_blob="$(git rev-parse "${BASE_SHA}:tools/admission_root_v1.py")"
           workflow_blob="$(git rev-parse \
             "${BASE_SHA}:.github/workflows/candidate-admission.yml")"
