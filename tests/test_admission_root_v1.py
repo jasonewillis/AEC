@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 import unittest
 from pathlib import Path
 
@@ -295,6 +296,44 @@ class AdmissionRootV1Tests(unittest.TestCase):
             WORKFLOW_TRANSITION_BASELINE[".github/workflows/foundation-gate.yml"],
         )
         self.assertEqual(future_gate, transitioned_gate)
+
+    def test_uncovered_python_path_lets_tampering_slip_without_coverage_clause(
+        self,
+    ) -> None:
+        """RED CANARY: a .py path omitted from sources/proof_closure must be caught.
+
+        Builds a synthetic declaration identical to the real one except one
+        python_paths entry ("aec/mentor.py") is dropped from `sources` and is
+        not picked up by `proof_closure` either. That path's bytes are then
+        mutated with no matching digest left anywhere in the declaration.
+        Admission must still reject it via the python_paths coverage clause,
+        even though tracked_python set equality and the expected-digest loop
+        have nothing left to compare that one path against.
+        """
+        payload = json.loads((ROOT / DECLARATION_PATH).read_text(encoding="utf-8"))
+        self.assertIn("aec/mentor.py", payload["sources"])
+        self.assertNotIn("aec/mentor.py", payload["proof_closure"])
+        del payload["sources"]["aec/mentor.py"]
+        tampered_declaration = json.dumps(payload).encode("utf-8")
+
+        entries = dict(self.entries)
+        blobs = dict(self.blobs)
+        declaration_oid = git_blob_oid(tampered_declaration)
+        entries[DECLARATION_PATH.encode()] = ("100644", declaration_oid)
+        blobs[declaration_oid] = tampered_declaration
+
+        mutated_mentor = (
+            self.blobs[self.entries[b"aec/mentor.py"][1]]
+            + b"\n# tampered, uncovered\n"
+        )
+        mentor_oid = git_blob_oid(mutated_mentor)
+        entries[b"aec/mentor.py"] = ("100644", mentor_oid)
+        blobs[mentor_oid] = mutated_mentor
+
+        report = self.prove(entries=entries, blobs=blobs)
+
+        self.assertFalse(report.passed, report.findings)
+        self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
 
     def test_base_constants_and_current_bytes_self_check(self) -> None:
         self.assertEqual(

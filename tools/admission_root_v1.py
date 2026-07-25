@@ -167,8 +167,10 @@ def parse_declaration(raw: bytes) -> SourceDeclaration:
 
     if ACTIVE_WORKFLOW_PATH not in workflows:
         raise ValueError("Declaration must cover the active admission workflow")
-    # The validator carries no declared digest on purpose. Its integrity comes
-    # from the base-owned blob identity, which a candidate cannot restate.
+    # The validator's primary integrity anchor is the base-owned blob identity
+    # below, which a candidate cannot restate. It also carries a declared
+    # digest like any other tracked .py path, so the coverage clause in
+    # validate_candidate needs no special case for it either.
     if VALIDATOR_PATH not in python_paths:
         raise ValueError("Declaration must track the admission validator")
     return SourceDeclaration(
@@ -370,6 +372,15 @@ def validate_candidate(
         and (b"/" not in path or path.startswith((b"aec/", b"tests/", b"tools/")))
     }
     if tracked_python != declared.python_paths:
+        findings.add("ADMISSION-001 EXACT_BASELINE")
+    # A .py path can be listed in python_paths yet omitted from every digest
+    # source (sources/proof_closure), in which case the loop below never
+    # hashes it at all: it is declared but never actually verified. Coverage
+    # is derived from the candidate's own python_paths, so a deleted file
+    # simply drops out of tracked_python above and needs no special case here.
+    if not declared.python_paths <= (
+        set(declared.sources) | set(declared.proof_closure)
+    ):
         findings.add("ADMISSION-001 EXACT_BASELINE")
     # The declaration cannot carry its own digest, so it is the one tracked JSON
     # file excluded from the artifact set. Its bytes are still bound to the tree

@@ -43,6 +43,7 @@ FROZEN_PYTHON_PATHS = (
     "tools/__init__.py",
     "tools/admission_root_v1.py",
     "tools/generate_resolver.py",
+    "tools/generate_source_declaration.py",
     "tools/prove_agent_adapter_parity.py",
     "tools/prove_foundation_behavior.py",
     "tools/prove_private_mentor_lens.py",
