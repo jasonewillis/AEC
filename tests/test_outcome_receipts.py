@@ -462,8 +462,8 @@ class CanonicalIntegerEncodingTests(unittest.TestCase):
                     self.assertTrue(validate_public_card(card))
 
 
-class OutcomeRecordAuthenticationTests(unittest.TestCase):
-    """Prove one record authenticates its card as a projection of its decision."""
+class OutcomeRecordBindingTests(unittest.TestCase):
+    """Prove one record binds its card to a carried decision snapshot."""
 
     def setUp(self) -> None:
         records = load_json(FIXTURES / "golden.json")

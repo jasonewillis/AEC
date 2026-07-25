@@ -107,10 +107,11 @@ draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC nev
 submits that draft or acts on the recommendation.
 
 A consumer that acted on a rendered recommendation may later write one local outcome
-record holding the card, the complete decision that produced it, and one receipt binding
-that exact decision to what was observed. Verification validates the decision, recomputes
-its resolution hash, and reproduces the card from it before reading any receipt fact. Receipts are never uploaded,
-aggregated remotely, or fed back into policy. See
+record holding the card, the carried decision snapshot, and one receipt binding that
+snapshot to what was observed. Verification validates the snapshot, recomputes its
+resolution hash, and reproduces the card from it before reading any receipt fact. This
+proves internal consistency, not trusted authorship or origin. Receipts are never
+uploaded, aggregated remotely, or fed back into policy. See
 [decision outcomes](architecture/decision-outcomes.md) for the receipt contract, the
 derived verdict rules, and the local evaluator.
 

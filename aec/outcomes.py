@@ -304,12 +304,12 @@ def _decision_errors(decision: object) -> list[str]:
 def verify_outcome_record(
     record: object,
 ) -> OutcomeReceiptVerification | OutcomeReceiptRejection:
-    """Authenticate one local record before evaluating any receipt fact.
+    """Validate one local record before evaluating any receipt fact.
 
-    A record carries the complete decision that produced its card. The decision
-    is validated by the independent decision validator, its resolution hash is
-    recomputed, and the card must be the exact deterministic projection of that
-    decision. Only then are the receipt's own facts read.
+    A record carries a complete decision snapshot and its projected card. The
+    decision is validated, its resolution hash is recomputed, and the card must
+    be the exact deterministic projection of that decision. This proves internal
+    consistency, not trusted authorship or origin. Only then are receipt facts read.
     """
     try:
         normalized = normalize_exact_json(record)
@@ -352,12 +352,12 @@ def verify_outcome_receipt(
     receipt: object,
     card: object,
 ) -> OutcomeReceiptVerification | OutcomeReceiptRejection:
-    """Verify one receipt against one card, after the card was authenticated.
+    """Verify one receipt against one structurally validated card.
 
     This is the receipt stage of the record contract. It reads receipt facts
-    against an already rendered card and does not itself authenticate the card
-    against a decision. `verify_outcome_record` is the authenticated entry
-    point, and it is the only path `evaluate_outcomes` and the CLI take.
+    against an already rendered card and does not bind the card to a decision.
+    `verify_outcome_record` is the snapshot-bound entry point, and it is the only
+    path `evaluate_outcomes` and the CLI take.
     """
     try:
         normalized = normalize_exact_json(receipt)

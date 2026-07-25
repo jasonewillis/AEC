@@ -1548,7 +1548,7 @@ def main() -> int:
     report = evaluate_outcomes(outcomes["records"])
     checks.append(
         report_errors(
-            "outcome-record.decision-authenticated",
+            "outcome-record.decision-snapshot-bound",
             validate_resolution(decision)
             + (
                 []

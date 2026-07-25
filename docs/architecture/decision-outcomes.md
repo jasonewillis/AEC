@@ -82,10 +82,10 @@ result, or verdict is read from a card that failed.
 
 `card_hash` alone is local structural and tamper integrity, not proof of origin. It
 detects a card that was truncated, edited, or reassembled, but anyone who can rewrite a
-card can also recompute the hash. Origin is established separately, by the record
-authentication below. AEC adds no signing keys and no secrets.
+card can also recompute the hash. AEC adds no signing keys, secrets, trusted ledger, or
+trusted storage boundary, so it makes no claim about who authored a local record.
 
-## Record authentication
+## Record consistency and exact snapshot binding
 
 A recomputed hash proves nothing on its own, because whoever changed the card can
 recompute it. So an outcome record carries the complete normalized decision that produced
@@ -95,7 +95,8 @@ the card:
 {"card": {...}, "decision": {...}, "receipt": {...}}
 ```
 
-Verification authenticates the record before it reads a single receipt fact:
+Verification checks the record's internal consistency before it reads a single receipt
+fact:
 
 1. the decision is validated by the independent decision validator, the same one the
    foundation gate runs, so a fabricated decision must satisfy the entire closed decision
@@ -109,6 +110,12 @@ Verification authenticates the record before it reads a single receipt fact:
 render a card and the outcome verifier calls it to reproduce one, so there is one
 implementation and no second opinion about what a decision renders. It reads an already
 resolved decision and holds no resolver, policy, or lifecycle authority.
+
+These checks prove that the carried card is the exact projection of the carried decision
+snapshot. They do not prove that a trusted actor or process created either value. A
+coherent local record can be self-authored and have all of its hashes recomputed. Trusted
+origin would require an external signature, ledger, or storage boundary, which is outside
+AEC's local, read-only, non-authoritative contract.
 
 | Failure | Code |
 | --- | --- |
