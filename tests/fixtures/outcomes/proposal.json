@@ -52,9 +52,12 @@
       "choice": "isolate-import-boundary",
       "confidence": "high",
       "expected_result": {
+        "baseline": 4,
         "direction": "decrease",
         "measure": "unrelated-import-failures",
-        "threshold": "Zero unrelated import failures in the focused proof run."
+        "target": 0,
+        "threshold": "Zero unrelated import failures in the focused proof run.",
+        "unit": "failures"
       },
       "principal_uncertainty": "Whether another entry point still imports it eagerly.",
       "revisit_when": [

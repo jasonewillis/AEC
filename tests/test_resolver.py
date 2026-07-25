@@ -3,6 +3,7 @@ import json
 import unittest
 from pathlib import Path
 
+from aec.mentoring import validate_decision_context
 from aec.resolver import (
     ResolutionRejection,
     canonical_resolution_bytes,
@@ -76,9 +77,12 @@ MATERIAL_DECISION_CONTEXT = {
         "choice": "isolate-import-boundary",
         "confidence": "high",
         "expected_result": {
+            "baseline": 4,
             "direction": "decrease",
             "measure": "unrelated-import-failures",
+            "target": 0,
             "threshold": "Zero unrelated import failures in the focused UI proof run.",
+            "unit": "failures",
         },
         "principal_uncertainty": (
             "Whether any production entry point still imports the ML stack eagerly."
@@ -305,6 +309,36 @@ class ResolverTracerTests(unittest.TestCase):
         uncitable_choice["choices"][0]["identity"] = "Isolate the import boundary"
         uncitable_choice["recommendation"]["choice"] = "Isolate the import boundary"
         invalid_contexts.append(uncitable_choice)
+
+        # An expected result is comparable only when baseline, target, and direction agree.
+        for field, value in (
+            ("target", 4),
+            ("target", 9),
+            ("direction", "increase"),
+            ("direction", "hold"),
+            ("baseline", 4.0),
+            ("baseline", True),
+            ("target", "0"),
+            ("unit", "Failures Per Run"),
+            ("unit", ""),
+        ):
+            incomparable = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+            incomparable["recommendation"]["expected_result"][field] = value
+            invalid_contexts.append(incomparable)
+
+        for field in ("baseline", "target", "unit"):
+            incomplete = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+            del incomplete["recommendation"]["expected_result"][field]
+            invalid_contexts.append(incomplete)
+
+        held = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        held["recommendation"]["expected_result"].update(
+            {"baseline": 4, "direction": "hold", "target": 4}
+        )
+        self.assertEqual(
+            [],
+            validate_decision_context(held, revision=held["context"]["revision"]),
+        )
 
         for context in invalid_contexts:
             with self.subTest(context=context):

@@ -25,15 +25,14 @@
     "observed_result": {
       "additionalProperties": false,
       "properties": {
-        "direction": {"enum": ["increase", "decrease", "hold"]},
-        "expectation": {
-          "enum": ["met", "partially-met", "missed", "reversed", "unobserved"]
-        },
-        "measure": {"$ref": "#/$defs/identity"}
+        "measure": {"$ref": "#/$defs/identity"},
+        "unit": {"$ref": "#/$defs/identity"},
+        "value": {"type": "integer"}
       },
-      "required": ["direction", "expectation", "measure"],
+      "required": ["measure", "unit", "value"],
       "type": "object"
     },
+    "observed_revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
     "schema_version": {"const": "1.0.0"},
     "verdict": {
       "enum": [
@@ -64,6 +63,7 @@
     "coaching",
     "decision",
     "observed_result",
+    "observed_revision",
     "schema_version",
     "verdict",
     "verification"

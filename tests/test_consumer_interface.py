@@ -141,7 +141,7 @@ class ConsumerStateContractTests(unittest.TestCase):
             )
         self.assertEqual("consumer-owner", support["authority"]["owner"])
         self.assertEqual(
-            {"direction", "measure", "threshold"},
+            {"baseline", "direction", "measure", "target", "threshold", "unit"},
             set(support["recommendation"]["expected_result"]),
         )
         self.assertEqual("high", support["recommendation"]["confidence"])

@@ -39,8 +39,11 @@ This repository currently provides:
 - AEC-authored phase teaching plus optional, validated material-decision support with
   declared evidence quality, confidence, principal uncertainty, and one expected
   measurable result;
-- a local-only outcome receipt and deterministic evaluator that compare each
-  recommendation with an observed result without telemetry, free text, or causal claims;
+- a hashed public mentoring card whose closed validator recomputes local structural and
+  tamper integrity, without signing keys, secrets, or any claim of external origin;
+- a local-only outcome receipt and deterministic evaluator that derive each verdict from
+  an exact integer result measured after the change, without telemetry, free text, or
+  causal claims;
 - provenance locks for upstream pattern sources;
 - seven exact, pinned Blueprint skills under one canonical agent-neutral root with
   Claude symlinks and fail-closed hash and discovery-parity validation;

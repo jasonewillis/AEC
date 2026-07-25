@@ -4,9 +4,12 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from typing import Any
 
+from aec.cards import compute_card_hash, validate_public_card
 from aec.consumer import ConsumerCard, resolve_consumer_state
 from aec.outcomes import (
+    VERDICTS,
     OutcomeReceiptRejection,
     OutcomeReceiptVerification,
     evaluate_outcomes,
@@ -54,6 +57,23 @@ class OutcomeReceiptContractTests(unittest.TestCase):
         self.assertEqual(code, result.code)
         self.assertTrue(result.errors)
 
+    def reject_card(self, card: object) -> None:
+        result = verify_outcome_receipt(self.receipt, card)
+        self.assertIsInstance(result, OutcomeReceiptRejection)
+        assert isinstance(result, OutcomeReceiptRejection)
+        self.assertEqual("OUTCOME_RECEIPT_CARD_INVALID", result.code)
+
+    def observed(self, value: object) -> dict[str, Any]:
+        receipt = copy.deepcopy(self.receipt)
+        receipt["observed_result"]["value"] = value
+        return receipt
+
+    def expectation(self, name: str, value: object) -> dict[str, Any]:
+        card = copy.deepcopy(self.card)
+        card["decision_support"]["recommendation"]["expected_result"][name] = value
+        card["card_hash"] = compute_card_hash(card)
+        return card
+
     def test_golden_example_binds_proposal_card_and_observed_result(self) -> None:
         self.assertEqual(rendered_card(), self.card)
 
@@ -88,16 +108,57 @@ class OutcomeReceiptContractTests(unittest.TestCase):
             ],
             schema["properties"]["verdict"]["enum"],
         )
+        observed = schema["properties"]["observed_result"]
+        self.assertEqual({"measure", "unit", "value"}, set(observed["required"]))
+        self.assertEqual("integer", observed["properties"]["value"]["type"])
 
     def test_routine_work_cannot_carry_an_outcome_receipt(self) -> None:
         routine = copy.deepcopy(self.card)
         routine["decision_support"] = None
+        routine["card_hash"] = compute_card_hash(routine)
 
         result = verify_outcome_receipt(self.receipt, routine)
 
         self.assertIsInstance(result, OutcomeReceiptRejection)
         assert isinstance(result, OutcomeReceiptRejection)
         self.assertEqual("OUTCOME_RECEIPT_NO_DECISION", result.code)
+
+    def test_broken_cards_fail_before_any_outcome_fact_is_read(self) -> None:
+        for value in (None, [], "card"):
+            with self.subTest(card=value):
+                self.reject_card(value)
+
+        missing = copy.deepcopy(self.card)
+        del missing["gate"]
+        self.reject_card(missing)
+
+        malformed = copy.deepcopy(self.card)
+        malformed["gate"] = "green"
+        malformed["card_hash"] = compute_card_hash(malformed)
+        self.reject_card(malformed)
+
+        inconsistent = copy.deepcopy(self.card)
+        inconsistent["transition_request"]["requested_gate"] = "Ready"
+        inconsistent["card_hash"] = compute_card_hash(inconsistent)
+        self.reject_card(inconsistent)
+
+        tampered = copy.deepcopy(self.card)
+        tampered["decision_support"]["recommendation"]["choice"] = "install-everywhere"
+        self.reject_card(tampered)
+
+    def test_inconsistent_expected_result_on_the_card_fails_closed(self) -> None:
+        for name, value in (
+            ("target", 4),
+            ("target", 9),
+            ("direction", "increase"),
+            ("direction", "hold"),
+            ("baseline", 4.0),
+            ("baseline", True),
+            ("target", "0"),
+            ("unit", "Failures Per Run"),
+        ):
+            with self.subTest(field=name, value=value):
+                self.reject_card(self.expectation(name, value))
 
     def test_stale_or_mismatched_decision_binding_fails_closed(self) -> None:
         wrong_hash = copy.deepcopy(self.receipt)
@@ -108,56 +169,115 @@ class OutcomeReceiptContractTests(unittest.TestCase):
         wrong_revision["decision"]["revision"] = "f" * 40
         self.reject(wrong_revision, "OUTCOME_RECEIPT_DECISION_MISMATCH")
 
-    def test_undeclared_choice_fails_closed(self) -> None:
+    def test_only_the_recommended_choice_can_be_reported(self) -> None:
         undeclared = copy.deepcopy(self.receipt)
         undeclared["decision"]["selected_choice"] = "rewrite-everything"
         self.reject(undeclared, "OUTCOME_RECEIPT_CHOICE_UNDECLARED")
 
-    def test_result_that_does_not_match_the_expected_result_fails_closed(self) -> None:
+        declared = copy.deepcopy(self.receipt)
+        declared["decision"]["selected_choice"] = "install-everywhere"
+        self.reject(declared, "OUTCOME_RECEIPT_CHOICE_NOT_RECOMMENDED")
+
+    def test_result_that_does_not_answer_the_expected_result_fails_closed(self) -> None:
         other_measure = copy.deepcopy(self.receipt)
         other_measure["observed_result"]["measure"] = "some-other-measure"
         self.reject(other_measure, "OUTCOME_RECEIPT_RESULT_MISMATCH")
 
-        wrong_direction = copy.deepcopy(self.receipt)
-        wrong_direction["observed_result"]["direction"] = "increase"
-        self.reject(wrong_direction, "OUTCOME_RECEIPT_RESULT_MISMATCH")
+        other_unit = copy.deepcopy(self.receipt)
+        other_unit["observed_result"]["unit"] = "seconds"
+        self.reject(other_unit, "OUTCOME_RECEIPT_RESULT_MISMATCH")
 
-    def test_lying_outcome_summary_fails_closed(self) -> None:
-        for expectation, verdict in (
-            ("missed", "unsupported"),
-            ("partially-met", "partially-supported"),
-            ("reversed", "harmful"),
-            ("unobserved", "inconclusive"),
-        ):
-            with self.subTest(expectation=expectation):
-                lying = copy.deepcopy(self.receipt)
-                lying["observed_result"]["expectation"] = expectation
-                if expectation == "reversed":
-                    lying["observed_result"]["direction"] = "increase"
-                self.reject(lying, "OUTCOME_RECEIPT_VERDICT_CONTRADICTED")
+    def test_the_observed_revision_may_differ_from_the_decision_revision(self) -> None:
+        self.assertNotEqual(
+            self.receipt["decision"]["revision"],
+            self.receipt["observed_revision"],
+        )
 
-                honest = copy.deepcopy(lying)
+        result = verify_outcome_receipt(self.receipt, self.card)
+
+        self.assertIsInstance(result, OutcomeReceiptVerification)
+        assert isinstance(result, OutcomeReceiptVerification)
+        self.assertEqual(self.receipt["observed_revision"], result.observed_revision)
+        self.assertEqual(self.card["transition_request"]["revision"], result.revision)
+
+    def test_mixed_or_stale_accepted_verification_fails_closed(self) -> None:
+        decision_revision = self.receipt["decision"]["revision"]
+
+        mixed = copy.deepcopy(self.receipt)
+        mixed["verification"][0]["revision"] = "f" * 40
+        self.reject(mixed, "OUTCOME_RECEIPT_VERIFICATION_STALE")
+
+        stale = copy.deepcopy(self.receipt)
+        for fact in stale["verification"]:
+            fact["revision"] = decision_revision
+        self.reject(stale, "OUTCOME_RECEIPT_VERIFICATION_STALE")
+
+        ignored = copy.deepcopy(self.receipt)
+        ignored["verification"].append(
+            {"accepted": False, "kind": "smoke-report", "revision": decision_revision}
+        )
+        self.assertIsInstance(
+            verify_outcome_receipt(ignored, self.card), OutcomeReceiptVerification
+        )
+
+    def test_non_integer_metric_values_fail_closed(self) -> None:
+        for value in (True, False, 0.0, 1.5, "0", None, [0], {"value": 0}):
+            with self.subTest(value=value):
+                self.reject(self.observed(value), "OUTCOME_RECEIPT_INVALID")
+
+    def test_the_declared_verdict_must_equal_the_derived_verdict(self) -> None:
+        for value, verdict in ((0, "supported"), (-2, "supported"),
+                               (1, "partially-supported"), (3, "partially-supported"),
+                               (4, "unsupported"), (5, "harmful")):
+            with self.subTest(value=value):
+                honest = self.observed(value)
                 honest["verdict"] = verdict
                 result = verify_outcome_receipt(honest, self.card)
                 self.assertIsInstance(result, OutcomeReceiptVerification)
                 assert isinstance(result, OutcomeReceiptVerification)
                 self.assertEqual(verdict, result.verdict)
 
-    def test_unverified_or_stale_verification_forces_inconclusive(self) -> None:
+                for lie in sorted(set(VERDICTS) - {verdict}):
+                    lying = copy.deepcopy(honest)
+                    lying["verdict"] = lie
+                    self.reject(lying, "OUTCOME_RECEIPT_VERDICT_CONTRADICTED")
+
+    def test_increase_is_the_exact_inverse_and_hold_admits_one_value(self) -> None:
+        cases = (
+            ("increase", 4, 9, ((9, "supported"), (11, "supported"),
+                                (5, "partially-supported"), (4, "unsupported"),
+                                (3, "harmful"))),
+            ("hold", 4, 4, ((4, "supported"), (3, "harmful"), (5, "harmful"))),
+        )
+        for direction, baseline, target, outcomes in cases:
+            card = copy.deepcopy(self.card)
+            card["decision_support"]["recommendation"]["expected_result"].update(
+                {"baseline": baseline, "direction": direction, "target": target}
+            )
+            card["card_hash"] = compute_card_hash(card)
+            self.assertEqual([], validate_public_card(card))
+
+            for value, verdict in outcomes:
+                with self.subTest(direction=direction, value=value):
+                    receipt = self.observed(value)
+                    receipt["verdict"] = verdict
+                    result = verify_outcome_receipt(receipt, card)
+                    self.assertIsInstance(result, OutcomeReceiptVerification)
+                    assert isinstance(result, OutcomeReceiptVerification)
+                    self.assertEqual(verdict, result.verdict)
+
+    def test_no_accepted_proof_derives_an_inconclusive_verdict(self) -> None:
         unverified = copy.deepcopy(self.receipt)
         for fact in unverified["verification"]:
             fact["accepted"] = False
         self.reject(unverified, "OUTCOME_RECEIPT_VERDICT_CONTRADICTED")
 
-        stale = copy.deepcopy(self.receipt)
-        for fact in stale["verification"]:
-            fact["revision"] = "f" * 40
-        self.reject(stale, "OUTCOME_RECEIPT_VERDICT_CONTRADICTED")
-
-        honest = copy.deepcopy(stale)
+        honest = copy.deepcopy(unverified)
         honest["verdict"] = "inconclusive"
         result = verify_outcome_receipt(honest, self.card)
         self.assertIsInstance(result, OutcomeReceiptVerification)
+        assert isinstance(result, OutcomeReceiptVerification)
+        self.assertEqual("inconclusive", result.verdict)
 
     def test_unknown_and_prohibited_fields_fail_closed(self) -> None:
         cases = load_json(FIXTURES / "red-cases.json")
@@ -235,7 +355,7 @@ class OutcomeEvaluatorTests(unittest.TestCase):
     def test_evaluator_reports_rejected_records_without_counting_them(self) -> None:
         records = copy.deepcopy(self.records)
         records[0]["receipt"]["verdict"] = "supported"
-        records[0]["receipt"]["observed_result"]["expectation"] = "missed"
+        records[0]["receipt"]["observed_result"]["value"] = 9
 
         report = evaluate_outcomes(records)
 

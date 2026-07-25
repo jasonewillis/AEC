@@ -86,7 +86,9 @@ The request may also include `decision_context` as null or a closed material-dec
 brief at `schema_version: 2.0.0`. The brief contains two or three choices, five explicit
 tradeoff dimensions per choice, the revision and evidence quality the decision was formed
 from, one recommendation with its confidence, principal uncertainty, and expected
-measurable result, evidence that would justify revisiting it, and the decision authority
+measurable result — a measure, a unit, an exact integer baseline and target, and a
+direction those numbers must agree with — evidence that would justify revisiting it, and
+the decision authority
 owner. The resolver validates it against the request revision, binds it into the request
 hash, and returns it as `decision_support`. The resolver does not invent choices, select
 an authority, or execute the recommendation. See

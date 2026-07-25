@@ -38,7 +38,14 @@ RECOMMENDATION_FIELDS = {
     "revisit_when",
     "why",
 }
-EXPECTED_RESULT_FIELDS = {"direction", "measure", "threshold"}
+EXPECTED_RESULT_FIELDS = {
+    "baseline",
+    "direction",
+    "measure",
+    "target",
+    "threshold",
+    "unit",
+}
 AUTHORITY_OWNERS = {"agent", "consumer-owner", "external"}
 RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
 # Confidence may never exceed the evidence that supports it.
@@ -86,6 +93,11 @@ def _validate_context(value: object, field: str, revision: object) -> list[str]:
     return errors
 
 
+def _exact_integer(value: object) -> bool:
+    """Return whether a value is an exact integer and not a boolean."""
+    return type(value) is int
+
+
 def _validate_expected_result(value: object, field: str) -> list[str]:
     """Validate one declared measurable result for the recommendation."""
     if type(value) is not dict or set(value) != EXPECTED_RESULT_FIELDS:
@@ -94,10 +106,28 @@ def _validate_expected_result(value: object, field: str) -> list[str]:
     measure = value.get("measure")
     if type(measure) is not str or not SLUG_IDENTITY.fullmatch(measure):
         errors.append(f"{field}.measure must be a lowercase hyphenated identity")
-    if value.get("direction") not in RESULT_DIRECTIONS:
+    unit = value.get("unit")
+    if type(unit) is not str or not SLUG_IDENTITY.fullmatch(unit):
+        errors.append(f"{field}.unit must be a lowercase hyphenated identity")
+    direction = value.get("direction")
+    if direction not in RESULT_DIRECTIONS:
         errors.append(f"{field}.direction is unsupported")
     if not _non_empty_string(value.get("threshold")):
         errors.append(f"{field}.threshold must be a non-empty string")
+    baseline = value.get("baseline")
+    target = value.get("target")
+    for name, number in (("baseline", baseline), ("target", target)):
+        if not _exact_integer(number):
+            errors.append(f"{field}.{name} must be an exact integer")
+    if errors or direction not in RESULT_DIRECTIONS:
+        return errors
+    # A direction that disagrees with its own numbers cannot be compared later.
+    if (
+        (direction == "decrease" and not target < baseline)
+        or (direction == "increase" and not target > baseline)
+        or (direction == "hold" and target != baseline)
+    ):
+        errors.append(f"{field}.target contradicts {field}.direction")
     return errors
 
 

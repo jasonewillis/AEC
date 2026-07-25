@@ -15,10 +15,10 @@ BEHAVIOR_IDENTITY = (
     "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
 ARTIFACT_MANIFEST_ROOT = (
-    "sha256:f9f45265f506faf45eab88aabc5496527be6d96b8005d8ebdb6d2a6f9a07e181"
+    "sha256:2f48cc5a3d614c83a13bbad6af70781756cbf13c714bb365c762655f734b91fa"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:594b00bc42bb107a14ee9ac6f41a14e232df7705d90fb6050f3248e851d2aa3a"
+    "sha256:59b0a7dd146a1842ca5d459eafac3572ebbed3a1a7581e78fe6437d999c046ac"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -50,12 +50,15 @@ SOURCE_BASELINE: dict[str, str] = {
     "aec/_generated/resolver_program.py": (
         "4cf7aa4c831abe910d88bb23bf344beaa6dcfa11d0317e63048bb4a05508c270"
     ),
+    "aec/cards.py": (
+        "9d49ecca0302871f6f18f781373017620b7455cda395a93a03448ca0e36be073"
+    ),
     "aec/contracts.py": "077f7225b232d04ab02e5d908b5af0fb9243ed20def359ac739baefd1ddbedc1",
     "aec/mentoring.py": (
-        "30d65f35c53a286ef36d180324a143c717bae699271196f4338513bb270a8e1b"
+        "6493e470096f8cb5ae552f9cba1b1b35745b055bdc48924f4b522cd23bd7ba12"
     ),
     "aec/outcomes.py": (
-        "74d30de3e71359124852758d3ca498e71c4b089cce4ff5871bcceb6a17e1a5c3"
+        "9458e7bda9623f02a122bfb6c345d517bafdd97da64b4b077d0a8fb889eaec2d"
     ),
     "aec/review_attestation.py": (
         "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db"
@@ -95,7 +98,7 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/consumer-state.schema.json": ArtifactBaseline(
         "schema",
-        "39c7c739058348adf7274a13ee6f3778c23a7deb31b184ca03ab15000dd53fed",
+        "db8b86f2d39c7166a7739d954b0bc861f70ab51a53694d081c4514ea88138e86",
     ),
     "schemas/course-inventory.schema.json": ArtifactBaseline(
         "schema",
@@ -123,11 +126,11 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "schemas/outcome-receipt.schema.json": ArtifactBaseline(
         "schema",
-        "9f0e58c55f720610940ce7cbdfe3b915243bc3b4b4231b3e0756bd632e3f2754",
+        "065d3d71eae2f186a180c2e507bcc73b5d316bfc764353e3fd4d54822b6d2cc6",
     ),
     "schemas/resolution-request.schema.json": ArtifactBaseline(
         "schema",
-        "83ee7d7d829a93b8823ddc4f8ba124d2abf7a4c7047d6698c4596fde316643d9",
+        "bdda1453d41ff20dc78254aa66aec3cc34bc8e64c7ac8529e899a8d31ed0c42b",
     ),
     "schemas/resolver-program.schema.json": ArtifactBaseline(
         "schema",
@@ -155,15 +158,15 @@ ARTIFACT_BASELINE: dict[str, ArtifactBaseline] = {
     ),
     "tests/fixtures/outcomes/golden.json": ArtifactBaseline(
         "test-fixture",
-        "db1b5814a2d46011a7981dcdf934eb55924f422d4f8911405cdfb63e181034c7",
+        "e9ea756dff03b0e21819ed9ea86fb0bb00a4da9f430bec008a24e788ec4a8c64",
     ),
     "tests/fixtures/outcomes/proposal.json": ArtifactBaseline(
         "test-fixture",
-        "378b5ff4a5c2c0e400b227618cb7301691067e3ce9971109829899fab3a21a29",
+        "5081cfa917f64609e85a04bc2f22b4989f5c68d2a802f7a766c7f366e6ec0c55",
     ),
     "tests/fixtures/outcomes/red-cases.json": ArtifactBaseline(
         "test-fixture",
-        "b61c9b47e665d426ab3df31bc378c362bc1ef2d4eb098a9ebba4e212d02ed1ed",
+        "ac38173c216640561389931176ba0458d66545d5b63758832806fd904d3ddf8b",
     ),
     "tests/fixtures/private-mentor-lens/valid.json": ArtifactBaseline(
         "test-fixture",
@@ -257,7 +260,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "aec/consumer.py": FileBaseline(
         REGULAR_MODE,
-        "c387af9e1e9fa2ed52e4ae243fc1b862e35611868d5f9a5b0bc18377dafd89a9",
+        "1bcf5585d7843ad7e960b0c6709782b588bdeeb0aecbe75b8739cc6b6c47b263",
     ),
     "tests/test_foundation_behavior.py": FileBaseline(
         REGULAR_MODE,
@@ -285,7 +288,7 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = {
     ),
     "tools/validate_foundation.py": FileBaseline(
         REGULAR_MODE,
-        "8c986c4e86e7e0fbb15068cfedc2a06139c70101b828f2aabec6bac8e1ec9a59",
+        "b884fa7afe7f2837ccfbfc44b99aa1a689b68f9710ace54cb3cc08bd2fb061b8",
     ),
 }
 PYTHON_PATHS = frozenset(
@@ -305,6 +308,7 @@ PYTHON_PATHS = frozenset(
         "tests/test_foundation_behavior.py",
         "tests/test_outcome_receipts.py",
         "tests/test_private_mentor_lens.py",
+        "tests/test_public_card.py",
         "tests/test_resolver.py",
         "tests/test_resolver_blocker_precedence.py",
         "tests/test_resolver_program.py",

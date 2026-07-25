@@ -76,10 +76,16 @@ fields, stale freshness windows, revision or environment mismatches, effectful
 declarations, and local private paths before invoking the resolver.
 
 An accepted record is translated into the existing normalized resolver request. The
-resulting card contains Lane, Phase, the stage and nine-phase rail position, Gate,
-rationale, required proof, Good, Finished, one anti-example, and AEC-authored teaching.
-The teaching states the transferable lesson, why the gate exists, and how to recognize
-the situation again.
+resulting card is versioned at `schema_version: 3.0.0` and contains Lane, Phase, the
+stage and nine-phase rail position, Gate, rationale, required proof, Good, Finished, one
+anti-example, and AEC-authored teaching. The teaching states the transferable lesson, why
+the gate exists, and how to recognize the situation again.
+
+The card also carries `card_hash`, computed at render time over the complete card except
+`card_hash` itself. One closed validator covers every card field, checks that the card
+agrees with itself, and recomputes the hash. That is local structural and tamper
+integrity, not proof of origin: anyone who can rewrite a card can recompute the hash. AEC
+adds no signing keys or secrets.
 
 `decision_context` is optional and versioned at `schema_version: 2.0.0`. Omission means
 the task has no material fork and the card returns `decision_support: null`. When
@@ -87,8 +93,10 @@ supplied, it must contain two or three choices. Every choice carries a lowercase
 hyphenated identity an outcome receipt can cite exactly, and names quality, risk,
 reversibility, maintainability, and scope tradeoffs. The recommendation must identify
 one declared choice, explain why, name its principal uncertainty, declare a confidence,
-declare one expected measurable result, and name observable evidence that would justify
-revisiting it. `context.revision` must equal the record revision, and
+declare one expected measurable result — a measure, a unit, an exact integer baseline and
+target, a direction that agrees with those numbers, and a readable threshold — and name
+observable evidence that would justify revisiting it. `context.revision` must equal the
+record revision, and
 `context.evidence_quality` must support the declared confidence. The authority owner is
 one of `agent`, `consumer-owner`, or `external`; AEC itself is never an authority owner.
 A context missing any of those facts is rejected before a card is rendered.
@@ -110,8 +118,12 @@ The unversioned decision context that shipped before this contract is no longer
 accepted: it cannot state evidence quality, confidence, principal uncertainty, or an
 expected measurable result, so its recommendation could never be compared with a real
 outcome. Records without `decision_context` are unaffected, and every other consumer
-state, request, decision, and card version is unchanged. To migrate, add
-`schema_version`, `context`, and the four new `recommendation` fields.
+state, request, and decision version is unchanged. To migrate, add `schema_version`,
+`context`, and the four new `recommendation` fields.
+
+The public card moved from `2.0.0` to `3.0.0` in the same transition, because `card_hash`
+is a new required field. A reader that pinned the `2.0.0` card shape must accept
+`card_hash` and should recompute it. Consumer state remains at `1.0.0`.
 
 ## Conformance exit gate
 

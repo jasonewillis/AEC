@@ -8,6 +8,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from aec.cards import (
+    PHASE_RAIL,
+    PUBLIC_CARD_SCHEMA_VERSION,
+    STAGE_PHASES,
+    compute_card_hash,
+)
 from aec.contracts import normalize_exact_json, validate_project_profile
 from aec.mentoring import validate_decision_context
 from aec.resolver import (
@@ -45,23 +51,6 @@ PRIVATE_PATH_PATTERNS = (
     re.compile(r"(?<![\\])\\\\[^\\\s]+\\[^\\\s]+"),
     re.compile(r"(?<![A-Za-z0-9_.])\.{1,2}[/\\]"),
 )
-PHASE_RAIL = (
-    "Intake",
-    "Framing",
-    "Spec",
-    "Plan",
-    "Build",
-    "Verify",
-    "Review",
-    "PR",
-    "Deploy",
-)
-STAGE_PHASES = {
-    "Understand": ("Intake", "Framing"),
-    "Design": ("Spec", "Plan"),
-    "Execute": ("Build", "Verify"),
-    "Assure & Release": ("Review", "PR", "Deploy"),
-}
 
 
 @dataclass(frozen=True)
@@ -455,7 +444,7 @@ def _render_card(decision: ResolutionDecision) -> ConsumerCard:
         "rationale": resolved["rationale"],
         "required_proof": resolved["required_evidence"],
         "resolution_hash": resolved["resolution_hash"],
-        "schema_version": "2.0.0",
+        "schema_version": PUBLIC_CARD_SCHEMA_VERSION,
         "decision_support": resolved["decision_support"],
         "transition_request": {
             "authoritative": False,
@@ -466,6 +455,7 @@ def _render_card(decision: ResolutionDecision) -> ConsumerCard:
             "revision": resolved["revision"],
         },
     }
+    card["card_hash"] = compute_card_hash(card)
     return ConsumerCard(_canonical_bytes(card))
 
 

@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from aec.cards import validate_public_card
 from aec.contracts import normalize_exact_json
 
 
@@ -16,12 +17,13 @@ RECEIPT_FIELDS = {
     "coaching",
     "decision",
     "observed_result",
+    "observed_revision",
     "schema_version",
     "verdict",
     "verification",
 }
 DECISION_FIELDS = {"resolution_hash", "revision", "selected_choice"}
-OBSERVED_RESULT_FIELDS = {"direction", "expectation", "measure"}
+OBSERVED_RESULT_FIELDS = {"measure", "unit", "value"}
 COACHING_FIELDS = {"burden", "transfer"}
 VERIFICATION_FIELDS = {"accepted", "kind", "revision"}
 RECORD_FIELDS = {"card", "receipt"}
@@ -34,18 +36,6 @@ VERDICTS = (
     "supported",
     "unsupported",
 )
-# Every declared expectation maps to exactly one recommendation verdict.
-EXPECTATION_VERDICTS = {
-    "met": "supported",
-    "missed": "unsupported",
-    "partially-met": "partially-supported",
-    "reversed": "harmful",
-    "unobserved": "inconclusive",
-}
-RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
-# Whether an expectation requires the observed direction to match the expected
-# one. A missed or unobserved result constrains no direction.
-DIRECTION_AGREEMENT = {"met": True, "partially-met": True, "reversed": False}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 RESOLUTION_HASH = re.compile(r"^sha256:[0-9a-f]{64}$")
 SLUG_IDENTITY = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
@@ -115,6 +105,7 @@ class OutcomeReceiptVerification:
     verdict: str
     resolution_hash: str
     revision: str
+    observed_revision: str
     selected_choice: str
     canonical_bytes: bytes
 
@@ -201,16 +192,23 @@ def _validate_receipt_shape(receipt: dict[str, Any]) -> list[str]:
         if not _slug(decision.get("selected_choice")):
             errors.append("decision.selected_choice must be a declared choice identity")
 
+    observed_revision = receipt.get("observed_revision")
+    if type(observed_revision) is not str or not HEX_REVISION.fullmatch(
+        observed_revision
+    ):
+        errors.append("observed_revision must be a lowercase 40-character Git commit")
+
     observed = receipt.get("observed_result")
     if type(observed) is not dict or set(observed) != OBSERVED_RESULT_FIELDS:
         errors.append("observed_result fields do not match the contract")
     else:
         if not _slug(observed.get("measure")):
             errors.append("observed_result.measure must be a measure identity")
-        if observed.get("direction") not in RESULT_DIRECTIONS:
-            errors.append("observed_result.direction is unsupported")
-        if observed.get("expectation") not in EXPECTATION_VERDICTS:
-            errors.append("observed_result.expectation is unsupported")
+        if not _slug(observed.get("unit")):
+            errors.append("observed_result.unit must be a unit identity")
+        # bool is a subclass of int, and a float cannot be compared exactly.
+        if type(observed.get("value")) is not int:
+            errors.append("observed_result.value must be an exact integer")
 
     coaching = receipt.get("coaching")
     if type(coaching) is not dict or set(coaching) != COACHING_FIELDS:
@@ -247,52 +245,40 @@ def _validate_receipt_shape(receipt: dict[str, Any]) -> list[str]:
     return errors
 
 
-def _card_decision(card: object) -> tuple[dict[str, Any], list[str]] | None:
-    """Return the decision facts a receipt may bind, or None when absent."""
-    if type(card) is not dict:
+def _card_decision(card: Any) -> tuple[dict[str, Any], list[str]] | None:
+    """Return the decision facts one validated card offers, or None when absent."""
+    support = card["decision_support"]
+    if support is None:
         return None
-    resolution_hash = card.get("resolution_hash")
-    transition = card.get("transition_request")
-    support = card.get("decision_support")
-    if (
-        type(resolution_hash) is not str
-        or type(transition) is not dict
-        or type(transition.get("revision")) is not str
-        or type(support) is not dict
-    ):
-        return None
-    choices = support.get("choices")
-    recommendation = support.get("recommendation")
-    if type(choices) is not list or type(recommendation) is not dict:
-        return None
-    expected = recommendation.get("expected_result")
-    if type(expected) is not dict:
-        return None
-    identities = [
-        choice.get("identity") for choice in choices if type(choice) is dict
-    ]
+    recommendation = support["recommendation"]
     return (
         {
-            "expected_direction": expected.get("direction"),
-            "expected_measure": expected.get("measure"),
-            "resolution_hash": resolution_hash,
-            "revision": transition["revision"],
+            "expected_result": recommendation["expected_result"],
+            "recommended_choice": recommendation["choice"],
+            "resolution_hash": card["resolution_hash"],
+            "revision": card["transition_request"]["revision"],
         },
-        [identity for identity in identities if type(identity) is str],
+        [choice["identity"] for choice in support["choices"]],
     )
 
 
-def _derived_verdict(receipt: dict[str, Any]) -> str:
+def _derived_verdict(receipt: dict[str, Any], expected: dict[str, Any]) -> str:
     """Derive the only verdict the receipt's own facts support."""
-    revision = receipt["decision"]["revision"]
-    current = [
-        fact
-        for fact in receipt["verification"]
-        if fact["accepted"] is True and fact["revision"] == revision
-    ]
-    if not current:
+    if not any(fact["accepted"] is True for fact in receipt["verification"]):
         return "inconclusive"
-    return EXPECTATION_VERDICTS[receipt["observed_result"]["expectation"]]
+    value = receipt["observed_result"]["value"]
+    baseline = expected["baseline"]
+    target = expected["target"]
+    if expected["direction"] == "hold":
+        return "supported" if value == target else "harmful"
+    # Increase is the exact inverse of decrease, so compare on one oriented axis.
+    scale = 1 if expected["direction"] == "increase" else -1
+    value, baseline, target = scale * value, scale * baseline, scale * target
+    if value >= target:
+        return "supported"
+    if value > baseline:
+        return "partially-supported"
+    return "unsupported" if value == baseline else "harmful"
 
 
 def verify_outcome_receipt(
@@ -337,6 +323,16 @@ def verify_outcome_receipt(
             ),
         )
 
+    card_errors = validate_public_card(card)
+    if card_errors:
+        return OutcomeReceiptRejection(
+            code="OUTCOME_RECEIPT_CARD_INVALID",
+            errors=tuple(card_errors),
+            canonical_bytes=_canonical_bytes(
+                {"code": "OUTCOME_RECEIPT_CARD_INVALID", "errors": card_errors}
+            ),
+        )
+    # A card that validates is an exact JSON object with every required field.
     decision = _card_decision(card)
     if decision is None:
         return _rejection(
@@ -358,21 +354,38 @@ def verify_outcome_receipt(
             "OUTCOME_RECEIPT_CHOICE_UNDECLARED",
             "outcome receipt must select one declared choice",
         )
+    if bound["selected_choice"] != facts["recommended_choice"]:
+        return _rejection(
+            "OUTCOME_RECEIPT_CHOICE_NOT_RECOMMENDED",
+            "this contract compares the recommended choice only",
+        )
+    observed_revision = normalized["observed_revision"]
+    if any(
+        fact["accepted"] is True and fact["revision"] != observed_revision
+        for fact in normalized["verification"]
+    ):
+        return _rejection(
+            "OUTCOME_RECEIPT_VERIFICATION_STALE",
+            "every accepted verification fact must bind the observed revision",
+        )
+    expected = facts["expected_result"]
     observed = normalized["observed_result"]
-    agrees = observed["direction"] == facts["expected_direction"]
-    required = DIRECTION_AGREEMENT.get(observed["expectation"], agrees)
-    if observed["measure"] != facts["expected_measure"] or agrees is not required:
+    if (
+        observed["measure"] != expected["measure"]
+        or observed["unit"] != expected["unit"]
+    ):
         return _rejection(
             "OUTCOME_RECEIPT_RESULT_MISMATCH",
             "observed result does not answer the expected measurable result",
         )
-    derived = _derived_verdict(normalized)
+    derived = _derived_verdict(normalized, expected)
     if normalized["verdict"] != derived:
         return _rejection(
             "OUTCOME_RECEIPT_VERDICT_CONTRADICTED",
             f"declared verdict is contradicted by the receipt facts: {derived}",
         )
     bindings = {
+        "observed_revision": observed_revision,
         "resolution_hash": bound["resolution_hash"],
         "revision": bound["revision"],
         "selected_choice": bound["selected_choice"],
@@ -382,6 +395,7 @@ def verify_outcome_receipt(
         verdict=derived,
         resolution_hash=bound["resolution_hash"],
         revision=bound["revision"],
+        observed_revision=observed_revision,
         selected_choice=bound["selected_choice"],
         canonical_bytes=_canonical_bytes(bindings),
     )

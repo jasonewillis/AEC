@@ -4,6 +4,7 @@
       "card": {
         "anti_example": "A task list omits ownership, proof, or a stop condition.",
         "authoritative": false,
+        "card_hash": "sha256:3696f38a0a5fb20c95cf5022ddf288f24760ee1c815a476490e255e962815c8e",
         "decision_support": {
           "authority": {
             "owner": "consumer-owner",
@@ -42,9 +43,12 @@
             "choice": "isolate-import-boundary",
             "confidence": "high",
             "expected_result": {
+              "baseline": 4,
               "direction": "decrease",
               "measure": "unrelated-import-failures",
-              "threshold": "Zero unrelated import failures in the focused proof run."
+              "target": 0,
+              "threshold": "Zero unrelated import failures in the focused proof run.",
+              "unit": "failures"
             },
             "principal_uncertainty": "Whether another entry point still imports it eagerly.",
             "revisit_when": [
@@ -87,8 +91,8 @@
           "proof-and-stop-rules",
           "vertical-slice-plan"
         ],
-        "resolution_hash": "sha256:f0f3619932f2fd7dba1eebb4d7e7bfbe091f7ce43baf35fc3122155957934c57",
-        "schema_version": "2.0.0",
+        "resolution_hash": "sha256:dfee3d1272cdba0c0fb9aba1545312d7a7c41a9558551b59b8aefad5c8c62a9e",
+        "schema_version": "3.0.0",
         "transition_request": {
           "authoritative": false,
           "environment": "test",
@@ -104,27 +108,28 @@
           "transfer": "full"
         },
         "decision": {
-          "resolution_hash": "sha256:f0f3619932f2fd7dba1eebb4d7e7bfbe091f7ce43baf35fc3122155957934c57",
+          "resolution_hash": "sha256:dfee3d1272cdba0c0fb9aba1545312d7a7c41a9558551b59b8aefad5c8c62a9e",
           "revision": "0123456789abcdef0123456789abcdef01234567",
           "selected_choice": "isolate-import-boundary"
         },
         "observed_result": {
-          "direction": "decrease",
-          "expectation": "met",
-          "measure": "unrelated-import-failures"
+          "measure": "unrelated-import-failures",
+          "unit": "failures",
+          "value": 0
         },
+        "observed_revision": "9f2c1d4e5a6b708192a3b4c5d6e7f80912345678",
         "schema_version": "1.0.0",
         "verdict": "supported",
         "verification": [
           {
             "accepted": true,
             "kind": "focused-test-report",
-            "revision": "0123456789abcdef0123456789abcdef01234567"
+            "revision": "9f2c1d4e5a6b708192a3b4c5d6e7f80912345678"
           },
           {
             "accepted": true,
             "kind": "integration-test-report",
-            "revision": "0123456789abcdef0123456789abcdef01234567"
+            "revision": "9f2c1d4e5a6b708192a3b4c5d6e7f80912345678"
           }
         ]
       }

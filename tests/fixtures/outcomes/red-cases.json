@@ -65,6 +65,53 @@
     },
     {
       "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "boolean-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": true
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "fractional-metric-value",
+      "operation": "replace",
+      "path": ["observed_result", "value"],
+      "value": 0.5
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "missing-observed-revision",
+      "operation": "remove",
+      "path": ["observed_revision"]
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
+      "name": "malformed-observed-revision",
+      "operation": "replace",
+      "path": ["observed_revision"],
+      "value": "HEAD"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_CHOICE_NOT_RECOMMENDED",
+      "name": "declared-but-unrecommended-choice",
+      "operation": "replace",
+      "path": ["decision", "selected_choice"],
+      "value": "install-everywhere"
+    },
+    {
+      "code": "OUTCOME_RECEIPT_VERIFICATION_STALE",
+      "name": "accepted-verification-at-another-revision",
+      "operation": "replace",
+      "path": ["verification"],
+      "value": [
+        {
+          "accepted": true,
+          "kind": "focused-test-report",
+          "revision": "0123456789abcdef0123456789abcdef01234567"
+        }
+      ]
+    },
+    {
+      "code": "OUTCOME_RECEIPT_INVALID",
       "name": "missing-verdict",
       "operation": "remove",
       "path": ["verdict"]

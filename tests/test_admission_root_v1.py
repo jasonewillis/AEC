@@ -285,7 +285,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
                 "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679"
             ),
             "schemas/resolution-request.schema.json": (
-                "83ee7d7d829a93b8823ddc4f8ba124d2abf7a4c7047d6698c4596fde316643d9"
+                "bdda1453d41ff20dc78254aa66aec3cc34bc8e64c7ac8529e899a8d31ed0c42b"
             ),
         }
 
