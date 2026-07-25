@@ -14,6 +14,12 @@ live issue queue with explicit PR or blocker outcomes.
 | 6. Consumer adoption | A reference consumer integrates AEC without moving its state authority into AEC | The consumer proves its own writer, ledger, release, and audit evidence while AEC remains read-only |
 | 7. Productization | Versioned release and reusable onboarding contract | A second consumer integrates without copying policy or weakening proof |
 
+The target human and agent interaction, its current gaps, and the trustworthy-beta
+release gate are defined in
+[Coaching interaction](../architecture/coaching-interaction.md). That document is a
+delivery contract, not a claim that the one-command coaching interface, learner profile,
+or second-consumer proof already exists.
+
 ## Current position
 
 Slices 1 through 5 are merged. Slice 2 now has deterministic goldens for all nine
@@ -41,6 +47,14 @@ renders one non-authoritative card and transition draft; consumer-interface issu
 review evidence without granting execution, review, merge, or lifecycle authority.
 Consumer single-writer, Project, merge, deployment, and ledger work stays outside AEC
 in each consumer repository.
+
+HealthRAG adoption exposed the remaining Slice 6 and Slice 7 productization gaps:
+routine-only connection proof can miss a material-decision incompatibility, normal use
+still requires consumer-authored state, and the public adapter returns structured card
+data rather than one canonical human coaching response. Resolve the framework admission
+blocker first, then deliver the one-command interaction, compatibility proof, learner
+boundary, outcome interaction, and two-consumer pilot in the sequence defined by the
+coaching-interaction contract.
 
 ## Completion rule
 

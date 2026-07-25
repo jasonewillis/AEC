@@ -66,6 +66,7 @@ python3 -m unittest discover -s tests -v
 ## Documentation
 
 - [Architecture](docs/architecture/overview.md)
+- [Coaching interaction](docs/architecture/coaching-interaction.md)
 - [Deterministic resolver](docs/architecture/resolver.md)
 - [Decision outcomes](docs/architecture/decision-outcomes.md)
 - [Agent adapter parity](docs/architecture/agent-adapters.md)
