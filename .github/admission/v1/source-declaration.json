@@ -267,7 +267,7 @@
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "3f118910e6226a155a5d413464d8a54aaddb8d3d192f64ffa7ae380b768bf999",
+    "tests/test_authority_v2_hostile_corpus.py": "7f84cb713d22acd485388536bb780644a44271f7ed74ea47594b102b09f5f5cd",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_interface.py": "eaa68a7aed86a14ac209f1507acdc7b94a75b86bd8ed924e99d4f369fbf4ccf9",
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",

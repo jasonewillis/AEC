@@ -35,8 +35,18 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # adding a repeat. Of the 37 distinct paths, 29 arrive via SOURCE_BASELINE and
 # only 8 are pinned independently of the declaration.
 #
-# Bump this deliberately when adding or removing tracked source.
+# Bump these deliberately when adding or removing tracked source.
+#
+# TWO pins are required, and neither is sufficient alone:
+#   * EXPECTED_DISTINCT_FROZEN_PATHS guards the corpus tree. It fires when a path
+#     leaves coverage entirely.
+#   * EXPECTED_SOURCE_BASELINE_PATHS guards the declaration. It is the only one
+#     that fires for the 17 paths the literal tail duplicates: dropping one of
+#     those from the declaration leaves the distinct count at 37, because the
+#     literal tail still supplies it. Without this pin the canary covered only
+#     12 of the 29 declared paths and quietly missed the other 17.
 EXPECTED_DISTINCT_FROZEN_PATHS = 37
+EXPECTED_SOURCE_BASELINE_PATHS = 29
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
@@ -164,10 +174,13 @@ class AuthorityV2HostileCorpus(unittest.TestCase):
             "source declaration and every hostile case below is now building its "
             "tree without it.",
         )
-        self.assertTrue(
-            set(SOURCE_BASELINE) <= set(FROZEN_PYTHON_PATHS),
-            "every declared source path must reach the corpus tree; a path in "
-            "SOURCE_BASELINE that is absent here is uncovered by every case",
+        self.assertEqual(
+            len(SOURCE_BASELINE),
+            EXPECTED_SOURCE_BASELINE_PATHS,
+            "the source declaration changed size. This is the only assertion "
+            "that fires when a dropped path is also present in the literal tail "
+            "of FROZEN_PYTHON_PATHS, where the distinct count above stays "
+            "constant and notices nothing.",
         )
 
     def test_self_authorization_fails_without_executing_candidate_code(self) -> None:
