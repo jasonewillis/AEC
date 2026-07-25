@@ -22,6 +22,21 @@ from tools.admission_root_v1 import (
 
 ROOT = Path(__file__).resolve().parents[1]
 REJECTION = "ADMISSION-001 EXACT_BASELINE"
+# FROZEN_PYTHON_PATHS unpacks *SOURCE_BASELINE, which derives from the source
+# declaration. That is the artifact the corpus attacks, so corpus coverage would
+# otherwise shrink silently whenever a path left the declaration: the tree each
+# hostile case is built on would simply stop containing that file, and every
+# assertion below would still pass. Pinning the count makes such a shrink a test
+# failure instead.
+#
+# The tuple holds duplicates by construction, because the literal tail repeats 17
+# paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
+# it is the real coverage number, and it cannot be inflated back to green by
+# adding a repeat. Of the 37 distinct paths, 29 arrive via SOURCE_BASELINE and
+# only 8 are pinned independently of the declaration.
+#
+# Bump this deliberately when adding or removing tracked source.
+EXPECTED_DISTINCT_FROZEN_PATHS = 37
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
@@ -137,6 +152,23 @@ class AuthorityV2HostileCorpus(unittest.TestCase):
     def _assert_rejected(self, case_id: str, report) -> None:
         self.assertFalse(report.passed, f"{case_id} false green")
         self.assertIn(REJECTION, report.findings, case_id)
+
+    def test_frozen_python_path_coverage_has_not_shrunk(self) -> None:
+        """RED CANARY: corpus coverage is derived, so it can shrink in silence."""
+        self.assertEqual(
+            len(set(FROZEN_PYTHON_PATHS)),
+            EXPECTED_DISTINCT_FROZEN_PATHS,
+            "distinct FROZEN_PYTHON_PATHS coverage changed. If a tracked source "
+            "file was added or removed on purpose, update "
+            "EXPECTED_DISTINCT_FROZEN_PATHS. If not, a path silently left the "
+            "source declaration and every hostile case below is now building its "
+            "tree without it.",
+        )
+        self.assertTrue(
+            set(SOURCE_BASELINE) <= set(FROZEN_PYTHON_PATHS),
+            "every declared source path must reach the corpus tree; a path in "
+            "SOURCE_BASELINE that is absent here is uncovered by every case",
+        )
 
     def test_self_authorization_fails_without_executing_candidate_code(self) -> None:
         attacks = (
