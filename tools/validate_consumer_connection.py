@@ -21,8 +21,10 @@ consumer uses (`aec.consumer.resolve_consumer_state`):
   * MATERIAL -- a closed `decision_context` with two choices and one
     recommendation. Exercises the contract this incident broke.
 
-Both probes must resolve to a non-authoritative card (`executes=false`,
-`mutates=false`) for the connection to report PASS. Each probe also asserts
+Both probes must resolve to a non-authoritative card (`authoritative=false`
+at both the top level and inside `transition_request`, `executes=false`,
+`mutates=false`) for the connection to report PASS -- AEC is never an
+authority owner. Each probe also asserts
 its own `decision_support` shape: ROUTINE must render `decision_support: null`
 and MATERIAL must render it populated, so a fixture in the wrong slot -- for
 example a routine fixture handed to `--material` -- fails instead of passing
@@ -309,6 +311,16 @@ def run_probe(
         card.get("transition_request", {}).get("mutates") is not False
     ):
         raise ConnectionFailure(f"{name} probe resolved to an effectful decision")
+    # AEC is never an authority owner (see docs/consumer-contract.md's authority
+    # owner enum: agent, consumer-owner, external -- AEC itself is excluded).
+    # authoritative is carried in two places on the card: the top-level field
+    # and transition_request.authoritative. Both must be checked; checking
+    # only one would let a card that disagrees with itself, or a transition
+    # request alone claiming authority, pass silently.
+    if card.get("authoritative") is not False or (
+        card.get("transition_request", {}).get("authoritative") is not False
+    ):
+        raise ConnectionFailure(f"{name} probe resolved to an authoritative decision")
     has_decision_support = card.get("decision_support") is not None
     if has_decision_support != expect_decision_support:
         raise ConnectionFailure(
@@ -392,6 +404,28 @@ def self_check(catalog_path: Path) -> None:
             "not resolved to a card"
         )
     diagnosis = diagnose_decision_context(state.get("decision_context"))
+    # F3 (considered, not fixed, PR #72 review round 3): this call trusts
+    # diagnosis.missing_fields without re-parsing diagnosis.messages here to
+    # cross-check it. That is intentional. The binding is already enforced at
+    # construction: every "missing required fields" message and its
+    # missing_fields entries are written together by the single
+    # _report_missing call site, so they cannot diverge from a call here, only
+    # from a future edit to diagnose_decision_context that stops going through
+    # that helper. MissingFieldsMessagesInvariantTests (tests/test_consumer_
+    # connection_proof.py) proves the binding holds across four decision_context
+    # shapes as a regression backstop for exactly that case. Enforcing once at
+    # the construction site, rather than re-verifying at every consumer of
+    # DecisionContextDiagnosis, was the deliberate choice; re-checking here
+    # would just be testing _report_missing's own invariant a second time.
+    #
+    # F7 (known limitation, not fixed): the invariant test above parses field
+    # names out of messages into one unqualified set. If the same field name
+    # were independently omitted at two different paths in one diagnosis (for
+    # example both choices[0].summary and choices[1].summary missing), losing
+    # one of those two findings would not be caught by the invariant test,
+    # because the unqualified name "summary" would still appear once and still
+    # match. This is narrow (it requires a duplicate field name across two
+    # paths in the same diagnosis) and is recorded here rather than fixed.
     _verify_previous_contract_diagnosis(diagnosis)
 
 

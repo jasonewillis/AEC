@@ -173,6 +173,119 @@ class ProbeSlotMismatchTests(unittest.TestCase):
         self.assertTrue("decision_support mismatch" in str(context.exception))
 
 
+class FakeCard:
+    """A stand-in for `aec.consumer.ConsumerCard` carrying a fixed dict.
+
+    Used only to construct cards `resolve_consumer_state` would never
+    actually render (an authoritative one), so `run_probe`'s own guard is
+    what has to reject it, not the real adapter's validation.
+    """
+
+    def __init__(self, card: dict) -> None:
+        self._card = card
+
+    def to_dict(self) -> dict:
+        return self._card
+
+
+def _non_authoritative_card(**overrides: object) -> dict:
+    card = {
+        "gate": "Evidence needed",
+        "authoritative": False,
+        "decision_support": None,
+        "transition_request": {
+            "authoritative": False,
+            "environment": "test",
+            "executes": False,
+            "mutates": False,
+            "requested_gate": "Evidence needed",
+            "revision": "0" * 40,
+        },
+    }
+    card.update(overrides)
+    return card
+
+
+class AuthoritativeCardRejectionTests(unittest.TestCase):
+    """F6 (HIGH): a card claiming authority must be rejected, not passed.
+
+    Before this fix, `run_probe` checked `transition_request.executes` and
+    `.mutates` but never `authoritative`, at either of its two locations on
+    the card (the top-level field and `transition_request.authoritative`).
+    AEC is never an authority owner (see docs/consumer-contract.md), so a
+    card claiming authority is a contract violation the connection proof
+    exists to catch. `resolve_consumer_state` never actually renders such a
+    card today, so these tests construct one directly with a FakeCard and
+    patch `resolve_probe` to return it, proving run_probe's own guard is
+    what rejects it.
+    """
+
+    def test_top_level_authoritative_true_is_rejected(self) -> None:
+        """G1/G3: checking transition_request alone would miss this card,
+        because its transition_request.authoritative is correctly False."""
+        catalog = load_json(DEFAULT_CATALOG)
+        card = _non_authoritative_card(authoritative=True)
+
+        with patch(
+            "tools.validate_consumer_connection.resolve_probe",
+            return_value=FakeCard(card),
+        ):
+            with self.assertRaises(ConnectionFailure) as context:
+                run_probe(
+                    "routine",
+                    DEFAULT_ROUTINE_PROBE,
+                    catalog,
+                    expect_decision_support=False,
+                )
+        self.assertTrue("authoritative decision" in str(context.exception))
+
+    def test_transition_request_authoritative_true_is_rejected(self) -> None:
+        """G3: checking the top-level field alone would miss this card,
+        because its top-level authoritative is correctly False."""
+        catalog = load_json(DEFAULT_CATALOG)
+        card = _non_authoritative_card(
+            transition_request={
+                "authoritative": True,
+                "environment": "test",
+                "executes": False,
+                "mutates": False,
+                "requested_gate": "Evidence needed",
+                "revision": "0" * 40,
+            }
+        )
+
+        with patch(
+            "tools.validate_consumer_connection.resolve_probe",
+            return_value=FakeCard(card),
+        ):
+            with self.assertRaises(ConnectionFailure) as context:
+                run_probe(
+                    "routine",
+                    DEFAULT_ROUTINE_PROBE,
+                    catalog,
+                    expect_decision_support=False,
+                )
+        self.assertTrue("authoritative decision" in str(context.exception))
+
+    def test_a_genuinely_non_authoritative_card_passes(self) -> None:
+        """G2 green half: the same shape with both fields False must pass,
+        so the guard rejects on the claim, not on any other property."""
+        catalog = load_json(DEFAULT_CATALOG)
+        card = _non_authoritative_card()
+
+        with patch(
+            "tools.validate_consumer_connection.resolve_probe",
+            return_value=FakeCard(card),
+        ):
+            result = run_probe(
+                "routine",
+                DEFAULT_ROUTINE_PROBE,
+                catalog,
+                expect_decision_support=False,
+            )
+        self.assertEqual("PASS", result["status"])
+
+
 class PreviousContractFixtureTests(unittest.TestCase):
     """G3/G5: a fixture pinned to the previous contract fails before a card renders."""
 
