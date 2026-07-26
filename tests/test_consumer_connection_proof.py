@@ -8,7 +8,9 @@ material-decision card. These tests prove the connection proof in
 any card is rendered, and names the exact fields a consumer must change.
 """
 
+import copy
 import json
+import re
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -32,11 +34,28 @@ from tools.validate_consumer_connection import _verify_previous_contract_diagnos
 
 
 ROOT = Path(__file__).resolve().parents[1]
+MISSING_FIELDS_PATTERN = re.compile(r"is missing required fields: (?P<names>.+)$")
 
 
 def load_json(path: Path) -> object:
     with path.open(encoding="utf-8") as stream:
         return json.load(stream)
+
+
+def field_names_from_messages(messages: tuple) -> set:
+    """Parse the field names out of every "is missing required fields" message.
+
+    Used only to prove the missing_fields/messages binding empirically
+    (MissingFieldsMessagesInvariantTests); never used as a substring test on
+    its own, since a regex match on the literal marker phrase followed by an
+    exact comma-split is unambiguous, not a short-token substring check.
+    """
+    names: set = set()
+    for message in messages:
+        match = MISSING_FIELDS_PATTERN.search(message)
+        if match:
+            names.update(name.strip() for name in match.group("names").split(", "))
+    return names
 
 
 class RoutineProbeTests(unittest.TestCase):
@@ -89,7 +108,7 @@ class MaterialProbeTests(unittest.TestCase):
     def test_material_probe_declares_a_closed_decision_context(self) -> None:
         state = load_json(DEFAULT_MATERIAL_PROBE)
         assert isinstance(state, dict)
-        self.assertIn("decision_context", state)
+        self.assertTrue("decision_context" in state)
         self.assertIn(len(state["decision_context"]["choices"]), (2, 3))
 
     def test_material_probe_resolves_to_a_non_authoritative_decision_brief(self) -> None:
@@ -143,7 +162,7 @@ class ProbeSlotMismatchTests(unittest.TestCase):
             validate_connection(
                 DEFAULT_ROUTINE_PROBE, DEFAULT_ROUTINE_PROBE, DEFAULT_CATALOG
             )
-        self.assertIn("decision_support mismatch", str(context.exception))
+        self.assertTrue("decision_support mismatch" in str(context.exception))
 
     def test_material_fixture_passed_as_routine_fails(self) -> None:
         """G2: the material fixture (a closed decision_context) cannot pass as ROUTINE."""
@@ -151,7 +170,7 @@ class ProbeSlotMismatchTests(unittest.TestCase):
             validate_connection(
                 DEFAULT_MATERIAL_PROBE, DEFAULT_MATERIAL_PROBE, DEFAULT_CATALOG
             )
-        self.assertIn("decision_support mismatch", str(context.exception))
+        self.assertTrue("decision_support mismatch" in str(context.exception))
 
 
 class PreviousContractFixtureTests(unittest.TestCase):
@@ -199,21 +218,31 @@ class ActionableFailureMessageTests(unittest.TestCase):
         assert isinstance(self.state, dict)
 
     def test_diagnosis_names_the_missing_top_level_fields(self) -> None:
+        """Structural, not a substring test: every message here begins with the
+        literal "decision_context", which itself contains the substring
+        "context", so a substring test against joined messages cannot fail on
+        that field. Assert on missing_fields (structured) and, separately, one
+        exact full message string for the human-readable wording."""
         diagnosis = diagnose_decision_context(self.state["decision_context"])
 
-        joined = " ".join(diagnosis.messages)
-        self.assertIn("context", joined)
-        self.assertIn("schema_version", joined)
-        self.assertIn("missing required fields", joined)
+        self.assertTrue({"context", "schema_version"} <= diagnosis.missing_fields)
+        self.assertTrue(
+            "decision_context is missing required fields: context, schema_version"
+            in diagnosis.messages
+        )
 
     def test_diagnosis_names_the_missing_recommendation_fields(self) -> None:
         diagnosis = diagnose_decision_context(self.state["decision_context"])
 
-        joined = " ".join(diagnosis.messages)
-        self.assertIn("recommendation", joined)
-        self.assertIn("confidence", joined)
-        self.assertIn("expected_result", joined)
-        self.assertIn("principal_uncertainty", joined)
+        self.assertTrue(
+            {"confidence", "expected_result", "principal_uncertainty"}
+            <= diagnosis.missing_fields
+        )
+        self.assertTrue(
+            "decision_context.recommendation is missing required fields: "
+            "confidence, expected_result, principal_uncertainty"
+            in diagnosis.messages
+        )
 
     def test_diagnosis_missing_fields_is_exactly_the_five_pre_48_gaps(self) -> None:
         """G4/structural: missing_fields is exact field names, not prose."""
@@ -254,18 +283,32 @@ class ActionableFailureMessageTests(unittest.TestCase):
 
         diagnosis = diagnose_decision_context(context)
 
-        self.assertIn("reason", diagnosis.missing_fields)
-        self.assertIn("summary", diagnosis.missing_fields)
-        self.assertIn("risk", diagnosis.missing_fields)
-        self.assertIn("unit", diagnosis.missing_fields)
-        joined = " ".join(diagnosis.messages)
-        self.assertIn("decision_context.authority", joined)
-        self.assertIn("decision_context.choices[0]", joined)
-        self.assertIn("decision_context.choices[0].tradeoffs", joined)
-        self.assertIn("decision_context.recommendation.expected_result", joined)
+        self.assertTrue({"reason", "summary", "risk", "unit"} <= diagnosis.missing_fields)
+        self.assertTrue(
+            "decision_context.authority is missing required fields: reason"
+            in diagnosis.messages
+        )
+        self.assertTrue(
+            "decision_context.choices[0] is missing required fields: summary"
+            in diagnosis.messages
+        )
+        self.assertTrue(
+            "decision_context.choices[0].tradeoffs is missing required fields: risk"
+            in diagnosis.messages
+        )
+        self.assertTrue(
+            "decision_context.recommendation.expected_result is missing required "
+            "fields: unit" in diagnosis.messages
+        )
 
     def test_run_probe_failure_message_carries_the_field_level_diagnosis(self) -> None:
+        """Checks that run_probe's exception carries every full diagnosis
+        message verbatim, not a short ambiguous token. A short token like
+        "context" would be a tautology (see the class docstring above); a
+        complete message sentence is unambiguous provenance, not a guess."""
         catalog = load_json(DEFAULT_CATALOG)
+        diagnosis = diagnose_decision_context(self.state["decision_context"])
+        self.assertTrue(diagnosis.messages)
 
         with self.assertRaises(ConnectionFailure) as context:
             run_probe(
@@ -277,11 +320,8 @@ class ActionableFailureMessageTests(unittest.TestCase):
 
         message = str(context.exception)
         self.assertNotEqual("validation failed", message.strip().lower())
-        self.assertIn("schema_version", message)
-        self.assertIn("context", message)
-        self.assertIn("confidence", message)
-        self.assertIn("expected_result", message)
-        self.assertIn("principal_uncertainty", message)
+        for full_message in diagnosis.messages:
+            self.assertTrue(full_message in message)
 
     def test_self_check_proves_the_negative_path_and_field_level_guidance(self) -> None:
         self_check(DEFAULT_CATALOG)  # must not raise
@@ -331,6 +371,125 @@ class SelfCheckStructuralAssertionTests(unittest.TestCase):
     def test_empty_diagnosis_fails(self) -> None:
         with self.assertRaises(ConnectionFailure):
             _verify_previous_contract_diagnosis(DecisionContextDiagnosis((), frozenset()))
+
+
+class NullNestedFieldDiagnosisTests(unittest.TestCase):
+    """F4: a present-but-null nested field must still produce a diagnostic.
+
+    Before this fix, `recommendation: None` fell through both branches of the
+    old `if type(recommendation) is dict: ... elif recommendation is not
+    None: ...` check (the `elif` explicitly excluded None) and produced total
+    silence: no message, no missing_fields entry, nothing a consumer could
+    act on, immediately before a rejection with no guidance -- precisely the
+    failure AEC #55 exists to eliminate. `context`, `authority`, `choices`,
+    and one `choices[i]` element are checked here for the same hole; all four
+    already handled null correctly (their code checks `type(...) is not
+    dict/list`, which is true for None too), but nothing had proven that
+    before, so it is pinned here alongside the actual fix.
+    """
+
+    def setUp(self) -> None:
+        material = load_json(DEFAULT_MATERIAL_PROBE)
+        assert isinstance(material, dict)
+        self.context = material["decision_context"]
+
+    def test_null_recommendation_is_named(self) -> None:
+        mutated = copy.deepcopy(self.context)
+        mutated["recommendation"] = None
+
+        diagnosis = diagnose_decision_context(mutated)
+
+        self.assertTrue(diagnosis.messages)
+        self.assertTrue(
+            "decision_context.recommendation must be an object" in diagnosis.messages
+        )
+
+    def test_null_context_is_named(self) -> None:
+        mutated = copy.deepcopy(self.context)
+        mutated["context"] = None
+
+        diagnosis = diagnose_decision_context(mutated)
+
+        self.assertTrue(diagnosis.messages)
+        self.assertTrue("decision_context.context must be an object" in diagnosis.messages)
+
+    def test_null_authority_is_named(self) -> None:
+        mutated = copy.deepcopy(self.context)
+        mutated["authority"] = None
+
+        diagnosis = diagnose_decision_context(mutated)
+
+        self.assertTrue(diagnosis.messages)
+        self.assertTrue("decision_context.authority must be an object" in diagnosis.messages)
+
+    def test_null_choices_is_named(self) -> None:
+        mutated = copy.deepcopy(self.context)
+        mutated["choices"] = None
+
+        diagnosis = diagnose_decision_context(mutated)
+
+        self.assertTrue(diagnosis.messages)
+        self.assertTrue("decision_context.choices must be a list" in diagnosis.messages)
+
+    def test_null_choice_element_is_named(self) -> None:
+        mutated = copy.deepcopy(self.context)
+        mutated["choices"][0] = None
+
+        diagnosis = diagnose_decision_context(mutated)
+
+        self.assertTrue(diagnosis.messages)
+        self.assertTrue(
+            "decision_context.choices[0] must be an object" in diagnosis.messages
+        )
+
+
+class MissingFieldsMessagesInvariantTests(unittest.TestCase):
+    """G4: missing_fields and the "missing required fields" messages must agree.
+
+    Design choice: derive, not just test. `diagnose_decision_context` writes
+    both surfaces from one call to the shared `_report_missing` helper (see
+    `tools/validate_consumer_connection.py`), so a "missing required fields"
+    message and its matching `missing_fields` entries are always written
+    together from the same source list -- they cannot diverge by
+    construction. This class proves that binding holds empirically across a
+    range of decision_context shapes, as a regression backstop in case a
+    future edit reintroduces a direct `findings.append(...)` /
+    `missing_fields.update(...)` pair instead of going through the helper.
+    """
+
+    def _assert_consistent(self, diagnosis: DecisionContextDiagnosis) -> None:
+        self.assertEqual(
+            field_names_from_messages(diagnosis.messages), diagnosis.missing_fields
+        )
+
+    def test_previous_contract_fixture_is_consistent(self) -> None:
+        state = load_json(PREVIOUS_CONTRACT_FIXTURE)
+        assert isinstance(state, dict)
+        self._assert_consistent(diagnose_decision_context(state["decision_context"]))
+
+    def test_compliant_material_probe_is_consistent(self) -> None:
+        material = load_json(DEFAULT_MATERIAL_PROBE)
+        assert isinstance(material, dict)
+        self._assert_consistent(diagnose_decision_context(material["decision_context"]))
+
+    def test_multi_field_strip_is_consistent(self) -> None:
+        material = load_json(DEFAULT_MATERIAL_PROBE)
+        assert isinstance(material, dict)
+        context = material["decision_context"]
+        del context["authority"]["reason"]
+        del context["choices"][0]["summary"]
+        del context["choices"][0]["tradeoffs"]["risk"]
+        del context["recommendation"]["expected_result"]["unit"]
+        self._assert_consistent(diagnose_decision_context(context))
+
+    def test_null_nested_fields_are_consistent(self) -> None:
+        material = load_json(DEFAULT_MATERIAL_PROBE)
+        assert isinstance(material, dict)
+        for field in ("recommendation", "context", "authority", "choices"):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(material["decision_context"])
+                mutated[field] = None
+                self._assert_consistent(diagnose_decision_context(mutated))
 
 
 if __name__ == "__main__":

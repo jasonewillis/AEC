@@ -95,6 +95,34 @@ def _diff_fields(actual: dict[str, Any], expected: set[str]) -> tuple[list[str],
     return sorted(expected - keys), sorted(keys - expected)
 
 
+def _report_missing(
+    findings: list[str], missing_fields: set[str], label: str, names: list[str]
+) -> None:
+    """Record one "missing required fields" finding and its field names together.
+
+    This is the single call site that writes both `findings` (prose) and
+    `missing_fields` (the structured set) from the same `names` list. Every
+    missing-field finding in `diagnose_decision_context` goes through this
+    function so the two surfaces cannot silently diverge: there is no code
+    path that appends a "missing required fields" message without also
+    recording those exact names in `missing_fields`, and no path that adds a
+    name to `missing_fields` without the matching message.
+    """
+    if not names:
+        return
+    findings.append(f"{label} is missing required fields: " + ", ".join(names))
+    missing_fields.update(names)
+
+
+def _report_extra(findings: list[str], label: str, names: list[str]) -> None:
+    """Record one "fields the current contract does not accept" finding."""
+    if not names:
+        return
+    findings.append(
+        f"{label} has fields the current contract does not accept: " + ", ".join(names)
+    )
+
+
 @dataclass(frozen=True)
 class DecisionContextDiagnosis:
     """Structured, machine-checkable field-level diagnosis of one decision_context.
@@ -135,16 +163,8 @@ def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
     findings: list[str] = []
     missing_fields: set[str] = set()
     missing, extra = _diff_fields(value, DECISION_CONTEXT_FIELDS)
-    if missing:
-        findings.append(
-            "decision_context is missing required fields: " + ", ".join(missing)
-        )
-        missing_fields.update(missing)
-    if extra:
-        findings.append(
-            "decision_context has fields the current contract does not accept: "
-            + ", ".join(extra)
-        )
+    _report_missing(findings, missing_fields, "decision_context", missing)
+    _report_extra(findings, "decision_context", extra)
     if "schema_version" not in missing and value.get("schema_version") != (
         DECISION_CONTEXT_SCHEMA_VERSION
     ):
@@ -153,23 +173,22 @@ def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
             f"{DECISION_CONTEXT_SCHEMA_VERSION!r}, found {value.get('schema_version')!r}"
         )
 
+    # Every nested object below is checked the same way regardless of whether
+    # it is absent (its key missing from the parent, already reported above)
+    # or present-but-null: `value.get(field)` returns None either way, and
+    # `type(None) is not dict` is True, so a null value is reported exactly
+    # like a wrong-typed value instead of silently passing through. A field
+    # skips its nested diff only when the key itself is entirely missing from
+    # the parent, since that gap is already named by the parent's own
+    # "missing required fields" finding.
     if "context" not in missing:
         context = value.get("context")
         if type(context) is not dict:
             findings.append("decision_context.context must be an object")
         else:
             context_missing, context_extra = _diff_fields(context, CONTEXT_FIELDS)
-            if context_missing:
-                findings.append(
-                    "decision_context.context is missing required fields: "
-                    + ", ".join(context_missing)
-                )
-                missing_fields.update(context_missing)
-            if context_extra:
-                findings.append(
-                    "decision_context.context has fields the current contract does "
-                    "not accept: " + ", ".join(context_extra)
-                )
+            _report_missing(findings, missing_fields, "decision_context.context", context_missing)
+            _report_extra(findings, "decision_context.context", context_extra)
 
     if "authority" not in missing:
         authority = value.get("authority")
@@ -177,17 +196,10 @@ def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
             findings.append("decision_context.authority must be an object")
         else:
             authority_missing, authority_extra = _diff_fields(authority, AUTHORITY_FIELDS)
-            if authority_missing:
-                findings.append(
-                    "decision_context.authority is missing required fields: "
-                    + ", ".join(authority_missing)
-                )
-                missing_fields.update(authority_missing)
-            if authority_extra:
-                findings.append(
-                    "decision_context.authority has fields the current contract does "
-                    "not accept: " + ", ".join(authority_extra)
-                )
+            _report_missing(
+                findings, missing_fields, "decision_context.authority", authority_missing
+            )
+            _report_extra(findings, "decision_context.authority", authority_extra)
 
     if "choices" not in missing:
         choices = value.get("choices")
@@ -200,16 +212,8 @@ def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
                     findings.append(f"{field} must be an object")
                     continue
                 choice_missing, choice_extra = _diff_fields(choice, CHOICE_FIELDS)
-                if choice_missing:
-                    findings.append(
-                        f"{field} is missing required fields: " + ", ".join(choice_missing)
-                    )
-                    missing_fields.update(choice_missing)
-                if choice_extra:
-                    findings.append(
-                        f"{field} has fields the current contract does not accept: "
-                        + ", ".join(choice_extra)
-                    )
+                _report_missing(findings, missing_fields, field, choice_missing)
+                _report_extra(findings, field, choice_extra)
                 if "tradeoffs" not in choice_missing:
                     tradeoffs = choice.get("tradeoffs")
                     if type(tradeoffs) is not dict:
@@ -218,55 +222,42 @@ def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
                         tradeoffs_missing, tradeoffs_extra = _diff_fields(
                             tradeoffs, TRADEOFF_FIELDS
                         )
-                        if tradeoffs_missing:
-                            findings.append(
-                                f"{field}.tradeoffs is missing required fields: "
-                                + ", ".join(tradeoffs_missing)
-                            )
-                            missing_fields.update(tradeoffs_missing)
-                        if tradeoffs_extra:
-                            findings.append(
-                                f"{field}.tradeoffs has fields the current contract "
-                                "does not accept: " + ", ".join(tradeoffs_extra)
-                            )
+                        _report_missing(
+                            findings, missing_fields, f"{field}.tradeoffs", tradeoffs_missing
+                        )
+                        _report_extra(findings, f"{field}.tradeoffs", tradeoffs_extra)
 
-    recommendation = value.get("recommendation")
-    if type(recommendation) is dict:
-        rec_missing, rec_extra = _diff_fields(recommendation, RECOMMENDATION_FIELDS)
-        if rec_missing:
-            findings.append(
-                "decision_context.recommendation is missing required fields: "
-                + ", ".join(rec_missing)
+    if "recommendation" not in missing:
+        recommendation = value.get("recommendation")
+        if type(recommendation) is not dict:
+            findings.append("decision_context.recommendation must be an object")
+        else:
+            rec_missing, rec_extra = _diff_fields(recommendation, RECOMMENDATION_FIELDS)
+            _report_missing(
+                findings, missing_fields, "decision_context.recommendation", rec_missing
             )
-            missing_fields.update(rec_missing)
-        if rec_extra:
-            findings.append(
-                "decision_context.recommendation has fields the current contract "
-                "does not accept: " + ", ".join(rec_extra)
-            )
-        if "expected_result" not in rec_missing:
-            expected_result = recommendation.get("expected_result")
-            if type(expected_result) is not dict:
-                findings.append(
-                    "decision_context.recommendation.expected_result must be an object"
-                )
-            else:
-                result_missing, result_extra = _diff_fields(
-                    expected_result, EXPECTED_RESULT_FIELDS
-                )
-                if result_missing:
+            _report_extra(findings, "decision_context.recommendation", rec_extra)
+            if "expected_result" not in rec_missing:
+                expected_result = recommendation.get("expected_result")
+                if type(expected_result) is not dict:
                     findings.append(
-                        "decision_context.recommendation.expected_result is missing "
-                        "required fields: " + ", ".join(result_missing)
+                        "decision_context.recommendation.expected_result must be an object"
                     )
-                    missing_fields.update(result_missing)
-                if result_extra:
-                    findings.append(
-                        "decision_context.recommendation.expected_result has fields "
-                        "the current contract does not accept: " + ", ".join(result_extra)
+                else:
+                    result_missing, result_extra = _diff_fields(
+                        expected_result, EXPECTED_RESULT_FIELDS
                     )
-    elif recommendation is not None:
-        findings.append("decision_context.recommendation must be an object")
+                    _report_missing(
+                        findings,
+                        missing_fields,
+                        "decision_context.recommendation.expected_result",
+                        result_missing,
+                    )
+                    _report_extra(
+                        findings,
+                        "decision_context.recommendation.expected_result",
+                        result_extra,
+                    )
 
     return DecisionContextDiagnosis(tuple(findings), frozenset(missing_fields))
 
