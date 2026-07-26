@@ -147,6 +147,33 @@ The public card moved from `2.0.0` to `3.0.0` in the same transition, because `c
 is a new required field. A reader that pinned the `2.0.0` card shape must accept
 `card_hash` and should recompute it. Consumer state remains at `1.0.0`.
 
+## Connection proof
+
+A pin bump that tightens a contract is not always visible from a routine check. The
+`d35f535` transition above tightened `decision_context` strictly; a routine probe that
+never supplies `decision_context` still passes, so a consumer that only exercises the
+routine path learns nothing about the break until a material-decision card goes red.
+
+Before attempting any real coaching against a pinned AEC checkout, run the connection
+proof from the AEC repository root:
+
+```bash
+python3.12 -m tools.validate_consumer_connection --self-check
+```
+
+This resolves a ROUTINE probe (no `decision_context`) and a MATERIAL probe (a closed
+`decision_context`) through the same pure adapter every consumer uses,
+`aec.consumer.resolve_consumer_state`. Both must resolve to a non-authoritative card for
+the proof to report `PASS`. `--self-check` additionally resolves
+`tests/fixtures/consumer-connection/previous-contract.json`, a fixture pinned to the
+pre-`d35f535` `decision_context` shape, and asserts it is rejected before any card is
+rendered. A rejection names the exact fields the consumer's own state is missing or must
+change, for example `decision_context is missing required fields: context,
+schema_version` and `decision_context.recommendation is missing required fields:
+confidence, expected_result, principal_uncertainty` -- not a generic failure. See
+`tools/validate_consumer_connection.py` for the field-level diagnosis this proof runs
+beyond what `resolve_consumer_state` itself reports.
+
 ## Conformance exit gate
 
 The consumer integration is ready for a bounded pilot only when:

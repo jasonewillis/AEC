@@ -32,7 +32,7 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # The tuple holds duplicates by construction, because the literal tail repeats 17
 # paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
 # it is the real coverage number, and it cannot be inflated back to green by
-# adding a repeat. Of the 37 distinct paths, 29 arrive via SOURCE_BASELINE and
+# adding a repeat. Of the 39 distinct paths, 31 arrive via SOURCE_BASELINE and
 # only 8 are pinned independently of the declaration.
 #
 # Bump these deliberately when adding or removing tracked source.
@@ -42,11 +42,11 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 #     leaves coverage entirely.
 #   * EXPECTED_SOURCE_BASELINE_PATHS guards the declaration. It is the only one
 #     that fires for the 17 paths the literal tail duplicates: dropping one of
-#     those from the declaration leaves the distinct count at 37, because the
+#     those from the declaration leaves the distinct count at 39, because the
 #     literal tail still supplies it. Without this pin the canary covered only
-#     12 of the 29 declared paths and quietly missed the other 17.
-EXPECTED_DISTINCT_FROZEN_PATHS = 37
-EXPECTED_SOURCE_BASELINE_PATHS = 29
+#     14 of the 31 declared paths and quietly missed the other 17.
+EXPECTED_DISTINCT_FROZEN_PATHS = 39
+EXPECTED_SOURCE_BASELINE_PATHS = 31
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
