@@ -40,12 +40,12 @@ def current_revision() -> str:
     return result.stdout.strip()
 
 
-def parent_revision() -> str:
-    """Return a real, well-formed, but stale (not-HEAD) commit SHA."""
-    result = run(["git", "rev-parse", "HEAD~1"])
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr)
-    return result.stdout.strip()
+# Well-formed (40 lowercase hex characters) and deterministically not the
+# resolved revision. CI checks out a shallow clone with exactly one commit,
+# so no earlier commit exists there to reference; production only checks
+# "well-formed and not equal to resolved HEAD", so this synthetic constant
+# exercises the same code path without depending on repository history.
+STALE_REVISION = "0" * 40
 
 
 def build_state_file(directory: Path, /, phase: str = "Intake", **extra: str) -> Path:
@@ -121,14 +121,16 @@ class StateThenCheckpointTests(unittest.TestCase):
             )
 
     def test_stale_decision_context_is_rejected_at_state_build_time(self) -> None:
-        # Red canary: a decision_context whose context.revision is a real,
+        # Red canary: a decision_context whose context.revision is a
         # well-formed SHA for a DIFFERENT commit than resolved HEAD (a stale
         # decision, e.g. formed before a rebase) must be rejected by
         # `state` itself (aec/state_builder.py _bind_decision_context_revision),
         # naming both revisions. This is the CLI path a real stale decision
         # would actually take, not a hand-built state file: build_state can
         # reject this case directly, so the CLI is exercised end to end.
-        stale_revision = parent_revision()
+        # STALE_REVISION is synthetic, not a real prior commit, so this does
+        # not depend on repository history (CI checks out a shallow clone).
+        stale_revision = STALE_REVISION
         head_revision = current_revision()
         fixture = FIXTURES / "decision-context" / "example.json"
         decision_context = fixture.read_text(encoding="utf-8").replace(

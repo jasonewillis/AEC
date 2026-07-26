@@ -278,7 +278,7 @@
     "aec/state_builder.py": "0a99bbbac68a0d97dacbf0a44b893c0b98e29f221a93634086a16f9e704acf00",
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
-    "tests/test_aec_coach.py": "e696444ed95ab212a7f796bb2d1a16b1bc4ee52d2b60b66a7b822cc4930547f5",
+    "tests/test_aec_coach.py": "7a99bfdc7af9e2b6c148575835a000bdda4cb22479ccd134b7d0fb8c0f639296",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
     "tests/test_authority_v2_hostile_corpus.py": "a801479aca8ea5a360eecde21212313cb9e00a4f1d3b99b94b24bb3dd557a9d1",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
