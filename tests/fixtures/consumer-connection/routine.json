@@ -1,0 +1,65 @@
+{
+  "blockers": [],
+  "capabilities": {
+    "capabilities": ["normalized-resolution"],
+    "identity": "portable-python",
+    "version": "portable-python:1.0.0"
+  },
+  "consumer_profile": {
+    "aec_mode": "read-only-mentor",
+    "agent_adapters": ["example-adapter"],
+    "lifecycle_authority": "consumer-owned",
+    "profile_version": "example:1.0.0",
+    "project": "example-owner/example-repo",
+    "schema_version": "1.0.0",
+    "workflow": "ticket-to-pr"
+  },
+  "effects": {
+    "executes": false,
+    "mutates": false
+  },
+  "environment": {
+    "identity": "test"
+  },
+  "evidence": [],
+  "expires_at": "2026-01-01T01:00:00Z",
+  "observed_at": "2026-01-01T00:00:00Z",
+  "policy": {
+    "facts": {
+      "require_exact_environment": true,
+      "require_exact_revision": true
+    },
+    "identity": "default-delivery",
+    "revision": "default-delivery:1.0.0"
+  },
+  "procedures": {
+    "available": [
+      {
+        "identity": "verify-evidence",
+        "revision": "verify-evidence:1.0.0"
+      }
+    ],
+    "required": {
+      "identity": "verify-evidence",
+      "revision": "verify-evidence:1.0.0"
+    }
+  },
+  "provider": {
+    "identity": "consumer-state-provider",
+    "revision": "consumer-state-provider:1.0.0"
+  },
+  "revision": {
+    "identity": "0123456789abcdef0123456789abcdef01234567"
+  },
+  "schema_version": "1.0.0",
+  "task": {
+    "identity": "task-123"
+  },
+  "workflow_position": {
+    "lane": "GENERAL",
+    "phase": "Verify",
+    "stage": "Execute",
+    "workflow": "ticket-to-pr",
+    "workflow_revision": "ticket-to-pr:1.0.0"
+  }
+}
