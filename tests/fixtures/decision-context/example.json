@@ -1,0 +1,26 @@
+{
+  "authority": {"owner": "agent", "reason": "The choice is reversible and inside the claimed scope."},
+  "choices": [
+    {
+      "identity": "tested-cli",
+      "summary": "Use one tested consumer command.",
+      "tradeoffs": {"maintainability": "First choice maintainability tradeoff.", "quality": "First choice quality tradeoff.", "reversibility": "First choice reversibility tradeoff.", "risk": "First choice risk tradeoff.", "scope": "First choice scope tradeoff."}
+    },
+    {
+      "identity": "manual-command",
+      "summary": "Keep the documented manual invocation.",
+      "tradeoffs": {"maintainability": "Second choice maintainability tradeoff.", "quality": "Second choice quality tradeoff.", "reversibility": "Second choice reversibility tradeoff.", "risk": "Second choice risk tradeoff.", "scope": "Second choice scope tradeoff."}
+    }
+  ],
+  "context": {"evidence_quality": "direct-verified", "revision": "__REVISION__"},
+  "question": "How should AEC invoke the pinned mentoring adapter?",
+  "recommendation": {
+    "choice": "tested-cli",
+    "confidence": "high",
+    "expected_result": {"baseline": "0", "direction": "increase", "measure": "tested-invocations", "target": "1", "threshold": "At least one tested command path exists.", "unit": "count"},
+    "principal_uncertainty": "Whether AEC later publishes a native checkpoint command.",
+    "revisit_when": ["AEC publishes a native checkpoint command."],
+    "why": "One tested seam is easier to invoke correctly."
+  },
+  "schema_version": "2.0.0"
+}
