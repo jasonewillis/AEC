@@ -3,3 +3,6 @@ __pycache__/
 .local/
 docs/AI Engineer Course/
 tmp/
+.claude/worktrees/
+_SaveStates/
+.DS_Store
