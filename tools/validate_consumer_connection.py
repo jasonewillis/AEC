@@ -22,11 +22,17 @@ consumer uses (`aec.consumer.resolve_consumer_state`):
     recommendation. Exercises the contract this incident broke.
 
 Both probes must resolve to a non-authoritative card (`executes=false`,
-`mutates=false`) for the connection to report PASS. A rejection is reported
-before any card is rendered, and -- for `decision_context` specifically --
-is expanded field-by-field against the current contract's known shape so
-the failure names exactly what a consumer must add, remove, or change. A
-generic "validation failed" is never sufficient; see `diagnose_decision_context`.
+`mutates=false`) for the connection to report PASS. Each probe also asserts
+its own `decision_support` shape: ROUTINE must render `decision_support: null`
+and MATERIAL must render it populated, so a fixture in the wrong slot -- for
+example a routine fixture handed to `--material` -- fails instead of passing
+by coincidence. A rejection is reported before any card is rendered, and --
+for `decision_context` specifically -- is expanded field-by-field against the
+current contract's known shape (`decision_context` itself, `context`,
+`authority`, every `choices[i]` and its `tradeoffs`, `recommendation`, and
+`recommendation.expected_result`) so the failure names exactly what a
+consumer must add, remove, or change. A generic "validation failed" is never
+sufficient; see `diagnose_decision_context`.
 
 `--self-check` additionally resolves `tests/fixtures/consumer-connection/
 previous-contract.json`, a fixture pinned to the pre-#48 `decision_context`
@@ -38,16 +44,20 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from aec.consumer import ConsumerCard, ConsumerStateRejection, resolve_consumer_state
 from aec.mentoring import (
+    AUTHORITY_FIELDS,
+    CHOICE_FIELDS,
     CONTEXT_FIELDS,
     DECISION_CONTEXT_FIELDS,
     DECISION_CONTEXT_SCHEMA_VERSION,
+    EXPECTED_RESULT_FIELDS,
     RECOMMENDATION_FIELDS,
+    TRADEOFF_FIELDS,
 )
 
 
@@ -85,27 +95,51 @@ def _diff_fields(actual: dict[str, Any], expected: set[str]) -> tuple[list[str],
     return sorted(expected - keys), sorted(keys - expected)
 
 
-def diagnose_decision_context(value: object) -> list[str]:
+@dataclass(frozen=True)
+class DecisionContextDiagnosis:
+    """Structured, machine-checkable field-level diagnosis of one decision_context.
+
+    `messages` is the human-readable report. `missing_fields` is the flat set of
+    unqualified field names this diagnosis found absent from a required object
+    (`decision_context` itself, `context`, `authority`, one `choices[i]`, one
+    `tradeoffs`, `recommendation`, or `recommendation.expected_result`). It exists
+    so a caller can assert on exact field names instead of testing substrings
+    against `messages` -- a substring test against these messages is unsound,
+    because every message here starts with the literal `"decision_context"`,
+    which itself contains the substring `"context"`.
+    """
+
+    messages: tuple[str, ...]
+    missing_fields: frozenset[str]
+
+    def __bool__(self) -> bool:
+        return bool(self.messages)
+
+
+def diagnose_decision_context(value: object) -> DecisionContextDiagnosis:
     """Name the exact `decision_context` fields a consumer must add or change.
 
     Runs independently of `aec.consumer`'s own validator, which short-circuits
     to one generic "fields do not match the contract" message the instant the
-    top-level field set disagrees. This walks `context` and `recommendation`
-    regardless, so a consumer pinned to a stale contract sees every field it
-    is missing in one pass instead of fixing one field, rerunning, and
-    discovering the next.
+    top-level field set disagrees. This walks `context`, `authority`, every
+    `choices[i]` and its `tradeoffs`, `recommendation`, and
+    `recommendation.expected_result` regardless, so a consumer pinned to a
+    stale contract sees every field it is missing in one pass instead of
+    fixing one field, rerunning, and discovering the next.
     """
     if value is None:
-        return []
+        return DecisionContextDiagnosis((), frozenset())
     if type(value) is not dict:
-        return ["decision_context must be an object"]
+        return DecisionContextDiagnosis(("decision_context must be an object",), frozenset())
 
     findings: list[str] = []
+    missing_fields: set[str] = set()
     missing, extra = _diff_fields(value, DECISION_CONTEXT_FIELDS)
     if missing:
         findings.append(
             "decision_context is missing required fields: " + ", ".join(missing)
         )
+        missing_fields.update(missing)
     if extra:
         findings.append(
             "decision_context has fields the current contract does not accept: "
@@ -130,11 +164,71 @@ def diagnose_decision_context(value: object) -> list[str]:
                     "decision_context.context is missing required fields: "
                     + ", ".join(context_missing)
                 )
+                missing_fields.update(context_missing)
             if context_extra:
                 findings.append(
                     "decision_context.context has fields the current contract does "
                     "not accept: " + ", ".join(context_extra)
                 )
+
+    if "authority" not in missing:
+        authority = value.get("authority")
+        if type(authority) is not dict:
+            findings.append("decision_context.authority must be an object")
+        else:
+            authority_missing, authority_extra = _diff_fields(authority, AUTHORITY_FIELDS)
+            if authority_missing:
+                findings.append(
+                    "decision_context.authority is missing required fields: "
+                    + ", ".join(authority_missing)
+                )
+                missing_fields.update(authority_missing)
+            if authority_extra:
+                findings.append(
+                    "decision_context.authority has fields the current contract does "
+                    "not accept: " + ", ".join(authority_extra)
+                )
+
+    if "choices" not in missing:
+        choices = value.get("choices")
+        if type(choices) is not list:
+            findings.append("decision_context.choices must be a list")
+        else:
+            for index, choice in enumerate(choices):
+                field = f"decision_context.choices[{index}]"
+                if type(choice) is not dict:
+                    findings.append(f"{field} must be an object")
+                    continue
+                choice_missing, choice_extra = _diff_fields(choice, CHOICE_FIELDS)
+                if choice_missing:
+                    findings.append(
+                        f"{field} is missing required fields: " + ", ".join(choice_missing)
+                    )
+                    missing_fields.update(choice_missing)
+                if choice_extra:
+                    findings.append(
+                        f"{field} has fields the current contract does not accept: "
+                        + ", ".join(choice_extra)
+                    )
+                if "tradeoffs" not in choice_missing:
+                    tradeoffs = choice.get("tradeoffs")
+                    if type(tradeoffs) is not dict:
+                        findings.append(f"{field}.tradeoffs must be an object")
+                    else:
+                        tradeoffs_missing, tradeoffs_extra = _diff_fields(
+                            tradeoffs, TRADEOFF_FIELDS
+                        )
+                        if tradeoffs_missing:
+                            findings.append(
+                                f"{field}.tradeoffs is missing required fields: "
+                                + ", ".join(tradeoffs_missing)
+                            )
+                            missing_fields.update(tradeoffs_missing)
+                        if tradeoffs_extra:
+                            findings.append(
+                                f"{field}.tradeoffs has fields the current contract "
+                                "does not accept: " + ", ".join(tradeoffs_extra)
+                            )
 
     recommendation = value.get("recommendation")
     if type(recommendation) is dict:
@@ -144,15 +238,37 @@ def diagnose_decision_context(value: object) -> list[str]:
                 "decision_context.recommendation is missing required fields: "
                 + ", ".join(rec_missing)
             )
+            missing_fields.update(rec_missing)
         if rec_extra:
             findings.append(
                 "decision_context.recommendation has fields the current contract "
                 "does not accept: " + ", ".join(rec_extra)
             )
+        if "expected_result" not in rec_missing:
+            expected_result = recommendation.get("expected_result")
+            if type(expected_result) is not dict:
+                findings.append(
+                    "decision_context.recommendation.expected_result must be an object"
+                )
+            else:
+                result_missing, result_extra = _diff_fields(
+                    expected_result, EXPECTED_RESULT_FIELDS
+                )
+                if result_missing:
+                    findings.append(
+                        "decision_context.recommendation.expected_result is missing "
+                        "required fields: " + ", ".join(result_missing)
+                    )
+                    missing_fields.update(result_missing)
+                if result_extra:
+                    findings.append(
+                        "decision_context.recommendation.expected_result has fields "
+                        "the current contract does not accept: " + ", ".join(result_extra)
+                    )
     elif recommendation is not None:
         findings.append("decision_context.recommendation must be an object")
 
-    return findings
+    return DecisionContextDiagnosis(tuple(findings), frozenset(missing_fields))
 
 
 def resolve_probe(
@@ -169,8 +285,23 @@ def resolve_probe(
     )
 
 
-def run_probe(name: str, path: Path, catalog: object) -> dict[str, Any]:
-    """Resolve one named probe and return its receipt, or raise on rejection."""
+def run_probe(
+    name: str,
+    path: Path,
+    catalog: object,
+    *,
+    expect_decision_support: bool,
+) -> dict[str, Any]:
+    """Resolve one named probe and return its receipt, or raise on rejection.
+
+    `expect_decision_support` is the contract this probe exists to enforce: a
+    ROUTINE probe must resolve with `decision_support: null` and a MATERIAL
+    probe must resolve with `decision_support` populated. Without this check
+    the proof only confirms the state was accepted, not that it exercised the
+    material-decision path it claims to -- a fixture with the wrong shape in
+    the wrong slot (a routine fixture handed to `--material`, or vice versa)
+    would silently report PASS.
+    """
     state = load_json(path, f"{name} probe")
     if type(state) is not dict:
         raise ConnectionFailure(f"{name} probe must contain a JSON object")
@@ -178,7 +309,7 @@ def run_probe(name: str, path: Path, catalog: object) -> dict[str, Any]:
     if isinstance(result, ConsumerStateRejection):
         rejection = result.to_dict()
         messages = list(rejection["errors"])
-        messages.extend(diagnose_decision_context(state.get("decision_context")))
+        messages.extend(diagnose_decision_context(state.get("decision_context")).messages)
         raise ConnectionFailure(
             f"{name} probe rejected ({rejection['code']}): " + "; ".join(messages)
         )
@@ -187,10 +318,18 @@ def run_probe(name: str, path: Path, catalog: object) -> dict[str, Any]:
         card.get("transition_request", {}).get("mutates") is not False
     ):
         raise ConnectionFailure(f"{name} probe resolved to an effectful decision")
+    has_decision_support = card.get("decision_support") is not None
+    if has_decision_support != expect_decision_support:
+        raise ConnectionFailure(
+            f"{name} probe decision_support mismatch: expected "
+            f"{'present' if expect_decision_support else 'absent'}, found "
+            f"{'present' if has_decision_support else 'absent'}. This probe did "
+            "not exercise the contract it claims to; check the fixture in this slot."
+        )
     return {
         "probe": name,
         "gate": card["gate"],
-        "has_decision_support": card.get("decision_support") is not None,
+        "has_decision_support": has_decision_support,
         "status": "PASS",
     }
 
@@ -202,9 +341,45 @@ def validate_connection(
 ) -> dict[str, Any]:
     """Resolve the ROUTINE and MATERIAL probes and return one PASS receipt."""
     catalog = load_json(catalog_path, "procedure catalog")
-    routine = run_probe("routine", routine_path, catalog)
-    material = run_probe("material", material_path, catalog)
+    routine = run_probe(
+        "routine", routine_path, catalog, expect_decision_support=False
+    )
+    material = run_probe(
+        "material", material_path, catalog, expect_decision_support=True
+    )
     return {"probes": [routine, material], "status": "PASS"}
+
+
+# The previous-contract fixture is missing exactly these five fields under the
+# pre-#48 decision_context shape: `context` and `schema_version` at the top
+# level, and `confidence`, `expected_result`, and `principal_uncertainty` from
+# `recommendation`. self_check asserts this set exactly, structurally, so a
+# diagnosis that silently stops reporting one of them fails self-check instead
+# of passing by coincidence.
+PREVIOUS_CONTRACT_EXPECTED_MISSING_FIELDS = frozenset(
+    {"context", "schema_version", "confidence", "expected_result", "principal_uncertainty"}
+)
+
+
+def _verify_previous_contract_diagnosis(diagnosis: DecisionContextDiagnosis) -> None:
+    """Assert one diagnosis names exactly the fields the pre-#48 shape lacks.
+
+    Matches on `diagnosis.missing_fields`, a set of exact field names, never on
+    substrings of `diagnosis.messages`. Every message here starts with the
+    literal `"decision_context"`, which itself contains the substring
+    `"context"`, so a substring test against messages can never fail on that
+    field and is not a real assertion.
+    """
+    if not diagnosis.messages:
+        raise ConnectionFailure(
+            "self-check failed: no actionable decision_context findings were produced"
+        )
+    if diagnosis.missing_fields != PREVIOUS_CONTRACT_EXPECTED_MISSING_FIELDS:
+        raise ConnectionFailure(
+            "self-check failed: expected missing_fields "
+            f"{sorted(PREVIOUS_CONTRACT_EXPECTED_MISSING_FIELDS)}, got "
+            f"{sorted(diagnosis.missing_fields)}"
+        )
 
 
 def self_check(catalog_path: Path) -> None:
@@ -212,8 +387,8 @@ def self_check(catalog_path: Path) -> None:
 
     Loads `tests/fixtures/consumer-connection/previous-contract.json`, which
     reproduces the pre-#48 `decision_context` shape, and asserts it is
-    rejected before a card is rendered and that the rejection names the
-    specific fields a consumer must add or change.
+    rejected before a card is rendered and that the rejection names exactly
+    the specific fields a consumer must add or change.
     """
     catalog = load_json(catalog_path, "procedure catalog")
     state = load_json(PREVIOUS_CONTRACT_FIXTURE, "previous-contract fixture")
@@ -225,23 +400,8 @@ def self_check(catalog_path: Path) -> None:
             "self-check failed: the previous-contract fixture must be rejected, "
             "not resolved to a card"
         )
-    findings = diagnose_decision_context(state.get("decision_context"))
-    if not findings:
-        raise ConnectionFailure(
-            "self-check failed: no actionable decision_context findings were produced"
-        )
-    expected_missing = {"context", "schema_version"}
-    named_fields = {
-        field
-        for finding in findings
-        for field in expected_missing
-        if field in finding
-    }
-    if named_fields != expected_missing:
-        raise ConnectionFailure(
-            "self-check failed: expected findings naming "
-            f"{sorted(expected_missing)}, got {findings}"
-        )
+    diagnosis = diagnose_decision_context(state.get("decision_context"))
+    _verify_previous_contract_diagnosis(diagnosis)
 
 
 def parse_arguments() -> argparse.Namespace:
