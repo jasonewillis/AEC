@@ -192,21 +192,40 @@ class BuildStateTests(unittest.TestCase):
             with self.subTest(overrides=overrides), self.assertRaises(BuildStateFailure):
                 build(**overrides)
 
-    def test_decision_context_revision_is_bound_to_the_resolved_revision(self) -> None:
-        # A caller cannot know the exact commit ahead of time, so whatever
-        # revision it supplies must be overwritten, never trusted.
-        supplied = {
+    def decision_context(self, supplied_revision: str) -> dict[str, object]:
+        return {
             "authority": {"owner": "agent", "reason": "x"},
             "choices": [],
-            "context": {"evidence_quality": "direct-verified", "revision": "0" * 40},
+            "context": {"evidence_quality": "direct-verified", "revision": supplied_revision},
             "question": "x",
             "recommendation": {},
             "schema_version": "2.0.0",
         }
+
+    def test_placeholder_decision_context_revision_is_bound(self) -> None:
+        # A non-hex placeholder (e.g. "__REVISION__") cannot have been a real
+        # claim about any commit, so it is filled in, not trusted verbatim.
+        supplied = self.decision_context("__REVISION__")
         state = build(decision_context=supplied)
 
         self.assertEqual(REVISION, state["decision_context"]["context"]["revision"])
-        self.assertEqual("0" * 40, supplied["context"]["revision"], "input untouched")
+        self.assertEqual("__REVISION__", supplied["context"]["revision"], "input untouched")
+
+    def test_stale_decision_context_revision_is_rejected(self) -> None:
+        # A well-formed SHA that disagrees with the resolved revision is a
+        # real claim about a different tree: it must be rejected, not
+        # silently relabeled as current.
+        stale = "0" * 40
+        supplied = self.decision_context(stale)
+
+        with self.assertRaisesRegex(BuildStateFailure, f"{stale}.*{REVISION}"):
+            build(decision_context=supplied)
+
+    def test_matching_decision_context_revision_passes_through(self) -> None:
+        supplied = self.decision_context(REVISION)
+        state = build(decision_context=supplied)
+
+        self.assertEqual(REVISION, state["decision_context"]["context"]["revision"])
 
 
 if __name__ == "__main__":

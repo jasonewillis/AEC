@@ -8,8 +8,12 @@ the pure construction logic and leaves I/O to `tools/aec_coach.py`.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+
+HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 
 
 class BuildStateFailure(RuntimeError):
@@ -231,15 +235,35 @@ def build_state(
 def _bind_decision_context_revision(
     decision_context: dict[str, Any], revision: str
 ) -> dict[str, Any]:
-    """Return decision_context with context.revision bound to the resolved revision.
+    """Bind decision_context.context.revision to the resolved revision, or reject.
 
-    A caller cannot know the exact commit ahead of time, so its own
-    `context.revision` is never trusted -- overwritten the same way
-    evidence_records overwrite each entry's `revision` above.
+    Two different inputs need two different responses, not one blanket
+    overwrite:
+
+    - A template placeholder (anything that is not a well-formed 40-character
+      lowercase hex commit, e.g. the fixture's literal "__REVISION__") cannot
+      have been a real claim about any commit, so it is filled in with the
+      resolved revision here, the same way evidence_records fill in each
+      entry's `revision` above.
+    - A well-formed SHA that disagrees with the resolved revision IS a real
+      claim, about a different tree. That disagreement is exactly what
+      `context.revision must equal the resolved revision`
+      (aec/mentoring.py _validate_context) exists to catch: a decision
+      reasoned about one commit, now being rendered against another. Silently
+      relabeling it as current would destroy that signal, so this rejects it
+      instead, naming both revisions.
+
+    A SHA that already equals the resolved revision passes through unchanged.
     """
     context = decision_context.get("context")
     if not isinstance(context, dict):
         raise BuildStateFailure("decision context has no context object")
+    supplied = context.get("revision")
+    if type(supplied) is str and HEX_REVISION.fullmatch(supplied) and supplied != revision:
+        raise BuildStateFailure(
+            "decision context is stale: context.revision "
+            f"{supplied!r} does not equal the resolved revision {revision!r}"
+        )
     bound = dict(decision_context)
     bound["context"] = {**context, "revision": revision}
     return bound

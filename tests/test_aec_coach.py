@@ -40,6 +40,14 @@ def current_revision() -> str:
     return result.stdout.strip()
 
 
+def parent_revision() -> str:
+    """Return a real, well-formed, but stale (not-HEAD) commit SHA."""
+    result = run(["git", "rev-parse", "HEAD~1"])
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr)
+    return result.stdout.strip()
+
+
 def build_state_file(directory: Path, /, phase: str = "Intake", **extra: str) -> Path:
     out_path = directory / "state.json"
     args = ["state", "--task", "demo-task", "--phase", phase, "--lane", "INFRA"]
@@ -112,28 +120,43 @@ class StateThenCheckpointTests(unittest.TestCase):
                 "How should AEC invoke the pinned mentoring adapter?", rendered.stdout
             )
 
-    def test_decision_context_revision_mismatch_is_rejected(self) -> None:
-        # Red canary: a decision_context whose context.revision is a
-        # well-formed but WRONG commit must still be rejected by the
-        # existing resolver validation (aec/mentoring.py _validate_context),
-        # even though build_state itself can no longer produce that shape
-        # through the `state` subcommand. Constructed by hand to bypass the
-        # subcommand's own binding and exercise that downstream check.
+    def test_stale_decision_context_is_rejected_at_state_build_time(self) -> None:
+        # Red canary: a decision_context whose context.revision is a real,
+        # well-formed SHA for a DIFFERENT commit than resolved HEAD (a stale
+        # decision, e.g. formed before a rebase) must be rejected by
+        # `state` itself (aec/state_builder.py _bind_decision_context_revision),
+        # naming both revisions. This is the CLI path a real stale decision
+        # would actually take, not a hand-built state file: build_state can
+        # reject this case directly, so the CLI is exercised end to end.
+        stale_revision = parent_revision()
+        head_revision = current_revision()
         fixture = FIXTURES / "decision-context" / "example.json"
-        wrong_revision = "f" * 40
-        decision_context = json.loads(
-            fixture.read_text(encoding="utf-8").replace("__REVISION__", wrong_revision)
+        decision_context = fixture.read_text(encoding="utf-8").replace(
+            "__REVISION__", stale_revision
         )
 
         with tempfile.TemporaryDirectory() as directory:
-            out_path = build_state_file(Path(directory), phase="Framing")
-            state = json.loads(out_path.read_text(encoding="utf-8"))
-            state["decision_context"] = decision_context
-            out_path.write_text(json.dumps(state), encoding="utf-8")
+            decision_path = Path(directory) / "stale-decision.json"
+            decision_path.write_text(decision_context, encoding="utf-8")
+            out_path = Path(directory) / "state.json"
+            result = run_coach(
+                "state",
+                "--task",
+                "demo-task",
+                "--phase",
+                "Framing",
+                "--lane",
+                "INFRA",
+                "--decision-context",
+                str(decision_path),
+                "--out",
+                str(out_path),
+            )
 
-            rendered = run_coach("checkpoint", str(out_path))
-            self.assertNotEqual(0, rendered.returncode)
-            self.assertIn("must equal the resolved revision", rendered.stderr)
+            self.assertNotEqual(0, result.returncode)
+            self.assertFalse(out_path.exists())
+            self.assertIn(stale_revision, result.stderr)
+            self.assertIn(head_revision, result.stderr)
 
 
 class OutputFormatTests(unittest.TestCase):
