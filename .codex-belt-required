@@ -1,8 +1,14 @@
 This repository requires an adversarial Codex review pass before any pull request
-merges. Its presence is read by Gate 2B of ~/.claude/hooks/pre-merge-require-review.sh,
-which treats every PR in a repo shipping this file as high-risk: a merge is denied
+merges. Gate 2B of ~/.claude/hooks/pre-merge-require-review.sh reads this file from the
+BASE ref of the pull request being merged — not from whatever happens to be checked out
+locally — and treats every PR in a repo declaring it as high-risk: a merge is denied
 unless clean findings exist at
 ~/.claude/codex-findings/<owner>-<repo>/<pr>.json.
+
+Reading the base ref rather than the working tree is load-bearing. A PR that deletes this
+file is merged from a head where it is already gone; a local check would let such a PR
+switch the policy off without the policy ever applying to it. Resolving against the base
+means a removal PR is still governed by the base that still contains the file.
 
 Why this file exists rather than relying on the harness-path heuristic:
 
@@ -20,5 +26,6 @@ checked, not inferred from an incidental fact about the tree.
 To run the belt:  /codex:review  then  /jwCodexIngest
 To bypass once:   prefix the merge with SKIP_CODEX_GATE=1 (a WARN is recorded)
 
-Removing this file removes the requirement, which is the point — the decision is
-visible in the diff and reviewable like any other change.
+Removing this file removes the requirement for PRs opened after the removal lands. The
+removal itself is still gated, so the decision is visible in a diff that had to pass the
+policy it repeals.
