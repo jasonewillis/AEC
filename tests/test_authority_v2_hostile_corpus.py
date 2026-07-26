@@ -32,7 +32,7 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # The tuple holds duplicates by construction, because the literal tail repeats 17
 # paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
 # it is the real coverage number, and it cannot be inflated back to green by
-# adding a repeat. Of the 39 distinct paths, 31 arrive via SOURCE_BASELINE and
+# adding a repeat. Of the 45 distinct paths, 37 arrive via SOURCE_BASELINE and
 # only 8 are pinned independently of the declaration.
 #
 # Bump these deliberately when adding or removing tracked source.
@@ -42,11 +42,17 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 #     leaves coverage entirely.
 #   * EXPECTED_SOURCE_BASELINE_PATHS guards the declaration. It is the only one
 #     that fires for the 17 paths the literal tail duplicates: dropping one of
-#     those from the declaration leaves the distinct count at 39, because the
+#     those from the declaration leaves the distinct count at 45, because the
 #     literal tail still supplies it. Without this pin the canary covered only
-#     14 of the 31 declared paths and quietly missed the other 17.
-EXPECTED_DISTINCT_FROZEN_PATHS = 39
-EXPECTED_SOURCE_BASELINE_PATHS = 31
+#     20 of the 37 declared paths and quietly missed the other 17.
+#
+# Bumped 2026-07-25: +6 tracked files (aec/state_builder.py,
+# aec/human_render.py, tools/aec_coach.py, and their three test files) when
+# build_state.py/render_checkpoint.py were ported from HealthRAG (#58, #52).
+# Merged with the +2 from #72 (tools/validate_consumer_connection.py,
+# tests/test_consumer_connection_proof.py), giving 37 declared paths.
+EXPECTED_DISTINCT_FROZEN_PATHS = 45
+EXPECTED_SOURCE_BASELINE_PATHS = 37
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
