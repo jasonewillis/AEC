@@ -16,6 +16,7 @@ from aec.cards import PUBLIC_CARD_SCHEMA_VERSION
 from aec.human_render import HUMAN_RENDER_CONTRACT_VERSION
 from aec.release_manifest import (
     CONTRACT_VERSIONS,
+    CURRENT_RELEASE_VERSION,
     OFFICIAL_REPOSITORY,
     RELEASE_MANIFEST_SCHEMA_VERSION,
     ReleaseManifestFailure,
@@ -138,6 +139,7 @@ class ReleaseManifestTests(unittest.TestCase):
         )
         release_schema = schema["properties"]["release"]["properties"]
         self.assertEqual("0.1.0", release_schema["version"]["const"])
+        self.assertEqual(CURRENT_RELEASE_VERSION, release_schema["version"]["const"])
         self.assertEqual("v0.1.0", release_schema["tag"]["const"])
         self.assertEqual(
             "https://github.com/jasonewillis/AEC/releases/tag/v0.1.0",
@@ -220,6 +222,38 @@ class ReleaseManifestTests(unittest.TestCase):
         tampered = copy.deepcopy(manifest)
         tampered["consumer_update"]["auto_merge_allowed"] = True
         self.assertIn("auto_merge_allowed must be false", validate_release_manifest(tampered))
+
+    def test_runtime_rejects_every_schema_identity_and_timestamp_mismatch(self) -> None:
+        baseline = build_release_manifest(
+            descriptor(),
+            repository=OFFICIAL_REPOSITORY,
+            revision="d" * 40,
+            tag="v0.1.0",
+            published_at="2026-07-26T20:00:00Z",
+        )
+        for timestamp in (
+            "2026-07-26T20:00Z",
+            "2026-07-26 20:00:00Z",
+            "20260726T200000Z",
+            "2026-07-26T20:00:00.123Z",
+        ):
+            with self.subTest(timestamp=timestamp):
+                candidate = copy.deepcopy(baseline)
+                candidate["release"]["published_at"] = timestamp
+                self.assertTrue(validate_release_manifest(candidate))
+
+        changed_identity = copy.deepcopy(baseline)
+        changed_identity["release"].update(
+            {
+                "notes_url": "https://github.com/jasonewillis/AEC/releases/tag/v0.2.0",
+                "tag": "v0.2.0",
+                "version": "0.2.0",
+            }
+        )
+        self.assertIn(
+            "release.version must equal 0.1.0",
+            validate_release_manifest(changed_identity),
+        )
 
     def test_cli_generates_and_validates_one_canonical_asset(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

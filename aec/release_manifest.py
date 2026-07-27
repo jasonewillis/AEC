@@ -13,6 +13,7 @@ from aec.human_render import HUMAN_RENDER_CONTRACT_VERSION
 
 
 RELEASE_MANIFEST_SCHEMA_VERSION = "1.0.0"
+CURRENT_RELEASE_VERSION = "0.1.0"
 OFFICIAL_REPOSITORY = "jasonewillis/AEC"
 DESCRIPTOR_FIELDS = {
     "channel",
@@ -53,6 +54,10 @@ CONTRACT_FIELDS = {
 }
 SEMANTIC_VERSION = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
+UTC_SECONDS_TIMESTAMP = re.compile(
+    r"^[0-9]{4}-(0[1-9]|1[0-2])-([0-2][0-9]|3[01])"
+    r"T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+)
 CHANNELS = {"alpha", "beta", "stable"}
 COMPATIBILITY = {"compatible", "validation-required", "breaking"}
 REQUIRED_PROBES = ["human-render", "material", "routine"]
@@ -85,7 +90,7 @@ def canonical_json(value: object) -> str:
 
 
 def _timestamp(value: object) -> bool:
-    if type(value) is not str or not value.endswith("Z"):
+    if type(value) is not str or UTC_SECONDS_TIMESTAMP.fullmatch(value) is None:
         return False
     try:
         parsed = datetime.fromisoformat(f"{value[:-1]}+00:00")
@@ -104,6 +109,8 @@ def validate_release_descriptor(value: object) -> list[str]:
     version = value.get("release_version")
     if type(version) is not str or SEMANTIC_VERSION.fullmatch(version) is None:
         errors.append("release_version must be semantic MAJOR.MINOR.PATCH")
+    elif version != CURRENT_RELEASE_VERSION:
+        errors.append(f"release_version must equal {CURRENT_RELEASE_VERSION}")
     if value.get("channel") not in CHANNELS:
         errors.append("channel is unsupported")
     if value.get("compatibility") not in COMPATIBILITY:
@@ -208,6 +215,8 @@ def validate_release_manifest(value: object) -> list[str]:
         repository = value.get("repository")
         if type(version) is not str or SEMANTIC_VERSION.fullmatch(version) is None:
             errors.append("release.version must be semantic MAJOR.MINOR.PATCH")
+        elif version != CURRENT_RELEASE_VERSION:
+            errors.append(f"release.version must equal {CURRENT_RELEASE_VERSION}")
         if tag != f"v{version}":
             errors.append("release.tag must equal v<release.version>")
         revision = release.get("revision")
