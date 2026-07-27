@@ -51,8 +51,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # build_state.py/render_checkpoint.py were ported from HealthRAG (#58, #52).
 # Merged with the +2 from #72 (tools/validate_consumer_connection.py,
 # tests/test_consumer_connection_proof.py), giving 37 declared paths.
-EXPECTED_DISTINCT_FROZEN_PATHS = 47
-EXPECTED_SOURCE_BASELINE_PATHS = 39
+# Bumped 2026-07-26: +3 release-contract files (aec/release_manifest.py,
+# tools/release_manifest.py, and tests/test_release_manifest.py).
+EXPECTED_DISTINCT_FROZEN_PATHS = 50
+EXPECTED_SOURCE_BASELINE_PATHS = 42
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
