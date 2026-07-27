@@ -35,6 +35,7 @@ def default_rail_definition() -> RailDefinition:
 
 RAIL_MARGIN = 2
 RAIL_COLUMN_WIDTH = 8
+HUMAN_RENDER_CONTRACT_VERSION = "2.0.0"
 TRADEOFF_DIMENSIONS: tuple[str, ...] = (
     "maintainability",
     "quality",

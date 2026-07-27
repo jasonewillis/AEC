@@ -50,11 +50,13 @@ in each consumer repository.
 
 HealthRAG adoption exposed the remaining Slice 6 and Slice 7 productization gaps:
 routine-only connection proof can miss a material-decision incompatibility and normal
-use still requires consumer-authored state. AEC now owns the canonical human renderer;
-each consumer must still pin that revision, provide fresh revision-bound state, and wire
-the read-only prompt hook. Resolve the framework admission blocker first, then deliver
-consumer adoption, compatibility proof, learner boundary, outcome interaction, and the
-two-consumer pilot in the sequence defined by the coaching-interaction contract.
+use still requires consumer-authored state. AEC now owns the canonical human renderer
+and the framework-side prompt-hook entrypoint; no consumer is configured by that fact.
+Each consumer must still migrate the versioned human heading, pin the revision, provide
+fresh revision-bound state, and register the read-only hook. Resolve the framework
+admission blocker first, then deliver consumer adoption, compatibility proof, learner
+boundary, outcome interaction, and the two-consumer pilot in the sequence defined by
+the coaching-interaction contract.
 
 ## Completion rule
 
