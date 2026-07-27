@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -135,6 +136,24 @@ class ReleaseManifestTests(unittest.TestCase):
                 ].items()
             },
         )
+        release_schema = schema["properties"]["release"]["properties"]
+        self.assertEqual("0.1.0", release_schema["version"]["const"])
+        self.assertEqual("v0.1.0", release_schema["tag"]["const"])
+        self.assertEqual(
+            "https://github.com/jasonewillis/AEC/releases/tag/v0.1.0",
+            release_schema["notes_url"]["const"],
+        )
+        timestamp_pattern = re.compile(release_schema["published_at"]["pattern"])
+        self.assertIsNotNone(
+            timestamp_pattern.fullmatch("2026-07-26T20:00:00Z")
+        )
+        for malformed in (
+            "2026-07-26",
+            "2026-07-26T20:00:00+00:00",
+            "2026-13-26T20:00:00Z",
+            "2026-07-26T25:00:00Z",
+        ):
+            self.assertIsNone(timestamp_pattern.fullmatch(malformed))
 
     def test_builds_exact_tag_revision_and_contract_manifest(self) -> None:
         revision = "a" * 40
@@ -250,7 +269,9 @@ class ReleaseWorkflowTests(unittest.TestCase):
 
         self.assertIn("tags:", workflow)
         self.assertIn("- \"v*\"", workflow)
-        self.assertIn("contents: write", workflow)
+        self.assertIn("contents: read", workflow)
+        self.assertIn("secrets.AEC_RELEASE_TOKEN", workflow)
+        self.assertIn("AEC_RELEASE_TOKEN is required", workflow)
         self.assertIn("git merge-base --is-ancestor", workflow)
         self.assertIn("python3 tools/validate_foundation.py", workflow)
         self.assertIn("python3 -m unittest discover -s tests -v", workflow)

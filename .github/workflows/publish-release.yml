@@ -6,7 +6,7 @@ on:
       - "v*"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: aec-release
@@ -57,10 +57,14 @@ jobs:
 
       - name: Refuse to replace an existing release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AEC_RELEASE_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "AEC_RELEASE_TOKEN is required for immutable release administration." >&2
+            exit 1
+          fi
           ENABLED=$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" \
             --header "X-GitHub-Api-Version: 2026-03-10" --jq .enabled)
           test "$ENABLED" = "true"
@@ -73,7 +77,7 @@ jobs:
 
       - name: Stage and publish immutable GitHub Release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AEC_RELEASE_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
