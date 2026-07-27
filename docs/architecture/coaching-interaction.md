@@ -310,14 +310,15 @@ invocation is not coaching interaction.
 
 ### Human-render interaction contract
 
-`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.1.0`. It retains the stable
-`[AEC: Mentoring]` heading and adds a closed trigger contract. Full cards contain the
-rail, guidance, evidence status, finished condition, mentoring, and authority boundary
-from one validated card and exact-bound consumer snapshot. `routine-progress` emits one
-deterministic compact line. The renderer never remembers a prior phase or selects a
-lifecycle transition; the consumer adapter owns per-interaction trigger selection,
-payload augmentation, and state production. Direct native hook registration is compact
-only until that adapter boundary is installed and tested by the consumer.
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.2.0`. It retains the stable
+`[AEC: Project Guidance]` and `[AEC: Mentoring]` headings while adding a terminal-safe
+visual hierarchy. Full cards use major and supporting rules, compact labels, wrapped
+context, and only relevant evidence categories. The rail, guidance, evidence, finished
+condition, mentoring, and authority boundary still come from one validated card and
+exact-bound consumer snapshot. `routine-progress` still emits one deterministic compact
+line. The renderer never remembers a prior phase or selects a lifecycle transition; the
+consumer adapter owns per-interaction trigger selection, payload augmentation, and state
+production.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same

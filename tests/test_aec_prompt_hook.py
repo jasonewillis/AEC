@@ -136,7 +136,7 @@ class PromptHookTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("[AEC: Project Guidance]", result.stdout)
         self.assertIn("[AEC: Mentoring]", result.stdout)
-        self.assertIn("Phase: PR", result.stdout)
+        self.assertIn("CURRENT  PR", result.stdout)
 
     def test_valid_state_renders_required_human_sections(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -148,7 +148,7 @@ class PromptHookTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("[AEC: Project Guidance]", result.stdout)
         self.assertIn("[AEC: Mentoring]", result.stdout)
-        self.assertIn("you are here", result.stdout)
+        self.assertIn("RAIL · PR", result.stdout)
         self.assertNotIn("[AEC: Integration Blocked]", result.stdout)
 
     def test_prompt_text_cannot_change_the_validated_card(self) -> None:
@@ -167,7 +167,7 @@ class PromptHookTests(unittest.TestCase):
         self.assertEqual(0, first.returncode, first.stderr)
         self.assertEqual(0, second.returncode, second.stderr)
         self.assertEqual(first.stdout, second.stdout)
-        self.assertIn("Phase: PR", first.stdout)
+        self.assertIn("CURRENT  PR", first.stdout)
 
     def test_routine_progress_is_compact(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -302,10 +302,10 @@ class PromptHookTests(unittest.TestCase):
             "review-finding",
             evidence=repair_state["evidence"],
         )
-        self.assertIn("Phase: Build", repair_text)
+        self.assertIn("CURRENT  Build", repair_text)
         self.assertIn(repair_revision, repair_text)
-        self.assertIn("test-verified: pending", repair_text)
-        self.assertNotIn("test-verified: verified", repair_text)
+        self.assertIn("test-verified · pending", repair_text)
+        self.assertNotIn("test-verified · verified", repair_text)
 
         verify_card = card_for(
             state_for(

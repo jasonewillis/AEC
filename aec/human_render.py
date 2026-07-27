@@ -11,6 +11,7 @@ can prove the renderer is data-driven and force the fail-closed mismatch path.
 
 from __future__ import annotations
 
+from textwrap import wrap
 from typing import Any, NamedTuple
 
 from aec.cards import PHASE_RAIL, STAGE_PHASES
@@ -33,9 +34,11 @@ def default_rail_definition() -> RailDefinition:
     return RailDefinition(phase_names=PHASE_RAIL, stage_groups=stage_groups)
 
 
-RAIL_MARGIN = 2
-RAIL_COLUMN_WIDTH = 15
-HUMAN_RENDER_CONTRACT_VERSION = "1.1.0"
+HUMAN_RENDER_CONTRACT_VERSION = "1.2.0"
+TEXT_WIDTH = 96
+LABEL_WIDTH = 9
+LIGHT_RULE = "─" * 64
+RAIL_CONNECTOR = "───"
 FULL_CARD_TRIGGERS: tuple[str, ...] = (
     "task-intake",
     "phase-transition",
@@ -71,6 +74,40 @@ TRADEOFF_DIMENSIONS: tuple[str, ...] = (
 )
 
 
+def section_heading(label: str, *, fill: str = "═") -> str:
+    """Return one portable, high-contrast plain-text section heading."""
+    return label + "\n" + fill * 64
+
+
+def labeled_lines(label: str, value: str) -> list[str]:
+    """Wrap one value beneath a stable, scannable terminal label."""
+    prefix = (
+        f"{label:<{LABEL_WIDTH}}"
+        if len(label) < LABEL_WIDTH
+        else label + " "
+    )
+    chunks = wrap(
+        str(value),
+        width=TEXT_WIDTH - len(prefix),
+        break_long_words=True,
+        break_on_hyphens=False,
+    ) or [""]
+    return [prefix + chunks[0], *(" " * len(prefix) + item for item in chunks[1:])]
+
+
+def concise_recognition(value: str) -> str:
+    """Remove renderer-redundant mentoring boilerplate without changing meaning."""
+    when_prefix = "Use this procedure when "
+    after_prefix = "Use this procedure after "
+    if value.startswith(when_prefix):
+        remainder = value[len(when_prefix) :]
+        return remainder[:1].upper() + remainder[1:]
+    if value.startswith(after_prefix):
+        remainder = value[len(after_prefix) :]
+        return "After " + remainder
+    return value
+
+
 def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
     """Render the ASCII workflow rail for one validated card.
 
@@ -94,18 +131,6 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
             "count ({1})".format(rail_total, len(phase_names))
         )
 
-    header_characters = [" "] * (RAIL_MARGIN + len(phase_names) * RAIL_COLUMN_WIDTH)
-    cursor = RAIL_MARGIN
-    for label, phases in rail_definition.stage_groups:
-        span = len(phases) * RAIL_COLUMN_WIDTH
-        start = cursor + max(0, (span - len(label)) // 2)
-        for offset, character in enumerate(label):
-            index = start + offset
-            if index < len(header_characters):
-                header_characters[index] = character
-        cursor += span
-    header_line = "".join(header_characters).rstrip()
-
     markers = []
     for index in range(len(phase_names)):
         if index < current_index:
@@ -114,33 +139,50 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
             markers.append("◉")  # current
         else:
             markers.append("○")  # not reached
-    marker_line = " " * RAIL_MARGIN + ("─" * (RAIL_COLUMN_WIDTH - 1)).join(markers)
+    tokens = [
+        f"{PHASE_DISPLAY_NAMES.get(name, name)} {marker}"
+        for name, marker in zip(phase_names, markers, strict=True)
+    ]
+    phase_line = RAIL_CONNECTOR.join(tokens)
+    if len(phase_line) > TEXT_WIDTH:
+        raise RenderFailure(
+            f"workflow rail exceeds the {TEXT_WIDTH}-column human-render contract"
+        )
 
-    name_line = " " * RAIL_MARGIN + "".join(
-        PHASE_DISPLAY_NAMES.get(name, name).ljust(RAIL_COLUMN_WIDTH)
-        for name in phase_names
+    grouped_phases = tuple(
+        phase
+        for _, phases in rail_definition.stage_groups
+        for phase in phases
     )
-    name_line = name_line.rstrip()
+    if grouped_phases != phase_names:
+        raise RenderFailure("rail stage groups do not match the ordered phase names")
+    token_starts: list[int] = []
+    cursor = 0
+    for token in tokens:
+        token_starts.append(cursor)
+        cursor += len(token) + len(RAIL_CONNECTOR)
+    header_characters = [" "] * len(phase_line)
+    phase_cursor = 0
+    for label, phases in rail_definition.stage_groups:
+        first = phase_cursor
+        last = phase_cursor + len(phases) - 1
+        span_start = token_starts[first]
+        span_end = token_starts[last] + len(tokens[last])
+        start = span_start + max(0, (span_end - span_start - len(label)) // 2)
+        for offset, character in enumerate(label):
+            header_characters[start + offset] = character
+        phase_cursor += len(phases)
+    header_line = "".join(header_characters).rstrip()
 
-    column_start = RAIL_MARGIN + current_index * RAIL_COLUMN_WIDTH
-    detail_indent = " " * (column_start + 4)
     lines = [
         header_line,
-        marker_line,
-        name_line,
-        " " * column_start + "▲",
-        " " * column_start
-        + f"└── you are here · rail {rail}/{rail_total} "
-        + f"· phase {phase} of {phase_total} in stage",
-        detail_indent + f"gate status: {card['gate']}",
-        detail_indent + f"earliest unmet gate: {earliest_unmet_gate(card)}",
+        phase_line,
+        f"RAIL · {PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}"
+        + f" · step {rail}/{rail_total}"
+        + f" · {position['stage']} {phase}/{phase_total}",
     ]
-    required_proof = card.get("required_proof") or []
-    if required_proof:
-        lines.append(detail_indent + "required proof: " + ", ".join(required_proof))
     lines.append(
-        "Legend: ● cleared phase   ◉ current phase (you are here)   "
-        "○ phase not reached yet"
+        "● complete   ◉ current   ○ not reached"
     )
     return "\n".join(lines)
 
@@ -178,7 +220,7 @@ def render_evidence_status(
     required_by_category: dict[str, list[str]] = {}
     for kind in card.get("required_proof") or []:
         required_by_category.setdefault(evidence_class(kind), []).append(kind)
-    lines = ["Evidence status (exact revision and environment):"]
+    lines: list[str] = []
     for category in (
         "source-audited",
         "test-verified",
@@ -188,6 +230,8 @@ def render_evidence_status(
     ):
         kinds = sorted(set(accepted.get(category, [])))
         missing = sorted(set(required_by_category.get(category, [])))
+        if not kinds and not missing:
+            continue
         if missing:
             prefix = (
                 "partial (verified: " + ", ".join(kinds) + "; "
@@ -199,7 +243,9 @@ def render_evidence_status(
             value = "verified (" + ", ".join(kinds) + ")"
         else:
             value = "not claimed"
-        lines.append(f"  - {category}: {value}")
+        lines.extend(labeled_lines("EVIDENCE", f"{category} · {value}"))
+    if not lines:
+        lines.extend(labeled_lines("EVIDENCE", "None claimed."))
     return lines
 
 
@@ -225,76 +271,101 @@ def render_project_guidance(
     """
     position = card["rail_position"]
     transition = card.get("transition_request") or {}
-    lines = ["[AEC: Project Guidance]", render_rail(card, rail_definition), ""]
+    lines = [
+        section_heading("[AEC: Project Guidance]"),
+        render_rail(card, rail_definition),
+        LIGHT_RULE,
+    ]
     if task_id:
-        lines.append(f"Task: {task_id}")
-    lines.append(f"Phase: {card['phase']} (stage: {position['stage']})")
-    lines.append(f"Gate status: {card['gate']}")
-    required_proof = card.get("required_proof") or []
-    lines.append(f"Earliest unmet gate: {earliest_unmet_gate(card)}")
-    revision = transition.get("revision")
-    revision_suffix = f" on exact revision {revision}" if revision else ""
-    if required_proof:
-        classified = [
-            f"{evidence_class(item)}: {item}"
-            for item in required_proof
-        ]
-        lines.append(
-            f"Next action: Remain at {card['phase']}; obtain "
-            + "; ".join(classified)
-            + revision_suffix
-            + "."
+        lines.extend(labeled_lines("TASK", task_id))
+    lines.extend(
+        labeled_lines(
+            "CURRENT",
+            f"{PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}"
+            f" · {position['stage']} · step {position['rail']}/{position['rail_total']}",
         )
-        lines.append("Required proof: " + "; ".join(classified))
+    )
+    lines.extend(
+        labeled_lines(
+            "GATE",
+            f"{card['gate']} · {earliest_unmet_gate(card)}",
+        )
+    )
+    required_proof = card.get("required_proof") or []
+    revision = transition.get("revision")
+    if required_proof:
+        lines.extend(
+            labeled_lines(
+                "NEXT",
+                f"Stay in {PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}. "
+                "Get the proof below.",
+            )
+        )
+        proof_by_class: dict[str, list[str]] = {}
+        for item in required_proof:
+            proof_by_class.setdefault(evidence_class(item), []).append(item)
+        for category, items in proof_by_class.items():
+            lines.extend(labeled_lines("PROOF", f"{category} · {', '.join(items)}"))
     else:
         rail = int(position["rail"])
         phase_names = rail_definition.phase_names
         if rail < len(phase_names):
-            lines.append(
-                "Next action: The consumer may evaluate transition to "
-                f"{PHASE_DISPLAY_NAMES.get(phase_names[rail], phase_names[rail])}"
-                f"{revision_suffix}; AEC will not execute it."
+            lines.extend(
+                labeled_lines(
+                    "NEXT",
+                    "Check whether "
+                    f"{PHASE_DISPLAY_NAMES.get(phase_names[rail], phase_names[rail])} "
+                    "is ready. AEC will not move the task.",
+                )
             )
         else:
-            lines.append(
-                "Next action: Verify the finished condition and retain deployment/"
-                f"observation proof{revision_suffix}."
+            lines.extend(
+                labeled_lines(
+                    "NEXT",
+                    "Confirm the finished condition. Keep deployment and observation "
+                    "proof.",
+                )
             )
+    if revision:
+        lines.extend(labeled_lines("REVISION", revision))
     active_blockers = [
         item
         for item in blockers or []
         if type(item) is dict and item.get("active") is True
     ]
     if active_blockers:
-        lines.append(
-            "Blockers: "
-            + ", ".join(
+        lines.extend(
+            labeled_lines(
+                "BLOCKERS",
+                ", ".join(
                 f"{item.get('identity')} ({item.get('reason_code')})"
                 for item in active_blockers
+                ),
             )
         )
     elif card["gate"] == "Blocked":
         rationale = card.get("rationale") or {}
-        lines.append(
-            "Blockers: "
-            + str(rationale.get("summary") or "validated blocker details unavailable")
+        lines.extend(
+            labeled_lines(
+                "BLOCKERS",
+                str(
+                    rationale.get("summary")
+                    or "Validated blocker details are unavailable."
+                ),
+            )
         )
     else:
-        lines.append("Blockers: none recorded in the validated card.")
+        lines.extend(labeled_lines("BLOCKERS", "None recorded."))
     lines.extend(render_evidence_status(card, evidence or []))
     finished = card.get("finished") or []
-    if finished:
-        lines.append("Finished when:")
-        for item in finished:
-            lines.append(f"  - {item}")
-    lines.append(
-        "Authority: AEC is advisory/read-only "
-        "(authoritative={0}, transition_request.executes={1}, "
-        "transition_request.mutates={2}). Consumer owns execution, task/GitHub "
-        "state, tests, merge, deployment, rollback, and sensitive data.".format(
-            card.get("authoritative"),
-            transition.get("executes"),
-            transition.get("mutates"),
+    for item in finished:
+        lines.extend(labeled_lines("DONE WHEN", item))
+    lines.append(LIGHT_RULE)
+    lines.extend(
+        labeled_lines(
+            "AUTHORITY",
+            "AEC is advisory and read-only. You own execution, task/GitHub state, "
+            "tests, merge, deployment, rollback, and sensitive data.",
         )
     )
     return "\n".join(lines)
@@ -307,24 +378,22 @@ def render_mentoring(card: dict[str, Any]) -> str:
     reason for the gate is clear, not just its name.
     """
     mentoring = card.get("mentoring") or {}
-    lines = ["[AEC: Mentoring]"]
+    lines = [section_heading("[AEC: Mentoring]")]
     lesson = mentoring.get("lesson")
     if lesson:
-        lines.append(f"Lesson: {lesson}")
+        lines.extend(labeled_lines("LESSON", lesson))
     why_gate_exists = mentoring.get("why_gate_exists")
     if why_gate_exists:
-        lines.append(f"Why this gate exists: {why_gate_exists}")
+        lines.extend(labeled_lines("WHY", why_gate_exists))
     recognition_heuristic = mentoring.get("recognition_heuristic")
     if recognition_heuristic:
-        lines.append(f"Recognize this situation when: {recognition_heuristic}")
+        lines.extend(labeled_lines("WHEN", concise_recognition(recognition_heuristic)))
     anti_example = card.get("anti_example")
     if anti_example:
-        lines.append(f"Avoid this pattern: {anti_example}")
+        lines.extend(labeled_lines("AVOID", anti_example))
     good = card.get("good") or []
-    if good:
-        lines.append("Aim for this pattern:")
-        for item in good:
-            lines.append(f"  - {item}")
+    for item in good:
+        lines.extend(labeled_lines("AIM FOR", item))
     return "\n".join(lines)
 
 
@@ -347,13 +416,16 @@ def render_consumer_evidence_context(
     )
     if not pending:
         return None
-    return (
-        "[Consumer: Evidence Context]\n"
-        "These consumer-reported facts are not AEC gates or recommendations:\n"
-        + "\n".join(
-            f"  - {evidence_class(item)}: {item} pending" for item in pending
+    lines = [section_heading("[Consumer: Evidence Context]", fill="─")]
+    for item in pending:
+        lines.extend(
+            labeled_lines(
+                "PENDING",
+                f"{evidence_class(item)} · {item}. Consumer fact only; "
+                "not an AEC gate.",
+            )
         )
-    )
+    return "\n".join(lines)
 
 
 def render_decision(card: dict[str, Any]) -> str | None:
@@ -367,48 +439,53 @@ def render_decision(card: dict[str, Any]) -> str | None:
     if not support:
         return None
 
-    lines = ["[AEC: Decision]", f"Question: {support['question']}", ""]
+    lines = [
+        section_heading("[AEC: Decision]"),
+        *labeled_lines("QUESTION", support["question"]),
+        "",
+    ]
     for choice in support.get("choices", []):
-        lines.append(f"Choice: {choice['identity']}")
-        lines.append(f"  Summary: {choice['summary']}")
+        lines.extend(labeled_lines("CHOICE", choice["identity"]))
+        lines.extend(labeled_lines("SUMMARY", choice["summary"]))
         tradeoffs = choice.get("tradeoffs") or {}
         for dimension in TRADEOFF_DIMENSIONS:
             if dimension in tradeoffs:
-                lines.append(f"  {dimension}: {tradeoffs[dimension]}")
+                lines.extend(labeled_lines(dimension.upper(), tradeoffs[dimension]))
         lines.append("")
 
     recommendation = support.get("recommendation") or {}
-    lines.append(f"Recommendation: {recommendation.get('choice')}")
-    lines.append(f"  Confidence: {recommendation.get('confidence')}")
+    lines.extend(labeled_lines("RECOMMEND", recommendation.get("choice")))
+    lines.extend(labeled_lines("CONFIDENCE", recommendation.get("confidence")))
     principal_uncertainty = recommendation.get("principal_uncertainty")
     if principal_uncertainty:
-        lines.append(f"  Principal uncertainty: {principal_uncertainty}")
+        lines.extend(labeled_lines("UNCERTAINTY", principal_uncertainty))
     expected_result = recommendation.get("expected_result") or {}
     if expected_result:
-        lines.append(
-            "  Expected result: measure={0}, baseline={1}, target={2}, "
-            "direction={3}, unit={4}, threshold={5}".format(
+        lines.extend(
+            labeled_lines(
+                "EXPECTED",
+                "measure={0}, baseline={1}, target={2}, direction={3}, "
+                "unit={4}, threshold={5}".format(
                 expected_result.get("measure"),
                 expected_result.get("baseline"),
                 expected_result.get("target"),
                 expected_result.get("direction"),
                 expected_result.get("unit"),
                 expected_result.get("threshold"),
+                ),
             )
         )
     revisit_when = recommendation.get("revisit_when") or []
-    if revisit_when:
-        lines.append("  Revisit when:")
-        for item in revisit_when:
-            lines.append(f"    - {item}")
+    for item in revisit_when:
+        lines.extend(labeled_lines("REVISIT", item))
 
     authority = support.get("authority") or {}
     owner = authority.get("owner")
     reason = authority.get("reason")
     if owner and reason:
-        lines.append(f"Authority owner: {owner} — {reason}")
+        lines.extend(labeled_lines("OWNER", f"{owner} · {reason}"))
     elif owner:
-        lines.append(f"Authority owner: {owner}")
+        lines.extend(labeled_lines("OWNER", owner))
 
     while lines and lines[-1] == "":
         lines.pop()
@@ -444,7 +521,7 @@ def render_human(
     decision = render_decision(card)
     if decision is not None:
         sections.append(decision)
-    return "\n\n".join(sections) + "\n"
+    return f"\n{LIGHT_RULE}\n".join(sections) + "\n"
 
 
 def render_compact(card: dict[str, Any]) -> str:
