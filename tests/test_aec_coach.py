@@ -169,7 +169,7 @@ class OutputFormatTests(unittest.TestCase):
             default = run_coach("checkpoint", str(state_path))
             self.assertEqual(0, default.returncode, default.stderr)
             self.assertIn("[AEC: Project Guidance]", default.stdout)
-            self.assertIn("[AEC: Mentoring]", default.stdout)
+            self.assertIn("[AEC: Mentor]", default.stdout)
             with self.assertRaises(json.JSONDecodeError):
                 json.loads(default.stdout)
             self.assertNotIn("[AEC: Decision]", default.stdout)

@@ -36,6 +36,8 @@ This repository currently provides:
   canonical SHA-256 contract with normalized request and catalog input bindings and
   exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
+- a prompt-hook renderer that displays the validated workflow rail, project guidance,
+  and mentor block while making unavailable consumer state explicit;
 - AEC-authored phase teaching plus optional, validated material-decision support with
   declared evidence quality, confidence, principal uncertainty, and one expected
   measurable result;
@@ -62,6 +64,21 @@ Run the acceptance gate:
 python3 tools/validate_foundation.py
 python3 -m unittest discover -s tests -v
 ```
+
+Render one validated local checkpoint:
+
+```bash
+python3 -m tools.aec_coach state \
+  --task aec#81 --phase PR --lane INFRA --out tmp/aec-state.json
+printf '%s' '{"hook_event_name":"UserPromptSubmit","prompt":"open the PR"}' |
+  python3 tools/aec_prompt_hook.py \
+    --state tmp/aec-state.json \
+    --project-root "$PWD" \
+    --environment local
+```
+
+Consumer projects own their state producer and hook registration. A missing or rejected
+state emits `[AEC: Integration Blocked]`; AEC does not infer a phase from prompt text.
 
 ## Documentation
 
