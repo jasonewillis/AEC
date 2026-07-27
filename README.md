@@ -36,8 +36,9 @@ This repository currently provides:
   canonical SHA-256 contract with normalized request and catalog input bindings and
   exactly one primary procedure or blocker;
 - a pure nine-phase resolver catalog with immutable mentoring-card results;
-- a prompt-hook renderer that displays the validated workflow rail, project guidance,
-  and mentor block while making unavailable consumer state explicit;
+- a prompt-hook renderer that displays one validated workflow rail, project guidance,
+  and mentoring block at meaningful triggers, uses a compact indicator for routine
+  progress, and makes unavailable consumer state explicit;
 - AEC-authored phase teaching plus optional, validated material-decision support with
   declared evidence quality, confidence, principal uncertainty, and one expected
   measurable result;
@@ -70,7 +71,7 @@ Render one validated local checkpoint:
 ```bash
 python3 -m tools.aec_coach state \
   --task aec#81 --phase PR --lane INFRA --out tmp/aec-state.json
-printf '%s' '{"hook_event_name":"UserPromptSubmit","prompt":"open the PR"}' |
+printf '%s' '{"hook_event_name":"UserPromptSubmit","prompt":"show AEC status","aec_trigger":"status-request"}' |
   python3 tools/aec_prompt_hook.py \
     --state tmp/aec-state.json \
     --project-root "$PWD" \
@@ -79,9 +80,12 @@ printf '%s' '{"hook_event_name":"UserPromptSubmit","prompt":"open the PR"}' |
 
 Consumer projects own their state producer and hook registration. A missing or rejected
 state emits `[AEC: Integration Blocked]`; AEC does not infer a phase from prompt text.
-The framework hook alone does not change any consumer. Human-render contract `2.0.0`
-renames `[AEC: Mentoring]` to `[AEC: Mentor]`, so pin bumps require a coordinated
-consumer instruction, documentation, snapshot, and test migration.
+Native prompt-hook payloads omit `aec_trigger` and receive compact routine output. A
+consumer-owned adapter selects a closed trigger per interaction and adds `aec_trigger`
+before invoking AEC; a static hook argument cannot provide dynamic trigger behavior.
+The framework hook alone does not change any consumer. Human-render contract `1.1.0`
+retains `[AEC: Mentoring]` and adds deterministic full/compact presentation. Consumers
+must explicitly pin and validate the candidate AEC revision before adopting it.
 
 ## Documentation
 

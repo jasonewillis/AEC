@@ -118,7 +118,7 @@ productization work is called out in the gap map below.
                                                                       | 5. RENDER HUMAN COACHING                 |
                                                                       |                                          |
                                                                       | [AEC: Project Guidance] action and proof |
-                                                                      | [AEC: Mentor] lesson and recognition     |
+                                                                      | [AEC: Mentoring] lesson and recognition  |
                                                                       | Machine JSON only by explicit request    |
                                                                       +-------------------+----------------------+
                                                                                           |
@@ -216,7 +216,7 @@ validated card.
 
 ```text
 +-------------------------------------+  +-------------------------------------+
-| [AEC: Project Guidance]             |  | [AEC: Mentor]                       |
+| [AEC: Project Guidance]             |  | [AEC: Mentoring]                    |
 |                                     |  |                                     |
 | Position and workflow rail          |  | Transferable concept                |
 | Earliest unmet gate                 |  | Why the gate exists                 |
@@ -281,7 +281,8 @@ AEC-self `state` and `checkpoint` commands plus a consumer-capable
 python3 -m tools.aec_coach state --task aec#81 --phase Framing --lane INFRA
 python3 -m tools.aec_coach checkpoint tmp/aec-state.json
 
-# Consumer project, after its own state producer writes tmp/aec-state.json:
+# Consumer project, after its state producer writes tmp/aec-state.json and its
+# adapter adds "aec_trigger" to the native JSON payload per interaction:
 python3 .local/aec/tools/aec_prompt_hook.py \
   --state tmp/aec-state.json \
   --project-root "$CLAUDE_PROJECT_DIR" \
@@ -292,7 +293,13 @@ The pure adapter remains the policy seam. A consumer-owned launcher may read saf
 facts and construct ignored local state, but facts that cannot be proven must be supplied
 explicitly or rejected. The prompt hook reads the Claude-compatible event from standard
 input, discards prompt text, and binds the state to the consumer repository's exact HEAD.
-The default output is human coaching. Structured output requires explicit
+The native hook payload produces the compact routine indicator. A consumer-owned adapter
+selects `status-request`, `task-intake`, `phase-transition`, `gate-transition`,
+`gate-failure`, `review-finding`, `pr-created`, or `deploy-observe` and adds that closed
+value as `aec_trigger` to the per-interaction JSON payload for a full card. The AEC hook
+does not infer a trigger or lifecycle phase from prompt prose. A static command argument
+is intentionally insufficient because it would choose full or compact output for every
+prompt. Structured output remains explicit through
 `aec_coach checkpoint --format json`.
 
 The consumer owns hook registration, `AEC_STATE_PATH`, `AEC_ENVIRONMENT`, and production
@@ -301,13 +308,16 @@ a workflow rail. AEC ships the framework half only: installing this revision doe
 register a consumer hook or create consumer state. Skill discovery without consumer
 invocation is not coaching interaction.
 
-### Human-render contract migration
+### Human-render interaction contract
 
-`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `2.0.0`. Version 2 changes the
-learning heading from `[AEC: Mentoring]` to `[AEC: Mentor]`. This is an intentional
-breaking human-output change; it does not change the JSON card schema. A consumer pin
-bump must update its agent instructions, documentation, snapshots, and tests in the same
-consumer change before enabling the hook. Do not emit both headings indefinitely.
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.1.0`. It retains the stable
+`[AEC: Mentoring]` heading and adds a closed trigger contract. Full cards contain the
+rail, guidance, evidence status, finished condition, mentoring, and authority boundary
+from one validated card and exact-bound consumer snapshot. `routine-progress` emits one
+deterministic compact line. The renderer never remembers a prior phase or selects a
+lifecycle transition; the consumer adapter owns per-interaction trigger selection,
+payload augmentation, and state production. Direct native hook registration is compact
+only until that adapter boundary is installed and tested by the consumer.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same
@@ -373,7 +383,7 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 | Framework admission | Source-changing PRs cannot currently satisfy the base-owned admission job. | A legitimate source transition passes its own admission and a tampered transition still fails. |
 | Consumer compatibility | A routine connection probe can pass while a material-decision consumer test fails. | Pin validation proves routine and material cards, rejection paths, and the human renderer. |
 | State construction | Consumers manually assemble a large state document. | One command builds ignored local state from proven facts and rejects missing facts. |
-| Human coaching | The renderer exists, but a consumer can discover AEC without invoking it at the prompt boundary. | A configured consumer prompt hook renders both `[AEC: Project Guidance]` and `[AEC: Mentor]`; missing or rejected state is explicit and never fabricates a rail. |
+| Human coaching | The renderer exists, but a consumer can discover AEC without invoking it at the prompt boundary. | A configured consumer prompt hook renders one complete `[AEC: Project Guidance]` and `[AEC: Mentoring]` card at meaningful triggers, compact state otherwise, and explicit failure without a fabricated rail. |
 | Learner adaptation | AEC has static teaching but no local learner profile. | Explanation depth can adapt without changing any engineering decision or authority fact. |
 | Reflection | Outcome receipts record closed coaching values, but no normal interaction collects them. | One local command records project impact and coaching value without sensitive content. |
 | Agent parity | Claude and Codex bind the same normalized decision. Human coaching parity is not proven. | Both agents render semantically identical project, mentor, and decision blocks. |
