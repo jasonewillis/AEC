@@ -26,7 +26,12 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from aec.consumer import ConsumerStateRejection, resolve_consumer_state
-from aec.human_render import RenderFailure, default_rail_definition, render_human
+from aec.human_render import (
+    INTERACTION_TRIGGERS,
+    RenderFailure,
+    default_rail_definition,
+    render_interaction,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,11 +64,12 @@ def load_object(path: Path, code: str) -> dict[str, Any]:
     return value
 
 
-def read_hook_payload() -> None:
+def read_hook_payload() -> str:
     """Require the real Claude prompt-hook payload shape.
 
-    Prompt text is intentionally discarded. Its only purpose here is proving
-    that the command is attached to the expected host boundary.
+    Prompt text is intentionally discarded. A consumer-owned adapter may add
+    ``aec_trigger`` as the closed, per-interaction presentation signal. Native
+    hook payloads omit it and therefore receive compact routine output.
     """
     try:
         payload = json.loads(sys.stdin.read())
@@ -75,6 +81,10 @@ def read_hook_payload() -> None:
         or type(payload.get("prompt")) is not str
     ):
         raise HookFailure("HOOK_INPUT_REJECTED")
+    trigger = payload.get("aec_trigger", "routine-progress")
+    if type(trigger) is not str or trigger not in INTERACTION_TRIGGERS:
+        raise HookFailure("HOOK_INPUT_REJECTED")
+    return trigger
 
 
 def current_revision(project_root: Path) -> str:
@@ -111,7 +121,7 @@ def resolve_state_path(state: Path | None, project_root: Path) -> Path:
 
 
 def render_checkpoint(
-    state_path: Path, project_root: Path, environment: str
+    state_path: Path, project_root: Path, environment: str, trigger: str
 ) -> str:
     """Validate and render one state without executing its transition draft."""
     state = load_object(state_path, "STATE_UNAVAILABLE")
@@ -129,7 +139,14 @@ def render_checkpoint(
     if current_revision(project_root) != revision:
         raise HookFailure("PROJECT_REVISION_CHANGED")
     try:
-        return render_human(result.to_dict(), default_rail_definition())
+        return render_interaction(
+            result.to_dict(),
+            default_rail_definition(),
+            trigger,
+            evidence=state["evidence"],
+            blockers=state["blockers"],
+            task_id=state["task"]["identity"],
+        )
     except (KeyError, TypeError, ValueError, RenderFailure) as error:
         raise HookFailure("RENDER_REJECTED") from error
 
@@ -165,8 +182,10 @@ def main(argv: list[str] | None = None) -> int:
     project_root = arguments.project_root.resolve()
     state_path = resolve_state_path(arguments.state, project_root)
     try:
-        read_hook_payload()
-        rendered = render_checkpoint(state_path, project_root, arguments.environment)
+        trigger = read_hook_payload()
+        rendered = render_checkpoint(
+            state_path, project_root, arguments.environment, trigger
+        )
     except HookFailure as error:
         rendered = blocked_output(error.code)
     sys.stdout.write(rendered)
