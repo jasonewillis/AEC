@@ -17,8 +17,10 @@ OFFICIAL_REPOSITORY = "jasonewillis/AEC"
 DESCRIPTOR_FIELDS = {
     "channel",
     "compatibility",
+    "contracts",
     "release_notes",
     "release_version",
+    "repository",
     "schema_version",
 }
 MANIFEST_FIELDS = {
@@ -106,6 +108,13 @@ def validate_release_descriptor(value: object) -> list[str]:
         errors.append("channel is unsupported")
     if value.get("compatibility") not in COMPATIBILITY:
         errors.append("compatibility is unsupported")
+    if value.get("repository") != OFFICIAL_REPOSITORY:
+        errors.append(f"repository must equal {OFFICIAL_REPOSITORY}")
+    contracts = value.get("contracts")
+    if type(contracts) is not dict or set(contracts) != CONTRACT_FIELDS:
+        errors.append("contracts fields do not match the contract")
+    elif contracts != CONTRACT_VERSIONS:
+        errors.append("contracts do not match this AEC release implementation")
     notes = value.get("release_notes")
     expected_notes = f"docs/releases/v{version}.md" if type(version) is str else None
     if type(notes) is not str or notes != expected_notes:
@@ -125,6 +134,8 @@ def build_release_manifest(
     errors = validate_release_descriptor(descriptor)
     if repository != OFFICIAL_REPOSITORY:
         errors.append(f"repository must equal {OFFICIAL_REPOSITORY}")
+    if type(descriptor) is dict and repository != descriptor.get("repository"):
+        errors.append("repository must match the release descriptor")
     if HEX_REVISION.fullmatch(revision) is None:
         errors.append("revision must be a lowercase 40-character Git commit")
     if not _timestamp(published_at):
@@ -141,7 +152,7 @@ def build_release_manifest(
             "compatibility": descriptor["compatibility"],
             "required_probes": list(REQUIRED_PROBES),
         },
-        "contracts": dict(CONTRACT_VERSIONS),
+        "contracts": dict(descriptor["contracts"]),
         "release": {
             "channel": descriptor["channel"],
             "notes_url": f"https://github.com/{repository}/releases/tag/{tag}",

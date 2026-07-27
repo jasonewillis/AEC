@@ -10,9 +10,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from aec._generated.resolver_program import RESOLVER_PROGRAM
 from aec.cards import PUBLIC_CARD_SCHEMA_VERSION
 from aec.human_render import HUMAN_RENDER_CONTRACT_VERSION
 from aec.release_manifest import (
+    CONTRACT_VERSIONS,
+    OFFICIAL_REPOSITORY,
     RELEASE_MANIFEST_SCHEMA_VERSION,
     ReleaseManifestFailure,
     build_release_manifest,
@@ -32,8 +35,10 @@ def descriptor() -> dict[str, object]:
     return {
         "channel": "beta",
         "compatibility": "validation-required",
+        "contracts": dict(CONTRACT_VERSIONS),
         "release_notes": "docs/releases/v0.1.0.md",
         "release_version": "0.1.0",
+        "repository": OFFICIAL_REPOSITORY,
         "schema_version": "1.0.0",
     }
 
@@ -56,12 +61,55 @@ class ReleaseDescriptorTests(unittest.TestCase):
             "release_version must be semantic", validate_release_descriptor(malformed)[0]
         )
 
+    def test_repository_and_each_declared_contract_fail_closed_on_drift(self) -> None:
+        wrong_repository = descriptor()
+        wrong_repository["repository"] = "fork/AEC"
+        self.assertTrue(
+            any(
+                "repository must equal" in error
+                for error in validate_release_descriptor(wrong_repository)
+            )
+        )
+
+        for contract in CONTRACT_VERSIONS:
+            with self.subTest(contract=contract):
+                drifted = descriptor()
+                drifted["contracts"] = dict(CONTRACT_VERSIONS)
+                drifted["contracts"][contract] = "99.0.0"
+                self.assertIn(
+                    "contracts do not match this AEC release implementation",
+                    validate_release_descriptor(drifted),
+                )
+
 
 class ReleaseManifestTests(unittest.TestCase):
     def test_schema_and_runtime_define_the_same_closed_contract(self) -> None:
         schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+        consumer_state_schema = json.loads(
+            (ROOT / "schemas/consumer-state.schema.json").read_text(encoding="utf-8")
+        )
+        request_schema = json.loads(
+            (ROOT / "schemas/resolution-request.schema.json").read_text(encoding="utf-8")
+        )
+        workflow = json.loads(
+            (ROOT / "config/workflows/ticket-to-pr.json").read_text(encoding="utf-8")
+        )
+        authoritative = {
+            "consumer_state": consumer_state_schema["properties"]["schema_version"][
+                "const"
+            ],
+            "human_render": HUMAN_RENDER_CONTRACT_VERSION,
+            "public_card": PUBLIC_CARD_SCHEMA_VERSION,
+            "resolution_decision": RESOLVER_PROGRAM["decision_schema_version"],
+            "resolution_request": request_schema["properties"]["schema_version"][
+                "const"
+            ],
+            "workflow": workflow["schema_version"],
+        }
 
         self.assertFalse(schema["additionalProperties"])
+        self.assertEqual(authoritative, descriptor()["contracts"])
+        self.assertEqual(authoritative, CONTRACT_VERSIONS)
         self.assertEqual(
             RELEASE_MANIFEST_SCHEMA_VERSION,
             schema["properties"]["schema_version"]["const"],
@@ -77,6 +125,15 @@ class ReleaseManifestTests(unittest.TestCase):
         self.assertEqual(
             sorted(schema["required"]),
             sorted(schema["properties"]),
+        )
+        self.assertEqual(
+            authoritative,
+            {
+                name: row["const"]
+                for name, row in schema["properties"]["contracts"][
+                    "properties"
+                ].items()
+            },
         )
 
     def test_builds_exact_tag_revision_and_contract_manifest(self) -> None:
