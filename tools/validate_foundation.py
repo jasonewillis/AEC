@@ -27,6 +27,7 @@ from aec.outcomes import (  # noqa: E402
     verify_outcome_receipt,
     verify_outcome_record,
 )
+from aec.release_manifest import validate_release_descriptor  # noqa: E402
 from aec.resolver import (  # noqa: E402
     BLOCKER_REASON_REGISTRY,
     compute_resolution_hash,
@@ -1286,6 +1287,7 @@ def main() -> int:
     """Validate the complete foundation bootstrap contract."""
     course_inventory = load_json(ROOT / "provenance" / "course-inventory.json")
     procedure_catalog = load_json(ROOT / "config" / "procedures" / "ticket-to-pr.json")
+    release_descriptor = load_json(ROOT / "config" / "release" / "aec-release.json")
     consumer_state = load_json(
         ROOT / "tests" / "fixtures" / "consumer-state" / "valid.json"
     )
@@ -1339,6 +1341,10 @@ def main() -> int:
         report_errors(
             "procedure-catalog.ticket-to-pr",
             validate_procedure_catalog(procedure_catalog),
+        ),
+        report_errors(
+            "release-descriptor",
+            validate_release_descriptor(release_descriptor),
         ),
         report_errors(
             "consumer-state.valid",

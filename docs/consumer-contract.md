@@ -24,6 +24,19 @@ what that boundary does and does not guarantee.
 - normalized mentoring-card data; and
 - conformance fixtures and validators.
 
+## Release discovery
+
+Consumers discover reviewed updates through the official GitHub Release feed, not by
+tracking AEC `main`. The attached `aec-release-manifest.json` binds the release tag,
+exact Git revision, public contract versions, compatibility posture, and required
+routine, material, and human-render probes. The adjacent
+`release-manifest.schema.json` defines the closed asset shape.
+
+The release asset is a candidate notification, not compatibility proof. A consumer owns
+its scheduled check, update branch, pull request, detached install, validation, review,
+merge, deployment, and rollback. An incompatible candidate must remain draft or blocked.
+The manifest permanently declares `auto_merge_allowed=false`.
+
 ## The consumer provides
 
 - repository instructions and a local procedure registry;

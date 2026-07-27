@@ -87,6 +87,22 @@ The framework hook alone does not change any consumer. Human-render contract `1.
 retains `[AEC: Mentoring]` and adds deterministic full/compact presentation. Consumers
 must explicitly pin and validate the candidate AEC revision before adopting it.
 
+## Releases and consumer update notifications
+
+AEC publishes reviewed versions as GitHub Releases, never as a floating `main` pin. Each
+release attaches:
+
+- `aec-release-manifest.json`, a closed machine-readable record containing the exact tag
+  commit, contract versions, release channel, compatibility posture, and required
+  consumer probes; and
+- `release-manifest.schema.json`, the matching public schema.
+
+The exact revision is generated from the immutable tag commit during publication. It is
+not stored in a self-referential tracked file. Consumers may poll the official
+`jasonewillis/AEC` release feed and open their own update pull requests, but must validate
+the candidate at that exact SHA. The manifest sets `auto_merge_allowed=false`; AEC never
+edits, merges, deploys, or changes lifecycle state in a consumer repository.
+
 ## Documentation
 
 - [Architecture](docs/architecture/overview.md)
@@ -101,6 +117,7 @@ must explicitly pin and validate the candidate AEC revision before adopting it.
 - [Course traceability](docs/course-traceability/README.md)
 - [Provenance and licensing](docs/provenance.md)
 - [Consumer contract](docs/consumer-contract.md)
+- [Release notes](docs/releases/v0.1.0.md)
 - [Delivery roadmap](docs/delivery/roadmap.md)
 
 ## Source boundaries

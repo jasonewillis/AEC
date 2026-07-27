@@ -1,0 +1,7 @@
+{
+  "channel": "beta",
+  "compatibility": "validation-required",
+  "release_notes": "docs/releases/v0.1.0.md",
+  "release_version": "0.1.0",
+  "schema_version": "1.0.0"
+}
