@@ -79,6 +79,9 @@ printf '%s' '{"hook_event_name":"UserPromptSubmit","prompt":"open the PR"}' |
 
 Consumer projects own their state producer and hook registration. A missing or rejected
 state emits `[AEC: Integration Blocked]`; AEC does not infer a phase from prompt text.
+The framework hook alone does not change any consumer. Human-render contract `2.0.0`
+renames `[AEC: Mentoring]` to `[AEC: Mentor]`, so pin bumps require a coordinated
+consumer instruction, documentation, snapshot, and test migration.
 
 ## Documentation
 

@@ -14,6 +14,7 @@ import unittest
 
 from aec.cards import PHASE_RAIL, STAGE_PHASES
 from aec.human_render import (
+    HUMAN_RENDER_CONTRACT_VERSION,
     RAIL_COLUMN_WIDTH,
     RAIL_MARGIN,
     RailDefinition,
@@ -25,6 +26,11 @@ from aec.human_render import (
     render_project_guidance,
     render_rail,
 )
+
+
+class HumanRenderContractTests(unittest.TestCase):
+    def test_mentor_heading_is_a_versioned_breaking_contract(self) -> None:
+        self.assertEqual("2.0.0", HUMAN_RENDER_CONTRACT_VERSION)
 
 
 def minimal_card(

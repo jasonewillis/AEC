@@ -2,14 +2,24 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
+
+from aec.state_builder import build_state as build_consumer_state
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CATALOG = json.loads(
+    (ROOT / "config" / "procedures" / "ticket-to-pr.json").read_text(encoding="utf-8")
+)
+WORKFLOW = json.loads(
+    (ROOT / "config" / "workflows" / "ticket-to-pr.json").read_text(encoding="utf-8")
+)
 HOOK_PAYLOAD = '{"hook_event_name":"UserPromptSubmit","prompt":"open the PR"}'
 
 
@@ -46,7 +56,10 @@ def build_state(path: Path) -> None:
 
 
 def run_hook(
-    state: Path, payload: str = HOOK_PAYLOAD
+    state: Path,
+    payload: str = HOOK_PAYLOAD,
+    project_root: Path = ROOT,
+    environment: str = "local",
 ) -> subprocess.CompletedProcess[str]:
     return run(
         sys.executable,
@@ -54,15 +67,64 @@ def run_hook(
         "--state",
         str(state),
         "--project-root",
-        str(ROOT),
+        str(project_root),
         "--environment",
-        "local",
+        environment,
         stdin=payload,
         cwd=state.parent,
     )
 
 
 class PromptHookTests(unittest.TestCase):
+    def test_external_consumer_state_renders_at_its_exact_head(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            consumer = root / "consumer"
+            consumer.mkdir()
+            run("git", "init", "-q", cwd=consumer)
+            run("git", "config", "user.name", "AEC Test", cwd=consumer)
+            run("git", "config", "user.email", "aec-test@example.invalid", cwd=consumer)
+            (consumer / "README.md").write_text("consumer\n", encoding="utf-8")
+            run("git", "add", "README.md", cwd=consumer)
+            commit = run("git", "commit", "-qm", "consumer baseline", cwd=consumer)
+            self.assertEqual(0, commit.returncode, commit.stderr)
+            revision = run("git", "rev-parse", "HEAD", cwd=consumer).stdout.strip()
+            state_path = root / "consumer-state.json"
+            state = build_consumer_state(
+                task="consumer#1",
+                phase="PR",
+                lane="INFRA",
+                environment="consumer-test",
+                expires_minutes=30,
+                evidence=[],
+                blockers=[],
+                revision=revision,
+                catalog=CATALOG,
+                workflow=WORKFLOW,
+                profile={
+                    "aec_mode": "read-only-mentor",
+                    "agent_adapters": ["claude-code"],
+                    "lifecycle_authority": "consumer-owned",
+                    "profile_version": "consumer-test:1.0.0",
+                    "project": "example/consumer",
+                    "schema_version": "1.0.0",
+                    "workflow": "ticket-to-pr",
+                },
+                observed_at=datetime.now(timezone.utc),
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+
+            result = run_hook(
+                state_path,
+                project_root=consumer,
+                environment="consumer-test",
+            )
+
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("[AEC: Project Guidance]", result.stdout)
+        self.assertIn("[AEC: Mentor]", result.stdout)
+        self.assertIn("Phase: PR", result.stdout)
+
     def test_valid_state_renders_required_human_sections(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory) / "state.json"

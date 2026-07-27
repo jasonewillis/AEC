@@ -273,15 +273,19 @@ aec coach outcome --task healthrag#33 --receipt tmp/outcome.json
 ```
 
 The complete command family above remains target state. AEC currently ships the bounded
-`state` and `checkpoint` commands plus a `UserPromptSubmit` hook renderer:
+AEC-self `state` and `checkpoint` commands plus a consumer-capable
+`UserPromptSubmit` hook renderer:
 
 ```text
-python3 -m tools.aec_coach state --task healthrag#33 --phase Framing --lane INFRA
+# AEC repository self-coaching only:
+python3 -m tools.aec_coach state --task aec#81 --phase Framing --lane INFRA
 python3 -m tools.aec_coach checkpoint tmp/aec-state.json
+
+# Consumer project, after its own state producer writes tmp/aec-state.json:
 python3 .local/aec/tools/aec_prompt_hook.py \
   --state tmp/aec-state.json \
   --project-root "$CLAUDE_PROJECT_DIR" \
-  --environment healthrag
+  --environment "$AEC_ENVIRONMENT"
 ```
 
 The pure adapter remains the policy seam. A consumer-owned launcher may read safe Git
@@ -293,7 +297,17 @@ The default output is human coaching. Structured output requires explicit
 
 The consumer owns hook registration, `AEC_STATE_PATH`, `AEC_ENVIRONMENT`, and production
 of the state file. Missing or rejected state emits `[AEC: Integration Blocked]` without
-a workflow rail. Skill discovery without this invocation is not coaching interaction.
+a workflow rail. AEC ships the framework half only: installing this revision does not
+register a consumer hook or create consumer state. Skill discovery without consumer
+invocation is not coaching interaction.
+
+### Human-render contract migration
+
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `2.0.0`. Version 2 changes the
+learning heading from `[AEC: Mentoring]` to `[AEC: Mentor]`. This is an intentional
+breaking human-output change; it does not change the JSON card schema. A consumer pin
+bump must update its agent instructions, documentation, snapshots, and tests in the same
+consumer change before enabling the hook. Do not emit both headings indefinitely.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same
