@@ -150,13 +150,13 @@ def render_project_guidance(card: dict[str, Any], rail_definition: RailDefinitio
 
 
 def render_mentoring(card: dict[str, Any]) -> str:
-    """Render the [AEC: Mentoring] block for one validated card.
+    """Render the [AEC: Mentor] block for one validated card.
 
     This block teaches back the lesson behind the current gate, so the
     reason for the gate is clear, not just its name.
     """
     mentoring = card.get("mentoring") or {}
-    lines = ["[AEC: Mentoring]"]
+    lines = ["[AEC: Mentor]"]
     lesson = mentoring.get("lesson")
     if lesson:
         lines.append(f"Lesson: {lesson}")

@@ -249,7 +249,7 @@ class RenderHumanTests(unittest.TestCase):
         text = render_human(minimal_card(), RAIL_DEFINITION)
 
         self.assertIn("[AEC: Project Guidance]", text)
-        self.assertIn("[AEC: Mentoring]", text)
+        self.assertIn("[AEC: Mentor]", text)
         self.assertTrue(text.endswith("\n"))
         self.assertFalse(text.endswith("\n\n"))
 

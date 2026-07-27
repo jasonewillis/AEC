@@ -10,7 +10,7 @@ issues #58 and #52) behind a single command:
 `state` builds an ignored local `tmp/aec-state.json` from proven Git facts
 plus explicit flags (see aec/state_builder.py). `checkpoint` validates that
 state against the resolver and renders the card. Default output is human
-coaching text (`[AEC: Project Guidance]`, `[AEC: Mentoring]`); pass
+coaching text (`[AEC: Project Guidance]`, `[AEC: Mentor]`); pass
 `--format json` for the machine-readable card.
 """
 
