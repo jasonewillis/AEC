@@ -20,8 +20,6 @@ from aec.consumer import ConsumerStateRejection, resolve_consumer_state
 from aec.human_render import (
     FULL_CARD_TRIGGERS,
     HUMAN_RENDER_CONTRACT_VERSION,
-    RAIL_COLUMN_WIDTH,
-    RAIL_MARGIN,
     RailDefinition,
     RenderFailure,
     default_rail_definition,
@@ -46,7 +44,7 @@ WORKFLOW = json.loads(
 
 class HumanRenderContractTests(unittest.TestCase):
     def test_mentoring_heading_remains_the_stable_contract(self) -> None:
-        self.assertEqual("1.1.0", HUMAN_RENDER_CONTRACT_VERSION)
+        self.assertEqual("1.2.0", HUMAN_RENDER_CONTRACT_VERSION)
 
 
 def minimal_card(
@@ -116,13 +114,11 @@ class RenderRailTests(unittest.TestCase):
 
         rail_text = render_rail(card, RAIL_DEFINITION)
         marker_line = rail_text.splitlines()[1]
-        current_column = RAIL_MARGIN + 0 * RAIL_COLUMN_WIDTH
 
-        self.assertEqual("◉", marker_line[current_column])
+        self.assertIn("Intake ◉", marker_line)
         self.assertEqual(1, marker_line.count("◉"))
         self.assertEqual(0, marker_line.count("●"))
-        self.assertIn("rail 1/9", rail_text)
-        self.assertIn("phase 1 of 2 in stage", rail_text)
+        self.assertIn("RAIL · Intake · step 1/9 · Understand 1/2", rail_text)
         self.assertNotIn("blocking:", rail_text)
 
     def test_marker_placement_for_late_phase(self) -> None:
@@ -137,15 +133,16 @@ class RenderRailTests(unittest.TestCase):
 
         rail_text = render_rail(card, RAIL_DEFINITION)
         marker_line = rail_text.splitlines()[1]
-        current_column = RAIL_MARGIN + 8 * RAIL_COLUMN_WIDTH
 
-        self.assertEqual("◉", marker_line[current_column])
+        self.assertIn("Deploy/Observe ◉", marker_line)
         self.assertEqual(1, marker_line.count("◉"))
         self.assertEqual(8, marker_line.count("●"))
         self.assertEqual(0, marker_line.count("○"))
-        self.assertIn("rail 9/9", rail_text)
-        self.assertIn("phase 3 of 3 in stage", rail_text)
-        self.assertIn("required proof: example-proof-one, example-proof-two", rail_text)
+        self.assertIn(
+            "RAIL · Deploy/Observe · step 9/9 · Assure & Release 3/3",
+            rail_text,
+        )
+        self.assertNotIn("required proof:", rail_text)
 
     def test_all_nine_phase_names_present_in_rail(self) -> None:
         rail_text = render_rail(minimal_card(rail=5, stage="Execute", phase_name="Build"),
@@ -173,7 +170,7 @@ class RenderRailTests(unittest.TestCase):
             self.assertIn(phase_name, rail_text)
         self.assertIn("FIRST", rail_text)
         self.assertIn("SECOND", rail_text)
-        self.assertIn("rail 2/3", rail_text)
+        self.assertIn("RAIL · Beta · step 2/3 · FIRST 1/1", rail_text)
         for pinned_phase_name in PHASE_RAIL:
             if pinned_phase_name not in ("Alpha", "Beta", "Gamma"):
                 self.assertNotIn(pinned_phase_name, rail_text)
@@ -198,6 +195,24 @@ class RenderRailTests(unittest.TestCase):
 
 
 class RenderProjectGuidanceTests(unittest.TestCase):
+    def test_uses_scannable_terminal_safe_hierarchy(self) -> None:
+        text = render_project_guidance(
+            minimal_card(required_proof=["independent-review"]),
+            RAIL_DEFINITION,
+        )
+
+        lines = text.splitlines()
+        self.assertEqual("[AEC: Project Guidance]", lines[0])
+        self.assertEqual("═" * 64, lines[1])
+        self.assertIn("CURRENT  Framing · Understand · step 2/9", text)
+        self.assertIn("GATE     Evidence needed", text)
+        self.assertIn("NEXT     Stay in Framing.", text)
+        self.assertIn("PROOF    source-audited · independent-review", text)
+        self.assertIn("DONE WHEN A recorded example condition is met.", text)
+        self.assertIn("AEC is advisory and read-only.", text)
+        self.assertNotIn("Gate status:", text)
+        self.assertNotIn("Earliest unmet gate:", text)
+
     def test_renders_concrete_evidence_bound_next_action(self) -> None:
         card = minimal_card(
             rail=8,
@@ -210,17 +225,16 @@ class RenderProjectGuidanceTests(unittest.TestCase):
 
         text = render_project_guidance(card, RAIL_DEFINITION)
 
-        self.assertIn("Next action: Remain at PR", text)
-        self.assertIn("ci-verified: current-required-checks", text)
-        self.assertIn("Gate status: Evidence needed", text)
-        self.assertIn("Earliest unmet gate: PR evidence gate", text)
-        self.assertIn("Blockers: none recorded", text)
-        self.assertIn("Consumer owns execution, task/GitHub state, tests, merge", text)
+        self.assertIn("NEXT     Stay in PR.", text)
+        self.assertIn("PROOF    ci-verified · current-required-checks", text)
+        self.assertIn("GATE     Evidence needed", text)
+        self.assertIn("BLOCKERS None recorded.", text)
+        self.assertIn("You own execution, task/GitHub state, tests, merge", text)
 
     def test_labels_the_phase_not_a_procedure(self) -> None:
         text = render_project_guidance(minimal_card(), RAIL_DEFINITION)
 
-        self.assertIn("Next action:", text)
+        self.assertIn("NEXT     ", text)
         self.assertNotIn("Recommended next procedure:", text)
 
 
@@ -228,9 +242,39 @@ class RenderMentoringTests(unittest.TestCase):
     def test_renders_lesson_and_recognition_heuristic(self) -> None:
         text = render_mentoring(minimal_card())
 
+        self.assertEqual("[AEC: Mentoring]", text.splitlines()[0])
+        self.assertEqual("═" * 64, text.splitlines()[1])
+        self.assertIn("LESSON   An example lesson.", text)
+        self.assertIn("WHY      An example reason the gate exists.", text)
+        self.assertIn("WHEN     An example recognition heuristic.", text)
+        self.assertIn("AVOID    Work advances while a required question stays open.", text)
+        self.assertIn("AIM FOR  An example of the pattern to aim for.", text)
         self.assertIn("An example lesson.", text)
         self.assertIn("An example reason the gate exists.", text)
         self.assertIn("An example recognition heuristic.", text)
+
+    def test_wraps_long_context_under_its_label(self) -> None:
+        card = minimal_card()
+        card["mentoring"]["lesson"] = "word " * 30
+
+        text = render_mentoring(card)
+        lesson_lines = [
+            line for line in text.splitlines() if line.startswith(("LESSON", "         "))
+        ]
+
+        self.assertGreater(len(lesson_lines), 1)
+        self.assertTrue(all(len(line) <= 96 for line in lesson_lines))
+
+    def test_removes_redundant_recognition_boilerplate(self) -> None:
+        card = minimal_card()
+        card["mentoring"]["recognition_heuristic"] = (
+            "Use this procedure when the exact candidate needs review."
+        )
+
+        text = render_mentoring(card)
+
+        self.assertIn("WHEN     The exact candidate needs review.", text)
+        self.assertNotIn("Use this procedure when", text)
 
 
 class RenderDecisionTests(unittest.TestCase):
@@ -284,9 +328,9 @@ class RenderDecisionTests(unittest.TestCase):
         self.assertIn("An example decision question.", text)
         self.assertIn("example-choice-one", text)
         self.assertIn("example-choice-two", text)
-        self.assertIn("Confidence: high", text)
+        self.assertIn("CONFIDENCE high", text)
         self.assertIn("An example revisit condition.", text)
-        self.assertIn("Authority owner: agent", text)
+        self.assertIn("OWNER    agent", text)
         self.assertIn("[AEC: Decision]", render_human(card, RAIL_DEFINITION))
 
 
@@ -296,6 +340,7 @@ class RenderHumanTests(unittest.TestCase):
 
         self.assertIn("[AEC: Project Guidance]", text)
         self.assertIn("[AEC: Mentoring]", text)
+        self.assertIn("\n────────────────────────────────────────────────────────────────\n", text)
         self.assertTrue(text.endswith("\n"))
         self.assertFalse(text.endswith("\n\n"))
 
@@ -307,7 +352,74 @@ class RenderHumanTests(unittest.TestCase):
                 text = render_interaction(card, RAIL_DEFINITION, trigger)
                 self.assertIn("[AEC: Project Guidance]", text)
                 self.assertIn("[AEC: Mentoring]", text)
-                self.assertIn("you are here", text)
+                self.assertIn("RAIL · Framing · step 2/9", text)
+
+    def test_complete_card_respects_the_plain_text_width_contract(self) -> None:
+        card = minimal_card(
+            decision_support={
+                "authority": {"owner": "consumer", "reason": "Owns the decision."},
+                "choices": [
+                    {
+                        "identity": "bounded-choice",
+                        "summary": "A deliberately long summary " * 8,
+                        "tradeoffs": {
+                            name: f"A deliberately long {name} tradeoff " * 6
+                            for name in (
+                                "maintainability",
+                                "quality",
+                                "reversibility",
+                                "risk",
+                                "scope",
+                            )
+                        },
+                    }
+                ],
+                "question": "A deliberately long material question " * 6,
+                "recommendation": {
+                    "choice": "bounded-choice",
+                    "confidence": "medium",
+                    "expected_result": {
+                        "baseline": "0",
+                        "direction": "increase",
+                        "measure": "bounded-measure",
+                        "target": "1",
+                        "threshold": "A long measurable threshold " * 4,
+                        "unit": "count",
+                    },
+                    "principal_uncertainty": "A deliberately long uncertainty " * 6,
+                    "revisit_when": ["A deliberately long revisit condition " * 6],
+                },
+            }
+        )
+        evidence = [
+            {
+                "accepted": False,
+                "environment": "test",
+                "kind": "consumer-context-with-a-deliberately-long-identity",
+                "revision": "a" * 40,
+            }
+        ]
+
+        text = render_human(
+            card,
+            RAIL_DEFINITION,
+            evidence=evidence,
+            task_id="task-" + "x" * 200,
+        )
+
+        self.assertIn("[AEC: Decision]", text)
+        self.assertIn("[Consumer: Evidence Context]", text)
+        self.assertLessEqual(max(map(len, text.splitlines())), 96)
+
+    def test_oversized_identifier_cannot_escape_the_width_contract(self) -> None:
+        text = render_human(
+            minimal_card(),
+            RAIL_DEFINITION,
+            task_id="task-" + "x" * 200,
+        )
+
+        self.assertLessEqual(max(map(len, text.splitlines())), 96)
+        self.assertIn("TASK     task-", text)
 
     def test_routine_progress_is_compact_and_deterministic(self) -> None:
         card = minimal_card(
@@ -383,28 +495,33 @@ class RenderHumanTests(unittest.TestCase):
             task_id=state["task"]["identity"],
         )
 
-        self.assertIn("Task: FedJobAdvisor#9305", text)
-        self.assertIn("rail 8/9", text)
+        self.assertIn("TASK     FedJobAdvisor#9305", text)
+        self.assertIn("RAIL · PR · step 8/9", text)
         self.assertIn(revision, text)
-        self.assertIn("source-audited: verified", text)
+        self.assertIn("source-audited · verified", text)
         self.assertIn(
-            "[Consumer: Evidence Context]\n"
-            "These consumer-reported facts are not AEC gates or recommendations:\n"
-            "  - source-audited: stacked-base-readiness pending",
+            "[Consumer: Evidence Context]",
+            text,
+        )
+        self.assertIn(
+            "PENDING  source-audited · stacked-base-readiness. Consumer fact only; "
+            "not an AEC gate.",
             text,
         )
         next_action = next(
-            line for line in text.splitlines() if line.startswith("Next action:")
+            line for line in text.splitlines() if line.startswith("NEXT")
         )
         self.assertNotIn("stacked-base-readiness", next_action)
         self.assertIn("focused-test-report:227", text)
-        self.assertIn("test-verified: verified", text)
-        self.assertIn("ci-verified: pending (required: current-required-checks)", text)
-        self.assertIn("runtime-verified: not claimed", text)
-        self.assertIn("live-data-verified: not claimed", text)
+        self.assertIn("test-verified · verified", text)
         self.assertIn(
-            "Lesson: A pull request becomes mergeable only when findings and "
-            "required checks agree on the same immutable candidate.",
+            "ci-verified · pending (required: current-required-checks)",
+            text,
+        )
+        self.assertNotIn("runtime-verified", text)
+        self.assertNotIn("live-data-verified", text)
+        self.assertIn(
+            "LESSON   A pull request becomes mergeable only when findings and required checks",
             text,
         )
         self.assertIn("[AEC: Mentoring]", text)
@@ -430,7 +547,7 @@ class RenderHumanTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "source-audited: partial (verified: base-head-binding; "
+            "source-audited · partial (verified: base-head-binding; "
             "required: independent-review)",
             text,
         )
