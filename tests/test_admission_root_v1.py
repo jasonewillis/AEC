@@ -6,6 +6,7 @@ import copy
 import hashlib
 import json
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -421,6 +422,74 @@ class SelfCheckCoverageCanaryTests(unittest.TestCase):
         findings = self_check(root)
 
         self.assertIn("python_paths", findings)
+
+    def _commit_new_python_file(self, root: Path, path: str) -> None:
+        """Add a genuinely NEW tracked .py file, the way a real PR would."""
+        target = root / path
+        target.write_text("VALUE = 'corpus a3'\n", encoding="utf-8")
+        subprocess.run(["git", "-C", str(root), "add", path], check=True)
+        subprocess.run(
+            ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t",
+             "commit", "--quiet", "-m", "corpus a3"],
+            check=True,
+        )
+
+    def test_newly_tracked_undeclared_python_file_fails_self_check(self) -> None:
+        """RED CANARY: the tree gained a path the declaration never knew about.
+
+        Every other test here simulates an undeclared file by DROPPING an entry
+        from the declaration, which is the mirror image of this input, not the
+        same one. A validator that iterates the declaration and checks each entry
+        against disk passes those tests while never noticing a file that only
+        disk has. Coverage is `python_paths subset of sources | proof_closure`,
+        so it has to be driven from `git ls-files`, not from the declaration.
+
+        This is corpus case a3, the one attack in the out-of-tree corpus with no
+        in-tree equivalent (#67).
+        """
+        root = self._cloned_root()
+        self._commit_new_python_file(root, "aec/_corpus_new.py")
+
+        # The premise the assertion rests on: git really tracks it, and the
+        # declaration really does not list it. Without this the test could pass
+        # for an unrelated reason.
+        tracked = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "aec/_corpus_new.py"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        self.assertEqual("aec/_corpus_new.py", tracked)
+        declaration = json.loads((root / DECLARATION_PATH).read_text(encoding="utf-8"))
+        self.assertNotIn("aec/_corpus_new.py", declaration["python_paths"])
+
+        self.assertIn("python_paths", self_check(root))
+
+    def test_newly_tracked_but_declared_python_file_passes_self_check(self) -> None:
+        """Positive control for the canary above.
+
+        Without this, that test is satisfied by a validator that rejects any new
+        file on sight, which would be the wrong behaviour dressed as the right
+        result. Declaring the same file must clear the gate.
+        """
+        root = self._cloned_root()
+        self._commit_new_python_file(root, "aec/_corpus_new.py")
+        self.assertIn("python_paths", self_check(root))  # undeclared, as above
+
+        # Declare it the way a real PR does: regenerate and commit. Hand-editing
+        # the declaration instead would leave the file itself drifted from its own
+        # committed blob, which self-check reports separately - a failure that
+        # looks like the coverage clause firing but is not.
+        subprocess.run(
+            [sys.executable, "-m", "tools.generate_source_declaration"],
+            cwd=root, check=True, capture_output=True,
+        )
+        subprocess.run(["git", "-C", str(root), "add", "-A"], check=True)
+        subprocess.run(
+            ["git", "-C", str(root), "-c", "user.name=t", "-c", "user.email=t@t",
+             "commit", "--quiet", "-m", "declare it"],
+            check=True,
+        )
+
+        self.assertEqual((), self_check(root))
 
 
 if __name__ == "__main__":
