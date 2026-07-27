@@ -319,7 +319,7 @@
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
-    "tests/test_release_manifest.py": "4d76ffae8797c0aa4f03c6c49a8b0f9921a6bf77d06b3fed811cfd2888aab7b6",
+    "tests/test_release_manifest.py": "e8fa7d274a1a556c740eac9ea6b7085d1368d70b8a64b41d834d843fbb5c708f",
     "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
     "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
@@ -341,6 +341,6 @@
   "workflows": {
     ".github/workflows/candidate-admission.yml": "f948af96c62d896c8e0a9c427c668886ec294b41bbabf177dfa76f8703762cb3",
     ".github/workflows/foundation-gate.yml": "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
-    ".github/workflows/publish-release.yml": "d66aa52b669ec6e62cdff025e3ad166e6dbf4f70af383eeada39ffcbf944d099"
+    ".github/workflows/publish-release.yml": "dac271ae25eb6ef9123a827bd463c3510c4d0047f1c1fdec6bf70c5bc9682a99"
   }
 }
