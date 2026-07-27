@@ -103,6 +103,10 @@ not stored in a self-referential tracked file. Consumers may poll the official
 the candidate at that exact SHA. The manifest sets `auto_merge_allowed=false`; AEC never
 edits, merges, deploys, or changes lifecycle state in a consumer repository.
 
+Publication requires the protected `AEC_RELEASE_TOKEN` repository secret with
+Administration read access and Contents write access. The workflow fails before creating
+a release unless repository release immutability is enabled.
+
 ## Documentation
 
 - [Architecture](docs/architecture/overview.md)
