@@ -33,6 +33,13 @@ ROOT = Path(__file__).resolve().parents[1]
 DESCRIPTOR_PATH = ROOT / "config" / "release" / "aec-release.json"
 WORKFLOW_PATH = ROOT / ".github" / "workflows" / "publish-release.yml"
 SCHEMA_PATH = ROOT / "schemas" / "release-manifest.schema.json"
+FETCH_FAILURE_PATH = (
+    ROOT
+    / "tests"
+    / "fixtures"
+    / "release"
+    / "run-30404752936-fetch-failure.json"
+)
 
 
 def descriptor() -> dict[str, object]:
@@ -300,6 +307,35 @@ class ReleaseManifestTests(unittest.TestCase):
 
 
 class ReleaseWorkflowTests(unittest.TestCase):
+    def test_failed_run_fixture_reproduces_forbidden_credentialless_fetch(self) -> None:
+        failure = json.loads(FETCH_FAILURE_PATH.read_text(encoding="utf-8"))
+        workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+
+        self.assertEqual(
+            {
+                "checkout",
+                "command",
+                "exit_code",
+                "run_id",
+                "schema_version",
+                "stderr",
+                "step",
+            },
+            set(failure),
+        )
+        self.assertEqual({"persist_credentials": False}, failure["checkout"])
+        self.assertEqual("git fetch origin main", failure["command"])
+        self.assertEqual(128, failure["exit_code"])
+        self.assertEqual(30404752936, failure["run_id"])
+        self.assertEqual(
+            "fatal: could not read Username for 'https://github.com': "
+            "No such device or address",
+            failure["stderr"],
+        )
+        self.assertNotIn(failure["command"], workflow)
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("tools/release_api_evidence.py", workflow)
+
     def test_release_lookup_adapter_distinguishes_missing_from_failures(self) -> None:
         self.assertEqual(
             "missing",
@@ -393,6 +429,10 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("--draft=false", workflow)
         self.assertIn("aec-release-manifest.json", workflow)
         self.assertIn("release-manifest.schema.json", workflow)
+        self.assertNotIn(
+            "aec-release-publication-evidence.json#",
+            workflow,
+        )
         self.assertNotIn("pull_request_target", workflow)
         self.assertNotIn("consumer", workflow.lower().split("jobs:", 1)[0])
 

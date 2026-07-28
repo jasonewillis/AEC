@@ -128,6 +128,10 @@
       "test-fixture",
       "1c38ed99df6239cd269f0cab32d4a3f393e6c57f0b32f366a9da5c8a79d002cb"
     ],
+    "tests/fixtures/release/run-30404752936-fetch-failure.json": [
+      "test-fixture",
+      "7d36208179c1d11e343daec984e351ec799e7e43373585d370dabda76f39ffe4"
+    ],
     "tests/fixtures/resolution.mutating-aec.json": [
       "test-fixture",
       "cbb97de814da1f70da025fa08860c5f7cc021033de8734c6c4617d41c35953f7"
@@ -321,8 +325,8 @@
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
-    "tests/test_release_api_evidence.py": "dde935f1e92abf567058ca06c33030e61727b4e6098a5f117ceabfe0c230422e",
-    "tests/test_release_manifest.py": "74deaafdf1eaf31d7ce718a7f449cead4f842d98b7e20bc7ffeb85ae7a71b9e4",
+    "tests/test_release_api_evidence.py": "dd52db457de6c83224745f71c856ee1a053575d9da00e56c3b32c95474e623cd",
+    "tests/test_release_manifest.py": "4fe8c230fd3d67a654afec7f5051769a69e314b1f4ade1e038b00b9768b9f14a",
     "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
     "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
@@ -345,6 +349,6 @@
   "workflows": {
     ".github/workflows/candidate-admission.yml": "f948af96c62d896c8e0a9c427c668886ec294b41bbabf177dfa76f8703762cb3",
     ".github/workflows/foundation-gate.yml": "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
-    ".github/workflows/publish-release.yml": "5e066a8df6453c469cb1574681c6f8128048ee10f51cf02f1699450b1d6c7fe0"
+    ".github/workflows/publish-release.yml": "03f1740e681aa14b467944f3eb8ca0f5f476b2d2bc3e9bf837b94aa419160aa3"
   }
 }

@@ -107,6 +107,7 @@ jobs:
             --tag "$RELEASE_TAG" \
             --expected-revision "$RELEASE_REVISION" \
             --output "$RUNNER_TEMP/aec-release-publication-evidence.json"
+          cat "$RUNNER_TEMP/aec-release-publication-evidence.json"
           python3 release-candidate/tools/release_manifest.py preflight \
             --descriptor release-candidate/config/release/aec-release.json \
             --repository "$GITHUB_REPOSITORY" \
@@ -132,8 +133,7 @@ jobs:
           gh release upload "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             "release-candidate/aec-release-manifest.json#AEC release manifest" \
-            "release-candidate/schemas/release-manifest.schema.json#Release manifest schema" \
-            "$RUNNER_TEMP/aec-release-publication-evidence.json#Publication preflight evidence"
+            "release-candidate/schemas/release-manifest.schema.json#Release manifest schema"
           gh release edit "$RELEASE_TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --draft=false
