@@ -24,6 +24,7 @@ from aec.release_manifest import (
     canonical_json,
     validate_release_descriptor,
     validate_release_manifest,
+    validate_publication_preflight,
 )
 
 
@@ -298,6 +299,39 @@ class ReleaseManifestTests(unittest.TestCase):
 
 
 class ReleaseWorkflowTests(unittest.TestCase):
+    def test_publication_preflight_has_red_canaries_for_every_gate(self) -> None:
+        facts = {
+            "repository": OFFICIAL_REPOSITORY,
+            "revision": "a" * 40,
+            "tag": "v0.1.0",
+            "main_contains_revision": True,
+            "immutable_releases_enabled": True,
+            "existing_release_state": "missing",
+            "token_available": True,
+        }
+        self.assertEqual([], validate_publication_preflight(descriptor(), **facts))
+
+        red_cases = (
+            ("main_contains_revision", False, "ancestor of main"),
+            ("immutable_releases_enabled", False, "immutability must be enabled"),
+            ("existing_release_state", "published", "published release already exists"),
+            ("tag", "v0.2.0", "tag must equal"),
+            ("revision", "main", "40-character Git commit"),
+            ("token_available", False, "AEC_RELEASE_TOKEN is required"),
+        )
+        for field, value, expected in red_cases:
+            with self.subTest(field=field):
+                candidate = dict(facts)
+                candidate[field] = value
+                self.assertTrue(
+                    any(
+                        expected in error
+                        for error in validate_publication_preflight(
+                            descriptor(), **candidate
+                        )
+                    )
+                )
+
     def test_publication_is_tagged_serial_verified_and_never_touches_consumers(self) -> None:
         workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
 
@@ -305,13 +339,17 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("- \"v*\"", workflow)
         self.assertIn("contents: read", workflow)
         self.assertIn("secrets.AEC_RELEASE_TOKEN", workflow)
-        self.assertIn("AEC_RELEASE_TOKEN is required", workflow)
         self.assertIn("git merge-base --is-ancestor", workflow)
         self.assertIn("python3 tools/validate_foundation.py", workflow)
         self.assertIn("python3 -m unittest discover -s tests -v", workflow)
         self.assertIn("python3 tools/release_manifest.py generate", workflow)
+        self.assertIn("python3 tools/release_manifest.py preflight", workflow)
         self.assertIn("immutable-releases", workflow)
-        self.assertIn('test "$ENABLED" = "true"', workflow)
+        self.assertIn('--immutable-releases-enabled "$ENABLED"', workflow)
+        self.assertIn('--main-contains-revision "$MAIN_CONTAINS_REVISION"', workflow)
+        self.assertIn('--existing-release-state "$EXISTING_RELEASE_STATE"', workflow)
+        self.assertIn('--token-available "$TOKEN_AVAILABLE"', workflow)
+        self.assertIn('grep -q "HTTP 404"', workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("--draft", workflow)
         self.assertIn("gh release upload", workflow)

@@ -16,6 +16,7 @@ from aec.release_manifest import (  # noqa: E402
     ReleaseManifestFailure,
     build_release_manifest,
     canonical_json,
+    validate_publication_preflight,
     validate_release_manifest,
 )
 
@@ -55,6 +56,25 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     generate.add_argument("--output", type=Path, required=True)
     validate = commands.add_parser("validate")
     validate.add_argument("manifest", type=Path)
+    preflight = commands.add_parser("preflight")
+    preflight.add_argument("--descriptor", type=Path, required=True)
+    preflight.add_argument("--repository", required=True)
+    preflight.add_argument("--revision", required=True)
+    preflight.add_argument("--tag", required=True)
+    preflight.add_argument(
+        "--main-contains-revision", choices=("true", "false"), required=True
+    )
+    preflight.add_argument(
+        "--immutable-releases-enabled", choices=("true", "false"), required=True
+    )
+    preflight.add_argument(
+        "--existing-release-state",
+        choices=("missing", "draft", "published"),
+        required=True,
+    )
+    preflight.add_argument(
+        "--token-available", choices=("true", "false"), required=True
+    )
     return parser.parse_args(argv)
 
 
@@ -71,11 +91,27 @@ def main(argv: list[str] | None = None) -> int:
             )
             arguments.output.write_text(canonical_json(manifest), encoding="utf-8")
             print(f"WROTE {arguments.output}")
-        else:
+        elif arguments.command == "validate":
             errors = validate_release_manifest(load_json(arguments.manifest))
             if errors:
                 raise ReleaseManifestFailure("; ".join(errors))
             print("PASS release manifest")
+        else:
+            errors = validate_publication_preflight(
+                load_json(arguments.descriptor),
+                repository=arguments.repository,
+                revision=arguments.revision,
+                tag=arguments.tag,
+                main_contains_revision=arguments.main_contains_revision == "true",
+                immutable_releases_enabled=(
+                    arguments.immutable_releases_enabled == "true"
+                ),
+                existing_release_state=arguments.existing_release_state,
+                token_available=arguments.token_available == "true",
+            )
+            if errors:
+                raise ReleaseManifestFailure("; ".join(errors))
+            print("PASS release publication preflight")
     except ReleaseManifestFailure as error:
         print(f"FAIL release manifest: {error}", file=sys.stderr)
         return 1
