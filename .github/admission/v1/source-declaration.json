@@ -10,7 +10,7 @@
     ],
     "config/release/aec-release.json": [
       "configuration",
-      "81698c2d30c04fdb6daea1602f375d14a4512a704f0b38c925cd0951dd2a6c9c"
+      "07fd319a9ad1f6f927a6b3b789baba571044b78258ae5483550362b3d2500c01"
     ],
     "config/resolver/resolver-program.json": [
       "configuration",
@@ -58,7 +58,7 @@
     ],
     "schemas/release-manifest.schema.json": [
       "schema",
-      "eed01cab516b8f7b605d34faf519b1d9d2fd4c14adcdcaba12b4567911dcb095"
+      "3da7aac9053b6535ded4de55c0c4f3feaa5175b38ccb57eac81dd92bb1754643"
     ],
     "schemas/resolution-decision.schema.json": [
       "schema",
