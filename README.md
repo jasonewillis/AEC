@@ -83,7 +83,7 @@ state emits `[AEC: Integration Blocked]`; AEC does not infer a phase from prompt
 Native prompt-hook payloads omit `aec_trigger` and receive compact routine output. A
 consumer-owned adapter selects a closed trigger per interaction and adds `aec_trigger`
 before invoking AEC; a static hook argument cannot provide dynamic trigger behavior.
-The framework hook alone does not change any consumer. Human-render contract `1.1.0`
+The framework hook alone does not change any consumer. Human-render contract `1.2.0`
 retains `[AEC: Mentoring]` and adds deterministic full/compact presentation. Consumers
 must explicitly pin and validate the candidate AEC revision before adopting it.
 
