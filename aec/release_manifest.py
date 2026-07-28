@@ -61,6 +61,7 @@ UTC_SECONDS_TIMESTAMP = re.compile(
 CHANNELS = {"alpha", "beta", "stable"}
 COMPATIBILITY = {"compatible", "validation-required", "breaking"}
 REQUIRED_PROBES = ["human-render", "material", "routine"]
+EXISTING_RELEASE_STATES = {"missing", "draft", "published"}
 CONTRACT_VERSIONS = {
     "consumer_state": "1.0.0",
     "human_render": HUMAN_RENDER_CONTRACT_VERSION,
@@ -126,6 +127,39 @@ def validate_release_descriptor(value: object) -> list[str]:
     expected_notes = f"docs/releases/v{version}.md" if type(version) is str else None
     if type(notes) is not str or notes != expected_notes:
         errors.append("release_notes must match docs/releases/v<release_version>.md")
+    return errors
+
+
+def validate_publication_preflight(
+    descriptor: object,
+    *,
+    repository: str,
+    revision: str,
+    tag: str,
+    main_contains_revision: object,
+    immutable_releases_enabled: object,
+    existing_release_state: object,
+    token_available: object,
+) -> list[str]:
+    """Fail closed on every fact required before release publication."""
+    errors = validate_release_descriptor(descriptor)
+    if repository != OFFICIAL_REPOSITORY:
+        errors.append(f"repository must equal {OFFICIAL_REPOSITORY}")
+    if HEX_REVISION.fullmatch(revision) is None:
+        errors.append("revision must be a lowercase 40-character Git commit")
+    version = descriptor.get("release_version") if type(descriptor) is dict else None
+    if tag != f"v{version}":
+        errors.append("tag must equal v<release_version>")
+    if main_contains_revision is not True:
+        errors.append("release revision must be an ancestor of main")
+    if immutable_releases_enabled is not True:
+        errors.append("repository release immutability must be enabled")
+    if existing_release_state not in EXISTING_RELEASE_STATES:
+        errors.append("existing release state is unsupported")
+    elif existing_release_state == "published":
+        errors.append("published release already exists")
+    if token_available is not True:
+        errors.append("AEC_RELEASE_TOKEN is required")
     return errors
 
 

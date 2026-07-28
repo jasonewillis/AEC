@@ -28,12 +28,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Prove tag commit is on main
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
-
       - name: Validate exact release candidate
         run: |
           set -euo pipefail
@@ -62,18 +56,41 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${GH_TOKEN:-}" ]; then
-            echo "AEC_RELEASE_TOKEN is required for immutable release administration." >&2
-            exit 1
+            TOKEN_AVAILABLE=false
+          else
+            TOKEN_AVAILABLE=true
+          fi
+          git fetch origin main
+          if git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            MAIN_CONTAINS_REVISION=true
+          else
+            MAIN_CONTAINS_REVISION=false
           fi
           ENABLED=$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" \
             --header "X-GitHub-Api-Version: 2026-03-10" --jq .enabled)
-          test "$ENABLED" = "true"
-          DRAFT=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
-            --json isDraft --jq .isDraft 2>/dev/null || true)
-          if [ "$DRAFT" = "false" ]; then
-            echo "published release already exists: $RELEASE_TAG" >&2
+          RELEASE_ERROR=$(mktemp)
+          if DRAFT=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --json isDraft --jq .isDraft 2>"$RELEASE_ERROR"); then
+            if [ "$DRAFT" = "true" ]; then
+              EXISTING_RELEASE_STATE=draft
+            else
+              EXISTING_RELEASE_STATE=published
+            fi
+          elif grep -q "HTTP 404" "$RELEASE_ERROR"; then
+            EXISTING_RELEASE_STATE=missing
+          else
+            cat "$RELEASE_ERROR" >&2
             exit 1
           fi
+          python3 tools/release_manifest.py preflight \
+            --descriptor config/release/aec-release.json \
+            --repository "$GITHUB_REPOSITORY" \
+            --revision "$GITHUB_SHA" \
+            --tag "$RELEASE_TAG" \
+            --main-contains-revision "$MAIN_CONTAINS_REVISION" \
+            --immutable-releases-enabled "$ENABLED" \
+            --existing-release-state "$EXISTING_RELEASE_STATE" \
+            --token-available "$TOKEN_AVAILABLE"
 
       - name: Stage and publish immutable GitHub Release
         env:
