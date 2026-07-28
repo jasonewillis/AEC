@@ -68,20 +68,18 @@ jobs:
           fi
           ENABLED=$(gh api "repos/$GITHUB_REPOSITORY/immutable-releases" \
             --header "X-GitHub-Api-Version: 2026-03-10" --jq .enabled)
+          RELEASE_RESPONSE=$(mktemp)
           RELEASE_ERROR=$(mktemp)
-          if DRAFT=$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
-            --json isDraft --jq .isDraft 2>"$RELEASE_ERROR"); then
-            if [ "$DRAFT" = "true" ]; then
-              EXISTING_RELEASE_STATE=draft
-            else
-              EXISTING_RELEASE_STATE=published
-            fi
-          elif grep -q "HTTP 404" "$RELEASE_ERROR"; then
-            EXISTING_RELEASE_STATE=missing
-          else
-            cat "$RELEASE_ERROR" >&2
-            exit 1
-          fi
+          set +e
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" \
+            >"$RELEASE_RESPONSE" 2>"$RELEASE_ERROR"
+          RELEASE_LOOKUP_EXIT=$?
+          set -e
+          EXISTING_RELEASE_STATE=$(python3 tools/release_manifest.py \
+            classify-release-lookup \
+            --exit-code "$RELEASE_LOOKUP_EXIT" \
+            --response "$RELEASE_RESPONSE" \
+            --error "$RELEASE_ERROR")
           python3 tools/release_manifest.py preflight \
             --descriptor config/release/aec-release.json \
             --repository "$GITHUB_REPOSITORY" \

@@ -16,6 +16,7 @@ from aec.release_manifest import (  # noqa: E402
     ReleaseManifestFailure,
     build_release_manifest,
     canonical_json,
+    classify_release_lookup,
     validate_publication_preflight,
     validate_release_manifest,
 )
@@ -75,6 +76,10 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     preflight.add_argument(
         "--token-available", choices=("true", "false"), required=True
     )
+    lookup = commands.add_parser("classify-release-lookup")
+    lookup.add_argument("--exit-code", type=int, required=True)
+    lookup.add_argument("--response", type=Path, required=True)
+    lookup.add_argument("--error", type=Path, required=True)
     return parser.parse_args(argv)
 
 
@@ -96,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
             if errors:
                 raise ReleaseManifestFailure("; ".join(errors))
             print("PASS release manifest")
-        else:
+        elif arguments.command == "preflight":
             errors = validate_publication_preflight(
                 load_json(arguments.descriptor),
                 repository=arguments.repository,
@@ -112,6 +117,19 @@ def main(argv: list[str] | None = None) -> int:
             if errors:
                 raise ReleaseManifestFailure("; ".join(errors))
             print("PASS release publication preflight")
+        else:
+            try:
+                response_text = arguments.response.read_text(encoding="utf-8")
+                error_text = arguments.error.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as error:
+                raise ReleaseManifestFailure("release lookup evidence is unavailable") from error
+            print(
+                classify_release_lookup(
+                    arguments.exit_code,
+                    response_text,
+                    error_text,
+                )
+            )
     except ReleaseManifestFailure as error:
         print(f"FAIL release manifest: {error}", file=sys.stderr)
         return 1
