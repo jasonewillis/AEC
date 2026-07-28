@@ -98,6 +98,13 @@ class ReleaseApiEvidenceTests(unittest.TestCase):
             "malformed tag": [
                 response(200, {"object": {"sha": "main", "type": "commit"}})
             ],
+            "unsupported tag target": [
+                response(200, {"object": {"sha": "a" * 40, "type": "tree"}})
+            ],
+            "annotated tag cycle": [
+                response(200, {"object": {"sha": "a" * 40, "type": "tag"}}),
+                response(200, {"object": {"sha": "a" * 40, "type": "tag"}}),
+            ],
             "tag mismatch": [
                 response(200, {"object": {"sha": "c" * 40, "type": "commit"}})
             ],

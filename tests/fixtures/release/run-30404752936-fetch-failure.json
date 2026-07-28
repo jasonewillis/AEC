@@ -1,0 +1,11 @@
+{
+  "checkout": {
+    "persist_credentials": false
+  },
+  "command": "git fetch origin main",
+  "exit_code": 128,
+  "run_id": 30404752936,
+  "schema_version": "1.0.0",
+  "stderr": "fatal: could not read Username for 'https://github.com': No such device or address",
+  "step": "Refuse to replace an existing release"
+}
