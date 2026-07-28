@@ -22,6 +22,7 @@ from aec.release_manifest import (
     ReleaseManifestFailure,
     build_release_manifest,
     canonical_json,
+    classify_release_lookup,
     validate_release_descriptor,
     validate_release_manifest,
     validate_publication_preflight,
@@ -299,6 +300,33 @@ class ReleaseManifestTests(unittest.TestCase):
 
 
 class ReleaseWorkflowTests(unittest.TestCase):
+    def test_release_lookup_adapter_distinguishes_missing_from_failures(self) -> None:
+        self.assertEqual(
+            "missing",
+            classify_release_lookup(
+                1,
+                "",
+                "gh: Not Found (HTTP 404)\n",
+            ),
+        )
+        self.assertEqual(
+            "draft",
+            classify_release_lookup(0, '{"draft": true}', ""),
+        )
+        self.assertEqual(
+            "published",
+            classify_release_lookup(0, '{"draft": false}', ""),
+        )
+        for exit_code, response, error in (
+            (1, "", "gh: authentication failed (HTTP 401)\n"),
+            (1, "", "network timeout\n"),
+            (0, "not-json", ""),
+            (0, '{"draft": "false"}', ""),
+        ):
+            with self.subTest(error=error, response=response):
+                with self.assertRaises(ReleaseManifestFailure):
+                    classify_release_lookup(exit_code, response, error)
+
     def test_publication_preflight_has_red_canaries_for_every_gate(self) -> None:
         facts = {
             "repository": OFFICIAL_REPOSITORY,
@@ -344,12 +372,13 @@ class ReleaseWorkflowTests(unittest.TestCase):
         self.assertIn("python3 -m unittest discover -s tests -v", workflow)
         self.assertIn("python3 tools/release_manifest.py generate", workflow)
         self.assertIn("python3 tools/release_manifest.py preflight", workflow)
+        self.assertIn("classify-release-lookup", workflow)
         self.assertIn("immutable-releases", workflow)
         self.assertIn('--immutable-releases-enabled "$ENABLED"', workflow)
         self.assertIn('--main-contains-revision "$MAIN_CONTAINS_REVISION"', workflow)
         self.assertIn('--existing-release-state "$EXISTING_RELEASE_STATE"', workflow)
         self.assertIn('--token-available "$TOKEN_AVAILABLE"', workflow)
-        self.assertIn('grep -q "HTTP 404"', workflow)
+        self.assertIn('gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG"', workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("--draft", workflow)
         self.assertIn("gh release upload", workflow)

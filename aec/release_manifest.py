@@ -76,6 +76,29 @@ class ReleaseManifestFailure(RuntimeError):
     """Release metadata failed closed before publication or consumption."""
 
 
+def classify_release_lookup(
+    exit_code: object, response_text: object, error_text: object
+) -> str:
+    """Classify one GitHub release lookup without hiding transport failures."""
+    if (
+        type(exit_code) is not int
+        or type(response_text) is not str
+        or type(error_text) is not str
+    ):
+        raise ReleaseManifestFailure("release lookup result is malformed")
+    if exit_code != 0:
+        if "(HTTP 404)" in error_text:
+            return "missing"
+        raise ReleaseManifestFailure("release lookup failed without an HTTP 404")
+    try:
+        response = json.loads(response_text)
+    except json.JSONDecodeError as error:
+        raise ReleaseManifestFailure("release lookup response is malformed") from error
+    if type(response) is not dict or type(response.get("draft")) is not bool:
+        raise ReleaseManifestFailure("release lookup response lacks a boolean draft field")
+    return "draft" if response["draft"] else "published"
+
+
 def canonical_json(value: object) -> str:
     """Return deterministic exact JSON with one trailing newline."""
     return (
