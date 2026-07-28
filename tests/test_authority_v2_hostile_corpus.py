@@ -32,7 +32,7 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # The tuple holds duplicates by construction, because the literal tail repeats 17
 # paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
 # it is the real coverage number, and it cannot be inflated back to green by
-# adding a repeat. Of the 45 distinct paths, 37 arrive via SOURCE_BASELINE and
+# adding a repeat. Of the 52 distinct paths, 44 arrive via SOURCE_BASELINE and
 # only 8 are pinned independently of the declaration.
 #
 # Bump these deliberately when adding or removing tracked source.
@@ -42,9 +42,9 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 #     leaves coverage entirely.
 #   * EXPECTED_SOURCE_BASELINE_PATHS guards the declaration. It is the only one
 #     that fires for the 17 paths the literal tail duplicates: dropping one of
-#     those from the declaration leaves the distinct count at 45, because the
+#     those from the declaration leaves the distinct count unchanged, because the
 #     literal tail still supplies it. Without this pin the canary covered only
-#     20 of the 37 declared paths and quietly missed the other 17.
+#     part of the declared source set directly.
 #
 # Bumped 2026-07-25: +6 tracked files (aec/state_builder.py,
 # aec/human_render.py, tools/aec_coach.py, and their three test files) when
@@ -53,8 +53,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # tests/test_consumer_connection_proof.py), giving 37 declared paths.
 # Bumped 2026-07-26: +3 release-contract files (aec/release_manifest.py,
 # tools/release_manifest.py, and tests/test_release_manifest.py).
-EXPECTED_DISTINCT_FROZEN_PATHS = 50
-EXPECTED_SOURCE_BASELINE_PATHS = 42
+# Bumped 2026-07-28: +2 authenticated release-evidence files
+# (tools/release_api_evidence.py and tests/test_release_api_evidence.py).
+EXPECTED_DISTINCT_FROZEN_PATHS = 52
+EXPECTED_SOURCE_BASELINE_PATHS = 44
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

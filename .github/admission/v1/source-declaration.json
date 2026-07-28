@@ -267,6 +267,7 @@
     "tests/test_outcome_receipts.py",
     "tests/test_private_mentor_lens.py",
     "tests/test_public_card.py",
+    "tests/test_release_api_evidence.py",
     "tests/test_release_manifest.py",
     "tests/test_resolver.py",
     "tests/test_resolver_blocker_precedence.py",
@@ -283,6 +284,7 @@
     "tools/prove_agent_adapter_parity.py",
     "tools/prove_foundation_behavior.py",
     "tools/prove_private_mentor_lens.py",
+    "tools/release_api_evidence.py",
     "tools/release_manifest.py",
     "tools/validate_blueprint_skills.py",
     "tools/validate_consumer_connection.py",
@@ -309,7 +311,7 @@
     "tests/test_aec_coach.py": "7a99bfdc7af9e2b6c148575835a000bdda4cb22479ccd134b7d0fb8c0f639296",
     "tests/test_aec_prompt_hook.py": "85bbeafdd8fc48d32f43578389e17c8c419933d5d69a04ea58c0537117f1149b",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "dee378a22dec4bab8178013e72790df95d60e5f8e2e0739c0440a57a3a72ef6d",
+    "tests/test_authority_v2_hostile_corpus.py": "44e2f8261dc3eb86a4ba29012ddbf388e1199335c31ef0d9f28a70a0b88b8678",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "7de4abca092ff140d84b6b8bba6ab93cdc07a97b67233a4c370f4bb32a92b326",
     "tests/test_consumer_interface.py": "eaa68a7aed86a14ac209f1507acdc7b94a75b86bd8ed924e99d4f369fbf4ccf9",
@@ -319,7 +321,8 @@
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
-    "tests/test_release_manifest.py": "d40664b6d75f23414a6b722822426a34fc087edf22dd23b809dd7bc54a4c1c1f",
+    "tests/test_release_api_evidence.py": "dde935f1e92abf567058ca06c33030e61727b4e6098a5f117ceabfe0c230422e",
+    "tests/test_release_manifest.py": "74deaafdf1eaf31d7ce718a7f449cead4f842d98b7e20bc7ffeb85ae7a71b9e4",
     "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
     "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
@@ -330,6 +333,7 @@
     "tools/generate_source_declaration.py": "02bd0057b1b3ba6c8410cfd3f6f91bf244b26d374a07196d9ef398d92c900145",
     "tools/prove_agent_adapter_parity.py": "1f55e0d378068bff6b265e5fa15d032b9287a768d03cb580ebafe758cf448000",
     "tools/prove_private_mentor_lens.py": "169948c6fe9c6ff8d517f877cc621a017f6abb6ba6984a3df24569bae7ca5520",
+    "tools/release_api_evidence.py": "48b09a50db593e513b47e82d869181266966218fb12b10d827089565047a4b22",
     "tools/release_manifest.py": "b04e06ba8a31010e135ffa5cd8f88ddbe764be658995d3df3b4cd363a18713f5",
     "tools/validate_consumer_connection.py": "5627d3a48d24f6f3ea6b100eb96f33bb7fdc45c67a3f9f60dcc7c51ff7a88d50"
   },
@@ -341,6 +345,6 @@
   "workflows": {
     ".github/workflows/candidate-admission.yml": "f948af96c62d896c8e0a9c427c668886ec294b41bbabf177dfa76f8703762cb3",
     ".github/workflows/foundation-gate.yml": "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
-    ".github/workflows/publish-release.yml": "a0090855ea2c1ad788a77fe1ac787c6ec3ce54e6c2f5cb21f8ff9a954a3fd6f5"
+    ".github/workflows/publish-release.yml": "5e066a8df6453c469cb1574681c6f8128048ee10f51cf02f1699450b1d6c7fe0"
   }
 }
