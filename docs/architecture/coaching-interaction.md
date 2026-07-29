@@ -310,7 +310,7 @@ invocation is not coaching interaction.
 
 ### Human-render interaction contract
 
-`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.3.0`. It retains the stable
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.4.0`. It retains the stable
 `[AEC: Project Guidance]` and `[AEC: Mentoring]` headings while adding a terminal-safe
 visual hierarchy. Full cards use major and supporting rules, compact labels, wrapped
 context, and only relevant evidence categories. The rail, guidance, evidence, finished
@@ -325,6 +325,13 @@ are bracketed across their exact phase span (`├─── UNDERSTAND ───�
 a bare centred label, so a stage's scope is explicit on the same header line.
 The change is additive to the header line only; markers, evidence, guidance,
 and mentoring sections are unchanged.
+
+`1.4.0` widens `TEXT_WIDTH` from 96 to 104 columns. The default nine-phase
+rail's phase line landed exactly at the prior 96-column ceiling with zero
+headroom, so a one-character phase display-name change (for example,
+lengthening `Deploy/Observe`) could overflow and raise `RenderFailure`. The
+wider ceiling restores headroom without changing any other rendering
+behavior; all other sections keep wrapping at the same relative width.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same

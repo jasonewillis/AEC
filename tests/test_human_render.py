@@ -20,6 +20,9 @@ from aec.consumer import ConsumerStateRejection, resolve_consumer_state
 from aec.human_render import (
     FULL_CARD_TRIGGERS,
     HUMAN_RENDER_CONTRACT_VERSION,
+    RAIL_CONNECTOR,
+    TEXT_WIDTH,
+    PHASE_DISPLAY_NAMES,
     RailDefinition,
     RenderFailure,
     default_rail_definition,
@@ -44,7 +47,7 @@ WORKFLOW = json.loads(
 
 class HumanRenderContractTests(unittest.TestCase):
     def test_mentoring_heading_remains_the_stable_contract(self) -> None:
-        self.assertEqual("1.3.0", HUMAN_RENDER_CONTRACT_VERSION)
+        self.assertEqual("1.4.0", HUMAN_RENDER_CONTRACT_VERSION)
 
 
 def minimal_card(
@@ -268,7 +271,25 @@ class RenderRailTests(unittest.TestCase):
             )
             rail_text = render_rail(card, RAIL_DEFINITION)
             for line in rail_text.splitlines()[:2]:
-                self.assertLessEqual(len(line), 96, (phase_name, line))
+                self.assertLessEqual(len(line), TEXT_WIDTH, (phase_name, line))
+
+    def test_default_rail_phase_line_keeps_headroom_against_text_width(self) -> None:
+        # A one-character phase display-name rename (for example lengthening
+        # "Deploy/Observe") must not push the phase line over TEXT_WIDTH.
+        # Pin real headroom, not just exact equality, so this test fails
+        # loudly before render_rail starts raising RenderFailure.
+        tokens = [
+            f"{PHASE_DISPLAY_NAMES.get(name, name)} ●"
+            for name in RAIL_DEFINITION.phase_names
+        ]
+        phase_line = RAIL_CONNECTOR.join(tokens)
+        headroom = TEXT_WIDTH - len(phase_line)
+        self.assertGreaterEqual(
+            headroom,
+            8,
+            f"rail phase line has only {headroom} columns of headroom "
+            f"against TEXT_WIDTH={TEXT_WIDTH}",
+        )
 
 
 class RenderProjectGuidanceTests(unittest.TestCase):
@@ -340,7 +361,7 @@ class RenderMentoringTests(unittest.TestCase):
         ]
 
         self.assertGreater(len(lesson_lines), 1)
-        self.assertTrue(all(len(line) <= 96 for line in lesson_lines))
+        self.assertTrue(all(len(line) <= TEXT_WIDTH for line in lesson_lines))
 
     def test_removes_redundant_recognition_boilerplate(self) -> None:
         card = minimal_card()
@@ -486,7 +507,7 @@ class RenderHumanTests(unittest.TestCase):
 
         self.assertIn("[AEC: Decision]", text)
         self.assertIn("[Consumer: Evidence Context]", text)
-        self.assertLessEqual(max(map(len, text.splitlines())), 96)
+        self.assertLessEqual(max(map(len, text.splitlines())), TEXT_WIDTH)
 
     def test_oversized_identifier_cannot_escape_the_width_contract(self) -> None:
         text = render_human(
@@ -495,7 +516,7 @@ class RenderHumanTests(unittest.TestCase):
             task_id="task-" + "x" * 200,
         )
 
-        self.assertLessEqual(max(map(len, text.splitlines())), 96)
+        self.assertLessEqual(max(map(len, text.splitlines())), TEXT_WIDTH)
         self.assertIn("TASK     task-", text)
 
     def test_routine_progress_is_compact_and_deterministic(self) -> None:
