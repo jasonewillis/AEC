@@ -34,8 +34,8 @@ def default_rail_definition() -> RailDefinition:
     return RailDefinition(phase_names=PHASE_RAIL, stage_groups=stage_groups)
 
 
-HUMAN_RENDER_CONTRACT_VERSION = "1.3.0"
-TEXT_WIDTH = 96
+HUMAN_RENDER_CONTRACT_VERSION = "1.4.0"
+TEXT_WIDTH = 104
 LABEL_WIDTH = 9
 LIGHT_RULE = "─" * 64
 RAIL_CONNECTOR = "───"
