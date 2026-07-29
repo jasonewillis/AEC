@@ -57,8 +57,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # (tools/release_api_evidence.py and tests/test_release_api_evidence.py).
 # Bumped 2026-07-29: +1 red-first regression test
 # (tests/test_generate_source_declaration.py) for #74.
-EXPECTED_DISTINCT_FROZEN_PATHS = 53
-EXPECTED_SOURCE_BASELINE_PATHS = 45
+# Bumped 2026-07-29: +1 in-tree adversarial replay corpus
+# (tests/test_admission_attack_corpus.py) for #67.
+EXPECTED_DISTINCT_FROZEN_PATHS = 54
+EXPECTED_SOURCE_BASELINE_PATHS = 46
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
