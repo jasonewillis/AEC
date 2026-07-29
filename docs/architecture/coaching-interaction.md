@@ -273,6 +273,40 @@ At a material fork, the same response adds a decision block:
 
 Routine work must not manufacture a menu. Its `decision_support` remains null.
 
+## Card language
+
+Card text must read clearly for engineers of mixed experience levels and for
+non-native English readers. This section is a **card language style** guide, not a
+copy rewrite: it establishes the principles a plain-language rendering must follow. It does
+not change any canonical `mentoring` string in `config/procedures/ticket-to-pr.json`
+today, and it does not itself add a `plain` variant field. Applying these principles to
+the actual card copy is tracked separately in #89.
+
+Principles for any plain-language rendering of a card:
+
+- **Short sentences.** One idea per sentence. Prefer two short sentences over one
+  sentence joined with "which" or "that" carrying a second claim.
+- **Common vocabulary.** Prefer everyday words over Latinate or academic ones where a
+  common word means the same thing (`use` over `utilize`, `show` over `demonstrate`).
+- **Direct voice.** Prefer concrete verbs and active voice over nominalizations
+  ("verification is evidence" reads harder than "you verify by proving").
+- **No unexplained jargon.** Domain terms (`base`, `head`, `card_hash`, `pin`) are
+  either avoided or expanded on first use in the sentence that introduces them. A term
+  is not "explained" by using it again in a later sentence.
+- **No idioms or metaphors that do not translate.** Avoid phrases that only make sense
+  to a native English reader (for example "in the weeds", "boil the ocean"). Say the
+  literal thing instead.
+- **One worked example per concept**, where practical, so the abstraction has a
+  concrete anchor rather than standing alone.
+
+These principles apply to any future plain-language surface for `lesson` and
+`why_gate_exists` content. They must never change the gate, procedure, required proof,
+recommendation, authority owner, or `card_hash` that the canonical strings encode — see
+`decision_support` and the `[AEC: Mentoring]` block above for what must stay invariant
+across register. Register and plain-language rendering are the "Learner adaptation" gap
+map row's explicit concern below, not a substitute for the canonical, hash-relevant
+mentoring text.
+
 ## Intended invocation
 
 The target consumer experience is one canonical local command used by people, Claude,
