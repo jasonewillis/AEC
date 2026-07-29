@@ -273,6 +273,53 @@ At a material fork, the same response adds a decision block:
 
 Routine work must not manufacture a menu. Its `decision_support` remains null.
 
+## Card language
+
+Card text must read clearly for engineers of mixed experience levels and for
+non-native English readers. This section is a **card language style** guide, not a
+copy rewrite: it establishes the principles a plain-language rendering must
+follow. It does not change any canonical `mentoring` string in
+`config/procedures/ticket-to-pr.json` today, and it does not itself add a `plain`
+variant field. Applying these principles to the actual card copy is tracked
+separately in issue #89.
+
+Principles for any plain-language rendering of a card:
+
+- **Short sentences.** One idea per sentence. Prefer two short sentences over one
+  sentence joined with "which" or "that" carrying a second claim.
+- **Common vocabulary.** Prefer everyday words over Latinate or academic ones
+  where a common word means the same thing (`use` over `utilize`, `show` over
+  `demonstrate`).
+- **Direct voice.** Prefer concrete verbs and active voice over nominalizations
+  ("verification is evidence" reads harder than "you verify by proving").
+- **No unexplained jargon.** Domain terms (`base`, `head`, `card_hash`, `pin`)
+  are either avoided or expanded on first use in the sentence that introduces
+  them. A term is not "explained" by using it again in a later sentence.
+- **No idioms or metaphors that do not translate.** Avoid phrases that only
+  make sense to a native English reader (for example "in the weeds", "boil the
+  ocean"). Say the literal thing instead.
+- **One worked example per concept**, where practical, so the abstraction has
+  a concrete anchor rather than standing alone.
+
+These principles apply to any future plain-language surface for `lesson` and
+`why_gate_exists` content. What must stay invariant across register is the
+*semantic and policy* content the canonical strings encode: the gate,
+procedure, required proof, recommendation, and authority owner — see
+`decision_support` and the `[AEC: Mentoring]` block above. `card_hash` itself
+is not invariant under a register change: `project_card()` in `aec/cards.py`
+places `mentoring` directly in the public card and `compute_card_hash()`
+hashes every field except `card_hash` (`aec/cards.py:94,116,120-133`), so any
+edit to the `lesson` or `why_gate_exists` text inside that field changes
+`card_hash`, exactly as any other content revision would. There is no
+separate, unhashed rendering surface today — `mentoring` is the only card
+copy that exists. A plain-language rewrite of the canonical strings is
+therefore an ordinary content revision that recomputes `card_hash`, not a
+violation of it; a future unhashed `plain` variant field, if #89 adds one,
+would be a schema change with its own migration, not something this PR
+assumes. Register and plain-language rendering are related to the "Learner
+adaptation" row in the Gap map below, not a substitute for the canonical,
+hash-relevant mentoring text.
+
 ## Intended invocation
 
 The target consumer experience is one canonical local command used by people, Claude,
