@@ -44,7 +44,7 @@ WORKFLOW = json.loads(
 
 class HumanRenderContractTests(unittest.TestCase):
     def test_mentoring_heading_remains_the_stable_contract(self) -> None:
-        self.assertEqual("1.2.0", HUMAN_RENDER_CONTRACT_VERSION)
+        self.assertEqual("1.3.0", HUMAN_RENDER_CONTRACT_VERSION)
 
 
 def minimal_card(
@@ -192,6 +192,83 @@ class RenderRailTests(unittest.TestCase):
 
         with self.assertRaisesRegex(RenderFailure, "rail_total"):
             render_rail(card, synthetic)
+
+    def test_each_stage_label_is_bracketed_within_its_phase_token_columns(self) -> None:
+        card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
+        rail_text = render_rail(card, RAIL_DEFINITION)
+        header_line = rail_text.splitlines()[0]
+        phase_line = rail_text.splitlines()[1]
+
+        # One ├ and one ┤ per stage group.
+        self.assertEqual(len(RAIL_DEFINITION.stage_groups), header_line.count("├"))
+        self.assertEqual(len(RAIL_DEFINITION.stage_groups), header_line.count("┤"))
+
+        # Every bracket sits within its group's phase-token columns
+        # (neither overflows into a neighbouring stage's span).
+        tokens = phase_line.split("───")
+        token_starts = []
+        cursor = 0
+        for token in tokens:
+            token_starts.append(cursor)
+            cursor += len(token) + 3  # RAIL_CONNECTOR length
+        phase_cursor = 0
+        for _label, phases in RAIL_DEFINITION.stage_groups:
+            first = phase_cursor
+            last = phase_cursor + len(phases) - 1
+            span_start = token_starts[first]
+            span_end = token_starts[last] + len(tokens[last])
+            span = header_line[span_start:span_end]
+            self.assertEqual(1, span.count("├"), span)
+            self.assertEqual(1, span.count("┤"), span)
+            # ├ is the leftmost span char, ┤ the rightmost.
+            self.assertTrue(span.startswith("├"), span)
+            self.assertTrue(span.endswith("┤"), span)
+            phase_cursor += len(phases)
+
+    def test_long_stage_label_over_narrow_span_falls_back_to_plain_or_truncated(
+        self,
+    ) -> None:
+        # A single-phase span with a stage label wider than the phase
+        # token cannot fit brackets; the renderer must degrade rather
+        # than overflow into the neighbouring stage.
+        synthetic = RailDefinition(
+            phase_names=("A", "B"),
+            stage_groups=(
+                ("VERY-LONG-STAGE-LABEL", ("A",)),
+                ("S", ("B",)),
+            ),
+        )
+        card = minimal_card(rail=1, rail_total=2, phase_index=1, phase_total=1,
+                            stage="VERY-LONG-STAGE-LABEL", phase_name="A")
+        rail_text = render_rail(card, synthetic)
+        header_line = rail_text.splitlines()[0]
+        phase_line = rail_text.splitlines()[1]
+
+        # First stage span cannot fit brackets → header must not use them
+        # in that span. Header must not exceed the phase line width.
+        self.assertLessEqual(len(header_line), len(phase_line))
+        # No bracket has spilled into or past the neighbouring stage.
+        first_token_end = phase_line.index("───")
+        first_span = header_line[:first_token_end]
+        self.assertNotIn("├", first_span)
+        self.assertNotIn("┤", first_span)
+
+    def test_rail_lines_never_exceed_the_width_contract(self) -> None:
+        # Header and phase lines must both stay <= TEXT_WIDTH regardless
+        # of which phase is current. Prove it for the first and last
+        # phase indices, since marker glyphs are 1 column each so width
+        # is invariant to phase position but the assertion is cheap.
+        for rail_index, phase_name in ((1, "Intake"), (9, "Deploy")):
+            card = minimal_card(
+                rail=rail_index,
+                phase_index=1,
+                phase_total=2 if phase_name == "Intake" else 3,
+                stage="Understand" if phase_name == "Intake" else "Assure & Release",
+                phase_name=phase_name,
+            )
+            rail_text = render_rail(card, RAIL_DEFINITION)
+            for line in rail_text.splitlines()[:2]:
+                self.assertLessEqual(len(line), 96, (phase_name, line))
 
 
 class RenderProjectGuidanceTests(unittest.TestCase):

@@ -310,7 +310,7 @@ invocation is not coaching interaction.
 
 ### Human-render interaction contract
 
-`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.2.0`. It retains the stable
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.3.0`. It retains the stable
 `[AEC: Project Guidance]` and `[AEC: Mentoring]` headings while adding a terminal-safe
 visual hierarchy. Full cards use major and supporting rules, compact labels, wrapped
 context, and only relevant evidence categories. The rail, guidance, evidence, finished
@@ -319,6 +319,12 @@ exact-bound consumer snapshot. `routine-progress` still emits one deterministic 
 line. The renderer never remembers a prior phase or selects a lifecycle transition; the
 consumer adapter owns per-interaction trigger selection, payload augmentation, and state
 production.
+
+`1.3.0` adds one purely presentational refinement to the rail: stage headers
+are bracketed across their exact phase span (`├─── UNDERSTAND ───┤`) instead of
+a bare centred label, so a stage's scope is explicit on the same header line.
+The change is additive to the header line only; markers, evidence, guidance,
+and mentoring sections are unchanged.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same

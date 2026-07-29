@@ -34,7 +34,7 @@ def default_rail_definition() -> RailDefinition:
     return RailDefinition(phase_names=PHASE_RAIL, stage_groups=stage_groups)
 
 
-HUMAN_RENDER_CONTRACT_VERSION = "1.2.0"
+HUMAN_RENDER_CONTRACT_VERSION = "1.3.0"
 TEXT_WIDTH = 96
 LABEL_WIDTH = 9
 LIGHT_RULE = "─" * 64
@@ -77,6 +77,22 @@ TRADEOFF_DIMENSIONS: tuple[str, ...] = (
 def section_heading(label: str, *, fill: str = "═") -> str:
     """Return one portable, high-contrast plain-text section heading."""
     return label + "\n" + fill * 64
+
+
+def _bracketed_stage_label(label: str, span_width: int) -> str:
+    """Return `├─── LABEL ───┤` sized to fill exactly `span_width` columns.
+
+    Falls back to a plain centred label when there is not enough room
+    for the minimum bracketed form `├─ LABEL ─┤`, and truncates instead
+    of overflowing when the label alone exceeds the span.
+    """
+    padded = f" {label} "
+    if span_width < len(padded) + 2:
+        if span_width < len(label):
+            return label[:span_width]
+        return label.center(span_width)
+    filled = padded.center(span_width - 2, "─")
+    return "├" + filled + "┤"
 
 
 def labeled_lines(label: str, value: str) -> list[str]:
@@ -168,9 +184,9 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
         last = phase_cursor + len(phases) - 1
         span_start = token_starts[first]
         span_end = token_starts[last] + len(tokens[last])
-        start = span_start + max(0, (span_end - span_start - len(label)) // 2)
-        for offset, character in enumerate(label):
-            header_characters[start + offset] = character
+        bracketed = _bracketed_stage_label(label, span_end - span_start)
+        for offset, character in enumerate(bracketed):
+            header_characters[span_start + offset] = character
         phase_cursor += len(phases)
     header_line = "".join(header_characters).rstrip()
 
@@ -181,9 +197,7 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
         + f" · step {rail}/{rail_total}"
         + f" · {position['stage']} {phase}/{phase_total}",
     ]
-    lines.append(
-        "● complete   ◉ current   ○ not reached"
-    )
+    lines.append("● complete   ◉ current   ○ not reached")
     return "\n".join(lines)
 
 
