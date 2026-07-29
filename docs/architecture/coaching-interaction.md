@@ -302,12 +302,23 @@ Principles for any plain-language rendering of a card:
   a concrete anchor rather than standing alone.
 
 These principles apply to any future plain-language surface for `lesson` and
-`why_gate_exists` content. They must never change the gate, procedure, required
-proof, recommendation, authority owner, or `card_hash` that the canonical
-strings encode — see `decision_support` and the `[AEC: Mentoring]` block above
-for what must stay invariant across register. Register and plain-language
-rendering are the explicit concern of the "Learner adaptation" row in the Gap
-map below, not a substitute for the canonical, hash-relevant mentoring text.
+`why_gate_exists` content. What must stay invariant across register is the
+*semantic and policy* content the canonical strings encode: the gate,
+procedure, required proof, recommendation, and authority owner — see
+`decision_support` and the `[AEC: Mentoring]` block above. `card_hash` itself
+is not invariant under a register change: `project_card()` in `aec/cards.py`
+places `mentoring` directly in the public card and `compute_card_hash()`
+hashes every field except `card_hash` (`aec/cards.py:94,116,120-133`), so any
+edit to the `lesson` or `why_gate_exists` text inside that field changes
+`card_hash`, exactly as any other content revision would. There is no
+separate, unhashed rendering surface today — `mentoring` is the only card
+copy that exists. A plain-language rewrite of the canonical strings is
+therefore an ordinary content revision that recomputes `card_hash`, not a
+violation of it; a future unhashed `plain` variant field, if #89 adds one,
+would be a schema change with its own migration, not something this PR
+assumes. Register and plain-language rendering are related to the "Learner
+adaptation" row in the Gap map below, not a substitute for the canonical,
+hash-relevant mentoring text.
 
 ## Intended invocation
 
