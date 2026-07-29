@@ -22,17 +22,10 @@ class RenderFailure(RuntimeError):
 
 
 class RailDefinition(NamedTuple):
-    """The phase order and stage grouping for one rendered rail.
-
-    `unavailable_phases` names phases the consuming project cannot reach
-    by design (e.g. no merge or deploy authority), distinct from phases
-    it has not yet reached. Renders as `✗`, distinct from `○`. Defaults
-    empty; existing callers keep the pre-1.3.0 behaviour unchanged.
-    """
+    """The phase order and stage grouping for one rendered rail."""
 
     phase_names: tuple[str, ...]
     stage_groups: tuple[tuple[str, tuple[str, ...]], ...]
-    unavailable_phases: frozenset[str] = frozenset()
 
 
 def default_rail_definition() -> RailDefinition:
@@ -131,7 +124,12 @@ def concise_recognition(value: str) -> str:
     return value
 
 
-def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
+def render_rail(
+    card: dict[str, Any],
+    rail_definition: RailDefinition,
+    *,
+    unavailable_phases: frozenset[str] = frozenset(),
+) -> str:
     """Render the ASCII workflow rail for one validated card.
 
     A rail is a straight line with one marker for each pinned phase. A
@@ -139,6 +137,19 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
     Fails closed if the card's own rail_total disagrees with the rail
     definition's phase count, instead of drawing a rail whose text and
     columns silently disagree.
+
+    `unavailable_phases` (opt-in, keyword-only) names phases the consuming
+    project cannot reach by design (e.g. no merge or deploy authority),
+    rendered as `✗` and distinct from `○` "not yet reached". Passed to
+    `render_rail` rather than stored on `RailDefinition` so the public
+    tuple shape stays two-field-stable — a downstream consumer that
+    unpacks `phase_names, stage_groups = default_rail_definition()`
+    keeps working across the 1.3.0 addition.
+
+    Fails closed when an unavailable-phase entry is unknown to the rail,
+    matches the current phase, or matches a phase this card has already
+    cleared: those combinations are structurally contradictory and
+    silently overriding the `●`/`◉` marker would misrepresent state.
     """
     position = card["rail_position"]
     rail = int(position["rail"])
@@ -154,7 +165,18 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
             "count ({1})".format(rail_total, len(phase_names))
         )
 
-    unavailable = rail_definition.unavailable_phases
+    unavailable = frozenset(unavailable_phases)
+    unknown = unavailable - set(phase_names)
+    if unknown:
+        raise RenderFailure(
+            "unavailable_phases names not in the rail: " + ", ".join(sorted(unknown))
+        )
+    for index, name in enumerate(phase_names):
+        if name in unavailable and index <= current_index:
+            raise RenderFailure(
+                f"phase {name!r} is marked unavailable but the card has "
+                "reached or cleared it — the two facts contradict each other"
+            )
     markers = []
     for index, name in enumerate(phase_names):
         if name in unavailable:

@@ -226,13 +226,10 @@ class RenderRailTests(unittest.TestCase):
             phase_cursor += len(phases)
 
     def test_unavailable_phase_renders_as_x_and_is_not_pending(self) -> None:
-        rail = RailDefinition(
-            phase_names=RAIL_DEFINITION.phase_names,
-            stage_groups=RAIL_DEFINITION.stage_groups,
-            unavailable_phases=frozenset({"Deploy"}),
-        )
         card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
-        rail_text = render_rail(card, rail)
+        rail_text = render_rail(
+            card, RAIL_DEFINITION, unavailable_phases=frozenset({"Deploy"})
+        )
         marker_line = rail_text.splitlines()[1]
 
         self.assertIn("Deploy/Observe ✗", marker_line)
@@ -241,7 +238,7 @@ class RenderRailTests(unittest.TestCase):
         # remaining phases account for all ● / ◉ / ○ markers.
         self.assertEqual(1, marker_line.count("◉"))
         self.assertEqual(0, marker_line.count("●"))
-        self.assertEqual(len(rail.phase_names) - 2, marker_line.count("○"))
+        self.assertEqual(len(RAIL_DEFINITION.phase_names) - 2, marker_line.count("○"))
         self.assertIn("✗ unavailable", rail_text)
 
     def test_default_rail_definition_renders_no_unavailable_marker(self) -> None:
@@ -251,6 +248,38 @@ class RenderRailTests(unittest.TestCase):
         self.assertNotIn("✗", rail_text)
         # Legend stays clean of the opt-in glyph too.
         self.assertNotIn("unavailable", rail_text)
+
+    def test_rail_definition_preserves_two_tuple_unpack_shape(self) -> None:
+        # RailDefinition must stay a 2-tuple so downstream consumers that
+        # unpack `phase_names, stage_groups = default_rail_definition()`
+        # keep working across the 1.3.0 addition. Codex flagged the
+        # earlier 3-field form as a breaking change on merge.
+        phase_names, stage_groups = default_rail_definition()
+        self.assertEqual(PHASE_RAIL, phase_names)
+        self.assertEqual(len(STAGE_PHASES), len(stage_groups))
+
+    def test_unavailable_phase_unknown_to_rail_fails_closed(self) -> None:
+        card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
+        with self.assertRaisesRegex(RenderFailure, "unavailable_phases names not in"):
+            render_rail(
+                card, RAIL_DEFINITION, unavailable_phases=frozenset({"Deply"})
+            )
+
+    def test_unavailable_phase_matches_current_fails_closed(self) -> None:
+        card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
+        with self.assertRaisesRegex(RenderFailure, "reached or cleared"):
+            render_rail(
+                card, RAIL_DEFINITION, unavailable_phases=frozenset({"Intake"})
+            )
+
+    def test_unavailable_phase_matches_cleared_fails_closed(self) -> None:
+        # On phase 3 (Spec), Intake and Framing are already cleared.
+        # Marking Framing unavailable contradicts the observed clearing.
+        card = minimal_card(rail=3, phase_index=1, stage="Design", phase_name="Spec")
+        with self.assertRaisesRegex(RenderFailure, "reached or cleared"):
+            render_rail(
+                card, RAIL_DEFINITION, unavailable_phases=frozenset({"Framing"})
+            )
 
     def test_long_stage_label_over_narrow_span_falls_back_to_plain_or_truncated(
         self,
