@@ -237,16 +237,19 @@ judgment behind it. A learner profile may change explanation depth or suppress r
 lessons, but it must never change the decision hash, gate, procedure, recommendation,
 evidence requirement, or authority owner.
 
-**Design boundary: `[AEC: Project Guidance]` carries no project-specific detail.** The
-word "Project" distinguishes workflow-level coaching (this block) from student-level
-mentoring (the `[AEC: Mentoring]` block) — it is not a promise of project-specific
-content such as a project name, branch summary, PR number, test-count context, or
-commit summary. AEC is a generic ticket-to-PR mentor: the card contract deliberately
-omits project identity, and every rendered card looks the same shape across every
-project because the consumer adapter feeds it project-invariant inputs (task identity,
-phase/stage/rail position, lane, evidence entries, blocker entries). A consumer that
-wants project-specific detail alongside the coaching card should render its own project
-banner; AEC's card is not the place for it.
+**Design boundary: `[AEC: Project Guidance]` does not derive or summarize project
+detail.** The word "Project" distinguishes workflow-level coaching (this block) from
+student-level mentoring (the `[AEC: Mentoring]` block) — it is not a promise that AEC
+computes or contextualizes anything about the consumer's project. AEC is a generic
+ticket-to-PR mentor: the validated card the resolver produces contains only
+project-invariant inputs (task identity, phase/stage/rail position, lane, evidence
+entries, blocker entries), and every card has the same shape across every project. The
+rendered block may echo back a `TASK` line and a `REVISION` line, but those are opaque
+identity strings the consumer explicitly supplied to the renderer, not project detail
+AEC derived — AEC never computes a branch summary, a PR number, test-count context, or
+a commit summary on its own. A consumer that wants that kind of derived project context
+alongside the coaching card should render its own project banner; AEC's card is not the
+place for it.
 
 At a material fork, the same response adds a decision block:
 
