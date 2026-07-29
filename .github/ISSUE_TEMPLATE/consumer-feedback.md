@@ -16,7 +16,9 @@ open a blank issue instead.
 
 ## Consumer repository and pinned AEC revision
 
-<!-- e.g. jasonewillis/HealthRAG, pinned to AEC commit/tag abc1234 -->
+<!-- e.g. jasonewillis/HealthRAG, pinned to the full 40-character AEC commit SHA
+     (not a tag or abbreviated hash — tags can move and short hashes can become
+     ambiguous, e.g. abc1234567890abc1234567890abc1234567890) -->
 
 ## What was attempted
 
@@ -28,7 +30,11 @@ open a blank issue instead.
 
 ## Observed output
 
-<!-- Paste the actual output verbatim. No paraphrasing. -->
+<!-- Paste the actual output verbatim. No paraphrasing. If it contains tokens,
+     credentials, private repository details, user data, or other sensitive
+     content, redact those values and clearly mark each redaction (e.g.
+     [REDACTED: api-token]) so the evidence stays useful without disclosing
+     secrets. -->
 
 ```
 <observed output here>
