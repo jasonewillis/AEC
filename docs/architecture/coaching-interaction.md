@@ -320,18 +320,11 @@ line. The renderer never remembers a prior phase or selects a lifecycle transiti
 consumer adapter owns per-interaction trigger selection, payload augmentation, and state
 production.
 
-`1.3.0` adds two purely presentational refinements to the rail: stage headers are
-bracketed across their exact phase span (`├─── UNDERSTAND ───┤`) instead of a bare
-centred label, so a stage's scope is explicit on the same header line; and
-`render_rail`, `render_project_guidance`, `render_human`, and `render_interaction`
-gain a keyword-only `unavailable_phases: frozenset[str] = frozenset()` argument
-naming phase names a project cannot reach by design (rendered as `✗`, distinct
-from `○` "not yet reached"). The argument sits on the render functions, not on
-`RailDefinition`, so the public `NamedTuple` stays two-field-stable — downstream
-consumers that unpack `phase_names, stage_groups = default_rail_definition()`
-keep working. Fails closed when the given set names an unknown phase or a phase
-the card has already reached or cleared: those are structural contradictions and
-silently overriding a `●`/`◉` marker would misrepresent state.
+`1.3.0` adds one purely presentational refinement to the rail: stage headers
+are bracketed across their exact phase span (`├─── UNDERSTAND ───┤`) instead of
+a bare centred label, so a stage's scope is explicit on the same header line.
+The change is additive to the header line only; markers, evidence, guidance,
+and mentoring sections are unchanged.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same

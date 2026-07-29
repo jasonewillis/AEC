@@ -124,12 +124,7 @@ def concise_recognition(value: str) -> str:
     return value
 
 
-def render_rail(
-    card: dict[str, Any],
-    rail_definition: RailDefinition,
-    *,
-    unavailable_phases: frozenset[str] = frozenset(),
-) -> str:
+def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
     """Render the ASCII workflow rail for one validated card.
 
     A rail is a straight line with one marker for each pinned phase. A
@@ -137,19 +132,6 @@ def render_rail(
     Fails closed if the card's own rail_total disagrees with the rail
     definition's phase count, instead of drawing a rail whose text and
     columns silently disagree.
-
-    `unavailable_phases` (opt-in, keyword-only) names phases the consuming
-    project cannot reach by design (e.g. no merge or deploy authority),
-    rendered as `✗` and distinct from `○` "not yet reached". Passed to
-    `render_rail` rather than stored on `RailDefinition` so the public
-    tuple shape stays two-field-stable — a downstream consumer that
-    unpacks `phase_names, stage_groups = default_rail_definition()`
-    keeps working across the 1.3.0 addition.
-
-    Fails closed when an unavailable-phase entry is unknown to the rail,
-    matches the current phase, or matches a phase this card has already
-    cleared: those combinations are structurally contradictory and
-    silently overriding the `●`/`◉` marker would misrepresent state.
     """
     position = card["rail_position"]
     rail = int(position["rail"])
@@ -165,23 +147,9 @@ def render_rail(
             "count ({1})".format(rail_total, len(phase_names))
         )
 
-    unavailable = frozenset(unavailable_phases)
-    unknown = unavailable - set(phase_names)
-    if unknown:
-        raise RenderFailure(
-            "unavailable_phases names not in the rail: " + ", ".join(sorted(unknown))
-        )
-    for index, name in enumerate(phase_names):
-        if name in unavailable and index <= current_index:
-            raise RenderFailure(
-                f"phase {name!r} is marked unavailable but the card has "
-                "reached or cleared it — the two facts contradict each other"
-            )
     markers = []
-    for index, name in enumerate(phase_names):
-        if name in unavailable:
-            markers.append("✗")  # structurally unavailable to this consumer
-        elif index < current_index:
+    for index in range(len(phase_names)):
+        if index < current_index:
             markers.append("●")  # cleared
         elif index == current_index:
             markers.append("◉")  # current
@@ -229,10 +197,7 @@ def render_rail(
         + f" · step {rail}/{rail_total}"
         + f" · {position['stage']} {phase}/{phase_total}",
     ]
-    legend = "● complete   ◉ current   ○ not reached"
-    if unavailable:
-        legend += "   ✗ unavailable"
-    lines.append(legend)
+    lines.append("● complete   ◉ current   ○ not reached")
     return "\n".join(lines)
 
 
@@ -312,19 +277,17 @@ def render_project_guidance(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
-    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Render the [AEC: Project Guidance] block for one validated card.
 
     This block states where the task sits on the workflow, what to do next,
-    and what AEC is and is not allowed to do. `unavailable_phases` is
-    forwarded to `render_rail` — see that function's docstring.
+    and what AEC is and is not allowed to do.
     """
     position = card["rail_position"]
     transition = card.get("transition_request") or {}
     lines = [
         section_heading("[AEC: Project Guidance]"),
-        render_rail(card, rail_definition, unavailable_phases=unavailable_phases),
+        render_rail(card, rail_definition),
         LIGHT_RULE,
     ]
     if task_id:
@@ -550,13 +513,11 @@ def render_human(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
-    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Render one validated card as human coaching text.
 
     Renders only what the card contains. A field that is absent or empty is
-    left out, never replaced with a placeholder. `unavailable_phases` is
-    forwarded to `render_rail` — see that function's docstring.
+    left out, never replaced with a placeholder.
     """
     sections = [
         render_project_guidance(
@@ -565,7 +526,6 @@ def render_human(
             evidence=evidence,
             blockers=blockers,
             task_id=task_id,
-            unavailable_phases=unavailable_phases,
         )
     ]
     consumer_context = render_consumer_evidence_context(card, evidence or [])
@@ -602,14 +562,11 @@ def render_interaction(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
-    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Select full or compact presentation without selecting lifecycle state.
 
     The consumer adapter owns the trigger. AEC only applies this closed,
     deterministic presentation rule to the already validated card.
-    `unavailable_phases` is forwarded to the full-card path — see
-    `render_rail` for its semantics.
     """
     if trigger not in INTERACTION_TRIGGERS:
         raise RenderFailure(f"unsupported interaction trigger: {trigger}")
@@ -621,5 +578,4 @@ def render_interaction(
         evidence=evidence,
         blockers=blockers,
         task_id=task_id,
-        unavailable_phases=unavailable_phases,
     )
