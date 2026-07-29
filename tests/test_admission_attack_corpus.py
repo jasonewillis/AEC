@@ -185,34 +185,45 @@ class AdmissionAttackCorpusTests(unittest.TestCase):
         self._commit_all(root, "corpus A1: tamper + drop digest")
 
         findings = self_check(root)
-        self.assertNotEqual((), findings)
+        # Pin the specific clause, not just "something failed": an unrelated
+        # finding elsewhere (e.g. a workflow digest drift) could keep this
+        # green after the coverage clause under test regresses, since the
+        # tampered bytes are never actually checked once its digest is gone.
+        self.assertIn("python_paths-coverage", findings)
 
     # -- B: empty declaration + tamper two files -> FAIL ----------------------
 
     def test_b_empty_declaration_with_two_tampered_files_fails(self) -> None:
-        """Wipe the declaration to an empty shell, then tamper two tracked
-        files. An attacker betting that no declaration means no evidence to
-        contradict must still be rejected."""
+        """Empty the declaration's coverage sections (sources, proof_closure)
+        while leaving python_paths and the rest of the schema intact, then
+        tamper two tracked files. An attacker betting that no digests means
+        no evidence to contradict must still be rejected.
+
+        Deliberately NOT a wholesale-empty declaration: wiping every section
+        (including python_paths) makes the declaration schema-invalid, which
+        self_check treats as a parse failure and falls back to this
+        process's own trusted baseline - a real rejection, but for parse
+        failure, not for the coverage gap this case means to exercise. This
+        keeps the declaration valid so the failure is attributable to the
+        actual clause under test.
+        """
         root = self._cloned_root()
         self._regenerate_declaration(root)
         self._commit_all(root, "corpus B: clean baseline")
 
         self._tamper(root, "aec/mentor.py", b"\n# corpus B: tampered one\n")
         self._tamper(root, "aec/resolver.py", b"\n# corpus B: tampered two\n")
-        empty_declaration = {
-            "schema_version": self._load_declaration(root)["schema_version"],
-            "python_paths": [],
-            "sources": {},
-            "artifacts": {},
-            "proof_closure": {},
-            "workflows": {},
-            "workflow_bundles": {},
-        }
-        self._write_declaration(root, empty_declaration)
-        self._commit_all(root, "corpus B: empty declaration + tamper two files")
+        payload = self._load_declaration(root)
+        payload["sources"] = {}
+        payload["proof_closure"] = {}
+        self._write_declaration(root, payload)
+        self._commit_all(root, "corpus B: empty coverage sections + tamper two files")
 
         findings = self_check(root)
-        self.assertNotEqual((), findings)
+        # Confirm the declaration still parsed (this is the coverage gap,
+        # not a parse-failure fallback) and pin the specific clause.
+        self.assertNotIn(DECLARATION_PATH, findings)
+        self.assertIn("python_paths-coverage", findings)
 
     # -- A4: tamper, no declaration edit -> FAIL ------------------------------
 
@@ -260,7 +271,10 @@ class AdmissionAttackCorpusTests(unittest.TestCase):
         self.assertNotIn("aec/_corpus_a3_new.py", declaration.get("python_paths", []))
 
         findings = self_check(root)
-        self.assertNotEqual((), findings)
+        # Pin the specific clause: python_paths set-equality is what has to
+        # notice a tree-only addition, since nothing else in _verify_local
+        # ever inspects a path the declaration doesn't already know about.
+        self.assertIn("python_paths", findings)
 
 
 if __name__ == "__main__":
