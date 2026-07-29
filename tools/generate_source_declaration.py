@@ -22,11 +22,46 @@ import argparse
 import hashlib
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from tools.admission_root_v1 import parse_declaration  # noqa: E402
+
+
 DECLARATION_PATH = ROOT / ".github" / "admission" / "v1" / "source-declaration.json"
+
+
+class UnmergedIndexError(RuntimeError):
+    """Raised when the git index holds unresolved merge conflicts."""
+
+
+def unmerged_paths() -> list[str]:
+    """Return tracked paths that currently have unresolved merge conflicts.
+
+    During an unmerged (conflicted) index, `git ls-files -u` emits one line
+    per conflict stage (ours/theirs/base) for each conflicted path, in the
+    format `<mode> <object> <stage>\\t<path>`. A plain `git ls-files -- '*.py'`
+    then yields that same path once per stage, so callers deriving a path
+    list from it get silent duplicates instead of a clean error.
+    """
+    output = subprocess.run(
+        ["git", "ls-files", "-z", "--unmerged"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    ).stdout
+    entries = [entry for entry in output.decode("utf-8").split("\0") if entry]
+    paths = set()
+    for entry in entries:
+        _, _, path = entry.partition("\t")
+        if path:
+            paths.add(path)
+    return sorted(paths)
 
 
 def tracked_python_paths() -> list[str]:
@@ -78,13 +113,28 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     arguments = parser.parse_args(argv)
+
+    conflicted = unmerged_paths()
+    if conflicted:
+        print(
+            "FAIL git index has unmerged entries, refusing to generate: "
+            + ", ".join(conflicted)
+        )
+        return 1
+
     rendered = render(build_declaration())
     if arguments.check:
         if not DECLARATION_PATH.exists():
             print(f"FAIL missing source declaration: {DECLARATION_PATH}")
             return 1
-        if DECLARATION_PATH.read_text(encoding="utf-8") != rendered:
+        committed = DECLARATION_PATH.read_text(encoding="utf-8")
+        if committed != rendered:
             print("FAIL source declaration is stale")
+            return 1
+        try:
+            parse_declaration(committed.encode("utf-8"))
+        except ValueError as error:
+            print(f"FAIL source declaration does not parse: {error}")
             return 1
         print("PASS source declaration is current")
         return 0

@@ -334,7 +334,7 @@
     "tools/admission_root_v1.py": "f12017bf1f6dba4c3333dd5049788de5efb812b929f38a6927cad520777e843e",
     "tools/aec_coach.py": "4740c7ca2ef6bb87c94ff51af0bab179541af8641939dfff0162fee53c1f8ca3",
     "tools/aec_prompt_hook.py": "8eb9024883be1814661a9e85c380729ce03f3424becebe415addb81addbd42a0",
-    "tools/generate_source_declaration.py": "02bd0057b1b3ba6c8410cfd3f6f91bf244b26d374a07196d9ef398d92c900145",
+    "tools/generate_source_declaration.py": "ed74448dd8661264e446c6807b711f11fad44f85b3445d2dc042ef0d4f477f8c",
     "tools/prove_agent_adapter_parity.py": "1f55e0d378068bff6b265e5fa15d032b9287a768d03cb580ebafe758cf448000",
     "tools/prove_private_mentor_lens.py": "169948c6fe9c6ff8d517f877cc621a017f6abb6ba6984a3df24569bae7ca5520",
     "tools/release_api_evidence.py": "48b09a50db593e513b47e82d869181266966218fb12b10d827089565047a4b22",
