@@ -55,8 +55,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # tools/release_manifest.py, and tests/test_release_manifest.py).
 # Bumped 2026-07-28: +2 authenticated release-evidence files
 # (tools/release_api_evidence.py and tests/test_release_api_evidence.py).
-EXPECTED_DISTINCT_FROZEN_PATHS = 52
-EXPECTED_SOURCE_BASELINE_PATHS = 44
+# Bumped 2026-07-29: +1 red-first regression test
+# (tests/test_generate_source_declaration.py) for #74.
+EXPECTED_DISTINCT_FROZEN_PATHS = 53
+EXPECTED_SOURCE_BASELINE_PATHS = 45
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

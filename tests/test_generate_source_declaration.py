@@ -19,7 +19,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DECLARATION_RELATIVE_PATH = Path(".github/admission/v1/source-declaration.json")
-GENERATOR = ROOT / "tools" / "generate_source_declaration.py"
 CONFLICT_PATH = "aec/mentor.py"
 
 
@@ -53,20 +52,28 @@ class UnmergedIndexGeneratorTests(unittest.TestCase):
         )
 
     def test_unmerged_index_is_refused_by_both_generate_and_check(self) -> None:
-        """Pins both halves of #74 in one repo state: writing and --check."""
+        """Pins both halves of #74 in one repo state: writing and --check.
+
+        Runs the generator script *from the clone* (not GENERATOR / the real
+        checkout's copy): the script derives its own ROOT from `__file__`, so
+        invoking the real checkout's script would silently inspect the real
+        checkout's git state instead of the clone's unmerged index, regardless
+        of the `cwd=` passed to subprocess.run.
+        """
         root = self._cloned_root()
+        cloned_generator = root / "tools" / "generate_source_declaration.py"
         declaration_path = root / DECLARATION_RELATIVE_PATH
         original = declaration_path.read_bytes()
         self._make_index_unmerged(root, CONFLICT_PATH)
 
         generate_result = subprocess.run(
-            [sys.executable, str(GENERATOR)],
+            [sys.executable, str(cloned_generator)],
             cwd=root,
             capture_output=True,
             text=True,
         )
         check_result = subprocess.run(
-            [sys.executable, str(GENERATOR), "--check"],
+            [sys.executable, str(cloned_generator), "--check"],
             cwd=root,
             capture_output=True,
             text=True,
