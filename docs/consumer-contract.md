@@ -138,6 +138,17 @@ the decision, and rendered identically on the public card. Its transition reques
 draft with `authoritative=false`, `executes=false`, and `mutates=false`. AEC never
 submits that draft or acts on the recommendation.
 
+**`decision_support` is a validated pass-through of the submitted `decision_context`, not
+AEC-derived analysis.** AEC checks the submitted context for completeness and internal
+consistency — schema shape, revision match, and the evidence-quality-to-confidence bound
+above — and rejects it outright if any required fact is missing. It does not select,
+score, or rank the choices, and it does not add or alter recommendation content. What
+the card renders as `decision_support` is structurally identical to what the consumer
+submitted as `decision_context` — every field and value unchanged, independent of
+incidental JSON formatting such as key order or whitespace, which the canonical
+serialization normalizes. The resolver validates and republishes the decoded structure
+bound to the card hash; it does not evaluate the options.
+
 A consumer that acted on a rendered recommendation may later write one local outcome
 record holding the card, the carried decision snapshot, and one receipt binding that
 snapshot to what was observed. Verification validates the snapshot, recomputes its

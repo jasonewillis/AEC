@@ -273,6 +273,15 @@ At a material fork, the same response adds a decision block:
 
 Routine work must not manufacture a menu. Its `decision_support` remains null.
 
+**Design boundary: `[AEC: Decision]` renders `decision_support`, a validated pass-through
+of the consumer-supplied `decision_context`, not an AEC-derived recommendation.** The
+options, tradeoff dimensions, confidence, principal uncertainty, expected measurable
+result, and decision owner shown in the block above are the consumer's own submitted
+content, checked for completeness and republished bound to the card hash — AEC does not
+select, score, or rank among the choices. See
+[consumer-contract.md](../consumer-contract.md#the-consumer-provides) for the full
+validated-pass-through contract.
+
 ## Card language
 
 Card text must read clearly for engineers of mixed experience levels and for
