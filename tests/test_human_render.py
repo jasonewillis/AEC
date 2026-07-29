@@ -281,6 +281,28 @@ class RenderRailTests(unittest.TestCase):
                 card, RAIL_DEFINITION, unavailable_phases=frozenset({"Framing"})
             )
 
+    def test_unavailable_phases_reaches_full_render_via_render_human(self) -> None:
+        # End-to-end: the kwarg must thread through render_human and
+        # render_interaction — the actual consumer entry points — not
+        # just render_rail directly. Codex flagged the earlier form as
+        # "advertised feature unreachable through consumer paths".
+        card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
+        text = render_human(
+            card, RAIL_DEFINITION, unavailable_phases=frozenset({"Deploy"})
+        )
+        self.assertIn("Deploy/Observe ✗", text)
+        self.assertIn("✗ unavailable", text)
+
+    def test_unavailable_phases_reaches_render_interaction(self) -> None:
+        card = minimal_card(rail=1, phase_index=1, stage="Understand", phase_name="Intake")
+        text = render_interaction(
+            card,
+            RAIL_DEFINITION,
+            "status-request",
+            unavailable_phases=frozenset({"Deploy"}),
+        )
+        self.assertIn("Deploy/Observe ✗", text)
+
     def test_long_stage_label_over_narrow_span_falls_back_to_plain_or_truncated(
         self,
     ) -> None:

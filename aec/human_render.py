@@ -312,17 +312,19 @@ def render_project_guidance(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
+    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Render the [AEC: Project Guidance] block for one validated card.
 
     This block states where the task sits on the workflow, what to do next,
-    and what AEC is and is not allowed to do.
+    and what AEC is and is not allowed to do. `unavailable_phases` is
+    forwarded to `render_rail` — see that function's docstring.
     """
     position = card["rail_position"]
     transition = card.get("transition_request") or {}
     lines = [
         section_heading("[AEC: Project Guidance]"),
-        render_rail(card, rail_definition),
+        render_rail(card, rail_definition, unavailable_phases=unavailable_phases),
         LIGHT_RULE,
     ]
     if task_id:
@@ -548,11 +550,13 @@ def render_human(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
+    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Render one validated card as human coaching text.
 
     Renders only what the card contains. A field that is absent or empty is
-    left out, never replaced with a placeholder.
+    left out, never replaced with a placeholder. `unavailable_phases` is
+    forwarded to `render_rail` — see that function's docstring.
     """
     sections = [
         render_project_guidance(
@@ -561,6 +565,7 @@ def render_human(
             evidence=evidence,
             blockers=blockers,
             task_id=task_id,
+            unavailable_phases=unavailable_phases,
         )
     ]
     consumer_context = render_consumer_evidence_context(card, evidence or [])
@@ -597,11 +602,14 @@ def render_interaction(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
+    unavailable_phases: frozenset[str] = frozenset(),
 ) -> str:
     """Select full or compact presentation without selecting lifecycle state.
 
     The consumer adapter owns the trigger. AEC only applies this closed,
     deterministic presentation rule to the already validated card.
+    `unavailable_phases` is forwarded to the full-card path — see
+    `render_rail` for its semantics.
     """
     if trigger not in INTERACTION_TRIGGERS:
         raise RenderFailure(f"unsupported interaction trigger: {trigger}")
@@ -613,4 +621,5 @@ def render_interaction(
         evidence=evidence,
         blockers=blockers,
         task_id=task_id,
+        unavailable_phases=unavailable_phases,
     )
