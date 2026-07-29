@@ -10,7 +10,7 @@
     ],
     "config/release/aec-release.json": [
       "configuration",
-      "07fd319a9ad1f6f927a6b3b789baba571044b78258ae5483550362b3d2500c01"
+      "143232a294d163590e2d5d14538d6b82feb79ed0cacd137ba41c12acced02694"
     ],
     "config/resolver/resolver-program.json": [
       "configuration",
@@ -58,7 +58,7 @@
     ],
     "schemas/release-manifest.schema.json": [
       "schema",
-      "3da7aac9053b6535ded4de55c0c4f3feaa5175b38ccb57eac81dd92bb1754643"
+      "2e55ae9a5aa4f715815878a104eab447f58e2e35bf74aeacd028cf5f48f19180"
     ],
     "schemas/resolution-decision.schema.json": [
       "schema",
@@ -302,7 +302,7 @@
     "aec/adapters.py": "62b9712b0e21d66383a51605236e97289abcaf963bfa5218c210c29d05e15a73",
     "aec/cards.py": "d28d23cfd2775dd881291c9ac2bf28e108691b17ec35da75c325ae2504acd5f5",
     "aec/contracts.py": "becbc8a60685f96474ac01d4821612357e237e64b3ae0259267abbdce3d5b87b",
-    "aec/human_render.py": "52edd6f215a54f3f41eb4f595c56f9bf96339d2cb5bb2c28dc97897d70e60a68",
+    "aec/human_render.py": "b35f7704c1d33aa7e036aa64956cfa4f886faac808fa9d8ff891285410c575cb",
     "aec/mentor.py": "1784bd63fa295b3588280efc585fce74f2d00dfb4ad65cebc3aea5e64d088ec9",
     "aec/mentoring.py": "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e",
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
@@ -321,7 +321,7 @@
     "tests/test_consumer_interface.py": "eaa68a7aed86a14ac209f1507acdc7b94a75b86bd8ed924e99d4f369fbf4ccf9",
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",
     "tests/test_foundation_validation.py": "b5838db8777a5be29ef30252fb3f49457e678e652c3862cf63543a430ac570a8",
-    "tests/test_human_render.py": "e8faad709d9aa87426f004500e4b34ec5506d6f27c21ad1eb154a2ab8bd98f83",
+    "tests/test_human_render.py": "c5a96bc3ff981cf32dfced0eaa93effef3ca1609710e1f41bc5dca0bc20ab323",
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
