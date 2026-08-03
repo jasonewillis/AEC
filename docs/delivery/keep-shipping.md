@@ -46,9 +46,13 @@ someone would want recorded? If yes, present the fork. If no, choose and move.
 
 Escalate only for work that changes user-visible product scope; touches pricing, legal, or
 compliance; requires credentials you do not already hold; or is destructive at scale. AEC
-**adds** four more on top of these — licensing and provenance, relaxing an admission or
-trust-root check, branch-protection changes, and releases. It does not replace them. See
-`.claude/SHIPPING_CONTEXT.md` for the full set of eight.
+**adds five more** on top of these — licensing and provenance, relaxing an admission or
+trust-root check, branch-protection changes, releases, and **any material fork**. It drops
+none of the four. See `.claude/SHIPPING_CONTEXT.md` for the full set of nine.
+
+A material fork is the one most easily missed: any choice that changes quality, risk,
+reversibility, maintainability, or scope in a way someone would want recorded. Present it;
+do not resolve it because you can rank the options.
 
 Anything else: pick the option you would have recommended, write the assumption down in one
 line, and keep going.
