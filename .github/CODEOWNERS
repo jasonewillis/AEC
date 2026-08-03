@@ -33,6 +33,16 @@
 # line today, but anything placed here runs with the validator.
 /tools/__init__.py                           @jasonewillis
 
+# Executes BEFORE everything above. `python3 -m` places the repository root on
+# `sys.path`, so a root-level `sitecustomize.py` is imported by the `site`
+# module at interpreter startup, ahead of the validator and its package. Neither
+# file exists today; both are owned pre-emptively for the same reason as the
+# staged successor — the first commit that creates one is the one that matters.
+# The durable fix is to isolate interpreter startup rather than to own these
+# paths; tracked separately.
+/sitecustomize.py                            @jasonewillis
+/usercustomize.py                            @jasonewillis
+
 # Ownership map for the paths above. Listed so that, once required code-owner
 # approval is ever enabled, this file cannot be weakened or removed without the
 # same approval it grants — otherwise the protections below could be dismantled
