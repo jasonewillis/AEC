@@ -310,24 +310,20 @@ Principles for any plain-language rendering of a card:
 - **One worked example per concept**, where practical, so the abstraction has
   a concrete anchor rather than standing alone.
 
-These principles apply to any future plain-language surface for `lesson` and
-`why_gate_exists` content. What must stay invariant across register is the
-*semantic and policy* content the canonical strings encode: the gate,
-procedure, required proof, recommendation, and authority owner — see
-`decision_support` and the `[AEC: Mentoring]` block above. `card_hash` itself
-is not invariant under a register change: `project_card()` in `aec/cards.py`
-places `mentoring` directly in the public card and `compute_card_hash()`
-hashes every field except `card_hash` (`aec/cards.py:94,116,120-133`), so any
-edit to the `lesson` or `why_gate_exists` text inside that field changes
-`card_hash`, exactly as any other content revision would. There is no
-separate, unhashed rendering surface today — `mentoring` is the only card
-copy that exists. A plain-language rewrite of the canonical strings is
-therefore an ordinary content revision that recomputes `card_hash`, not a
-violation of it; a future unhashed `plain` variant field, if #89 adds one,
-would be a schema change with its own migration, not something this PR
-assumes. Register and plain-language rendering are related to the "Learner
-adaptation" row in the Gap map below, not a substitute for the canonical,
-hash-relevant mentoring text.
+These principles apply to all human-visible card copy. That copy is drawn
+from several public-card fields, including `mentoring`, `anti_example`,
+`good`, and `finished`; the renderer also presents rationale and required
+proof. Plain-language work must preserve the meaning of the separately
+structured policy and authority facts rather than infer or alter them.
+
+There is no separate, unhashed plain-language surface today.
+`compute_card_hash()` hashes every public-card field except `card_hash`
+itself (`aec/cards.py:120-133`), so editing any hashed copy recomputes the
+hash as an ordinary content revision. The rewrite in issue #89 covers six
+existing hashed fields. The additive proposal in issue #53 requires an
+explicit schema and hash contract before implementation. Neither issue is
+implemented by this style guidance. Register and plain-language rendering
+remain related to the "Learner adaptation" row in the Gap map below.
 
 ## Intended invocation
 
