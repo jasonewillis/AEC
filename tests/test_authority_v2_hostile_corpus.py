@@ -59,8 +59,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # (tests/test_generate_source_declaration.py) for #74.
 # Bumped 2026-07-29: +1 in-tree adversarial replay corpus
 # (tests/test_admission_attack_corpus.py) for #67.
-EXPECTED_DISTINCT_FROZEN_PATHS = 54
-EXPECTED_SOURCE_BASELINE_PATHS = 46
+# Bumped 2026-08-03: +1 interpreter-startup isolation canary
+# (tests/test_admission_startup_isolation.py) for #113.
+EXPECTED_DISTINCT_FROZEN_PATHS = 55
+EXPECTED_SOURCE_BASELINE_PATHS = 47
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

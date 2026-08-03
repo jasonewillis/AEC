@@ -258,6 +258,7 @@
     "tests/__init__.py",
     "tests/test_admission_attack_corpus.py",
     "tests/test_admission_root_v1.py",
+    "tests/test_admission_startup_isolation.py",
     "tests/test_aec_coach.py",
     "tests/test_aec_prompt_hook.py",
     "tests/test_agent_adapters.py",
@@ -315,10 +316,11 @@
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
     "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
+    "tests/test_admission_startup_isolation.py": "386c0059cb32bad871f1a5beb14dc2218b1d721643fe73de519d6fe3192dffc6",
     "tests/test_aec_coach.py": "7a99bfdc7af9e2b6c148575835a000bdda4cb22479ccd134b7d0fb8c0f639296",
     "tests/test_aec_prompt_hook.py": "85bbeafdd8fc48d32f43578389e17c8c419933d5d69a04ea58c0537117f1149b",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "13224a4f308bd5c8e2bcbc83703197ff5174ea17087b4935dfcfef6907f0f0b4",
+    "tests/test_authority_v2_hostile_corpus.py": "72e265fe30dd6cddd5ef198adcb9af04b877fbe5c516bb7aa05f3e43e7da5d22",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "7de4abca092ff140d84b6b8bba6ab93cdc07a97b67233a4c370f4bb32a92b326",
     "tests/test_consumer_interface.py": "eaa68a7aed86a14ac209f1507acdc7b94a75b86bd8ed924e99d4f369fbf4ccf9",
@@ -351,7 +353,7 @@
     ".github/workflows/publish-release.yml": ".github/workflows/publish-release.yml"
   },
   "workflows": {
-    ".github/workflows/candidate-admission.yml": "f948af96c62d896c8e0a9c427c668886ec294b41bbabf177dfa76f8703762cb3",
+    ".github/workflows/candidate-admission.yml": "90472689a92541fb6fce573d764439fd8d9cc7d3558e5f30c6dfd949b5d7cb90",
     ".github/workflows/foundation-gate.yml": "9ec6665e63e289d8fbc7601380ac5e633756b77c38e8e64e0c987c5b4c595556",
     ".github/workflows/publish-release.yml": "03f1740e681aa14b467944f3eb8ca0f5f476b2d2bc3e9bf837b94aa419160aa3"
   }
