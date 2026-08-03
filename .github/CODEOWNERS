@@ -1,0 +1,65 @@
+# Code owners for security-critical admission surfaces.
+#
+# STATUS: NOT ENFORCED FOR MERGE.
+#
+# Two distinct behaviors must not be conflated:
+#   - GitHub may automatically REQUEST review from an owner listed here as
+#     soon as this file exists. That is advisory.
+#   - GitHub only REQUIRES an owner's approval before merging when branch
+#     protection enables required pull-request reviews with "Require review
+#     from Code Owners".
+#
+# As of 2026-08-03 `main` has `required_pull_request_reviews: null`, so no
+# approval here is mandatory and no merge is blocked by this file. Enabling
+# required reviews on a single-maintainer repository would block all work,
+# since GitHub does not permit self-approval.
+#
+# Do not treat the presence of this file as evidence that these paths were
+# reviewed before merging.
+
+# SCOPE RULE for this file: own a path if it EXECUTES during admission, or if
+# it DEFINES what admission checks. Do not extend ownership to every file whose
+# digest is transitively bound by the source declaration — that is already
+# covered by the declaration itself, and an over-broad map dilutes the signal
+# of what is genuinely trust-root.
+
+# The admission validator decides what may enter the repository. A change here
+# changes what every future change is checked against.
+/tools/admission_root_v1.py                  @jasonewillis
+
+# Executes during admission. `.github/workflows/candidate-admission.yml` invokes
+# `python3 -m tools.admission_root_v1`, which imports and runs the `tools`
+# package initializer before the validator module itself. It is one docstring
+# line today, but anything placed here runs with the validator.
+/tools/__init__.py                           @jasonewillis
+
+# Executes BEFORE everything above. `python3 -m` places the repository root on
+# `sys.path`, so a root-level `sitecustomize.py` is imported by the `site`
+# module at interpreter startup, ahead of the validator and its package. Neither
+# file exists today; both are owned pre-emptively for the same reason as the
+# staged successor — the first commit that creates one is the one that matters.
+# The durable fix is to isolate interpreter startup rather than to own these
+# paths; tracked separately.
+/sitecustomize.py                            @jasonewillis
+/usercustomize.py                            @jasonewillis
+
+# Ownership map for the paths above. Listed so that, once required code-owner
+# approval is ever enabled, this file cannot be weakened or removed without the
+# same approval it grants — otherwise the protections below could be dismantled
+# in one pull request and exploited in the next.
+/.github/CODEOWNERS                          @jasonewillis
+
+# PROPOSED PATH, NOT YET IMPLEMENTED. `tools/admission_root_next_v1.py` does
+# not exist on `main`, and `tools/admission_root_v1.py` contains no staged-
+# successor promotion rule today. Under the issue #65 design (prototyped, not
+# adopted) this path would hold pre-authorized replacement bytes that a later
+# pull request could promote into the validator position. It is listed before
+# it exists so that it is owned from its first commit rather than afterwards.
+# If issue #65 is resolved a different way, delete this entry.
+/tools/admission_root_next_v1.py             @jasonewillis
+
+# The workflow that supplies base-owned authority values to the validator.
+/.github/workflows/candidate-admission.yml   @jasonewillis
+
+# The declaration that binds tracked sources to their digests.
+/.github/admission/v1/source-declaration.json @jasonewillis
