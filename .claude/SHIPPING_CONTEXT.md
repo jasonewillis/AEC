@@ -14,27 +14,46 @@ gh issue list --repo jasonewillis/AEC --state open \
   --template '{{range .}}#{{.number}} [{{range .labels}}{{.name}} {{end}}] {{.title}}{{"\n"}}{{end}}'
 ```
 
+That command lists open issues in GitHub's default order. It is the authority on **what is
+open**, not on **what is next** — it carries no priority ordering, dependency ordering, or
+release-gate filter. Read the labels (`release-blocker`, `post-review`, `circle-back`) and
+the delivery sequence before choosing, and never let its ordering place downstream work
+ahead of its blocker.
+
 Secondary, and **treat as a hint rather than truth**:
 `docs/architecture/coaching-interaction.md` sections "Gap map", "Delivery sequence", and
 "Trustworthy-beta release gate", plus `docs/delivery/roadmap.md`.
 
-Those documents have drifted before. On 2026-08-03 the Gap map still described consumer
-state construction and pin compatibility as unbuilt when `aec/state_builder.py` and
-`tools/validate_consumer_connection.py` already existed. Re-verify against the code before
-planning a session from either file.
+Those documents have drifted before, so re-verify against the code before planning a session
+from either.
+
+But do not overcorrect, as an earlier draft of this file did: `aec/state_builder.py` and
+`tools/validate_consumer_connection.py` **exist**, and that is not the same as the gaps being
+closed. `state_builder` provides bounded AEC-self construction and leaves consumer state
+production outside AEC; `validate_consumer_connection` runs two fixed built-in probes, not a
+consumer's own contract. **File existence is not completed capability.** Check what a module
+actually does for a consumer before claiming a Gap map row overstates its gap.
 
 ## Escalate Only For
 
-Replaces the portable standing four. Everything else is yours to decide.
+**Additive to the portable standing four, not a replacement.** An earlier draft replaced
+them and silently dropped real gates. All four still apply here:
 
-1. **Licensing and provenance.** Anything touching the pinned Blueprint skills,
+1. Changes **user-visible product scope** — what ships, not how it is built.
+2. Involves **pricing, legal, or compliance**.
+3. Requires **credentials or authority you do not already hold**.
+4. Is **destructive at scale** — bulk deletes, history rewrites, reverting shipped work.
+
+AEC adds four more. Everything outside these eight is yours to decide.
+
+5. **Licensing and provenance.** Anything touching the pinned Blueprint skills,
    `provenance/`, `skills-lock.json`, or the attestation scope. Installing new upstream
    bytes needs a recorded authorization; it is not a version bump.
-2. **Relaxing an admission or trust-root check.** Adding checks, canaries, or tests is
+6. **Relaxing an admission or trust-root check.** Adding checks, canaries, or tests is
    ordinary work. Weakening one, or granting any future revision authority, is not.
-3. **Branch-protection changes on `main`.** Removing a required check, even temporarily and
+7. **Branch-protection changes on `main`.** Removing a required check, even temporarily and
    even to land a fix, is an explicit exception that must be recorded with the SHA.
-4. **Publishing a release or moving a consumer-facing contract version.**
+8. **Publishing a release or moving a consumer-facing contract version.**
 
 Not escalation triggers, despite feeling like them: adding tests, adding red canaries,
 filing issues, correcting a factual error in tracked documentation, or fixing a control that
@@ -68,17 +87,23 @@ A pull request, merged, with every gate satisfied on the exact head:
   `~/.claude/codex-findings/jasonewillis-AEC/<pr>.json`, normalized by
   `~/.claude/scripts/codex-findings-normalize.py`. **Required for every PR including
   docs-only** — `.codex-belt-required` applies universally.
-- Merge verified by `gh pr view <N> --json state,mergedAt` returning `MERGED` with non-null
-  `mergedAt`. A green label is not a merge.
+- Merge verified by `gh pr view "$PR" --json state,mergedAt` returning `MERGED` with a
+  non-null `mergedAt`. Use a quoted variable or a literal number: an unquoted `<N>` is shell
+  input redirection, not a placeholder. A green label is not a merge.
 
 ## Local traps that waste sessions
 
-- A stray `.DS_Store` reds `tests/test_blueprint_skills.py` while CI is green on the same
-  SHA. Run `find . -name .DS_Store -delete` before believing a local red. Gitignore did not
-  close this — the validator walks the filesystem.
+- A `.DS_Store` **as an immediate child of `.agents/skills/` or `.claude/skills/`** reds
+  `tests/test_blueprint_skills.py` while CI is green on the same SHA, because the validator
+  compares the exact children of those two directories against an allowlist of seven. A
+  `.DS_Store` elsewhere in the repository does not red that test. `find . -name .DS_Store
+  -delete` is still the fastest clear, but the diagnosis is those two directories.
+  Gitignore did not close this — the validator walks the filesystem, not the index.
 - **Regenerate the source declaration after mutating a validator.** A stale digest
   manufactures unrelated failures and will make a sound guard look broken.
 - A mutation result expires when a later guard is added in front of it. Re-run mutations
   after adding any new check.
-- `statusCheckRollup` reports `UNSTABLE` mid-flight. Re-query before believing it.
+- `UNSTABLE` is a `mergeStateStatus` value, not a `statusCheckRollup` one — that field is a
+  list of check-run and status-context objects. Read the latest conclusion per context at the
+  exact head rather than re-querying the wrong primitive.
 - Squash-merge rewrites SHAs, so `commits_not_on_main` is noise. Check content or PR state.

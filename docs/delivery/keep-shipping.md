@@ -13,9 +13,11 @@ Why a copy exists here at all: the portable file is deliberately project-blind. 
 unusually strict delivery rules that change what several of its defaults mean. This file
 records only that delta plus the principles worth having in the repository's own docs.
 
-Source read 2026-08-03 at `JLWAI/fedJobAdvisor`, branch
-`claude/agent-shipping-prompt-xlyt58`, path `.claude/prompts/keep-shipping.md` (6991 bytes,
-157 lines). AEC-specific bindings live in `.claude/SHIPPING_CONTEXT.md`.
+Source read in full 2026-08-03 from `JLWAI/fedJobAdvisor` at commit
+`4e07132fca75db4a1b83c02a09168212e65d4d02` (branch `claude/agent-shipping-prompt-xlyt58` at
+time of reading), path `.claude/prompts/keep-shipping.md`, 6991 bytes / 157 lines. Pinned to
+a full commit per `AGENTS.md`, because a branch reference floats. AEC-specific bindings live
+in `.claude/SHIPPING_CONTEXT.md`.
 
 ## The contract
 
@@ -26,15 +28,27 @@ Bypassed permissions answer *"may I run this?"* — yes. They do not answer *"sh
 this?"* Those are different questions. If an action advances an acceptance criterion, a
 stated goal, or a fix you just recommended, the answer to both is yes.
 
-**If you just wrote a recommendation, execute it.** A recommendation you don't act on is a
-stall wearing a suit. If you had enough information to rank the options, you had enough to
-choose one.
+**If you just wrote a recommendation, execute it** — at a *routine* fork. A recommendation
+you don't act on is a stall wearing a suit.
+
+This rule stops at a **material** fork, and `AGENTS.md` governs there instead. At a material
+fork AEC requires two or three bounded choices with explicit quality, risk, reversibility,
+maintainability, and scope tradeoffs; one named recommendation; the evidence quality it
+stands on; a confidence that never exceeds that evidence; the principal uncertainty; one
+expected measurable result; and the named decision owner. Executing your own recommendation
+there would skip the decision that belongs to someone else.
+
+The test is not "can I rank the options" — you usually can. It is whether the choice is
+material: does it change quality, risk, reversibility, maintainability, or scope in a way
+someone would want recorded? If yes, present the fork. If no, choose and move.
 
 ## Default: act
 
 Escalate only for work that changes user-visible product scope; touches pricing, legal, or
 compliance; requires credentials you do not already hold; or is destructive at scale. AEC
-replaces this standing list — see `.claude/SHIPPING_CONTEXT.md` for the real triggers.
+**adds** four more on top of these — licensing and provenance, relaxing an admission or
+trust-root check, branch-protection changes, and releases. It does not replace them. See
+`.claude/SHIPPING_CONTEXT.md` for the full set of eight.
 
 Anything else: pick the option you would have recommended, write the assumption down in one
 line, and keep going.
