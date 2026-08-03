@@ -50,6 +50,11 @@ FULL_CARD_TRIGGERS: tuple[str, ...] = (
     "status-request",
 )
 INTERACTION_TRIGGERS = frozenset((*FULL_CARD_TRIGGERS, "routine-progress"))
+# Orientation chrome (stage header, marker legend, rules, and the read-only
+# authority statement) teaches the surface itself, not the current task. It is
+# rendered on the first interaction of a task and suppressed on repeat renders,
+# where it would restate constants the reader has already been given.
+ORIENTATION_TRIGGERS = frozenset(("task-intake",))
 PHASE_DISPLAY_NAMES = {"Deploy": "Deploy/Observe"}
 EVIDENCE_CLASS_BY_KIND = {
     "base-head-binding": "source-audited",
@@ -74,8 +79,15 @@ TRADEOFF_DIMENSIONS: tuple[str, ...] = (
 )
 
 
-def section_heading(label: str, *, fill: str = "═") -> str:
-    """Return one portable, high-contrast plain-text section heading."""
+def section_heading(label: str, *, fill: str = "═", rule: bool = True) -> str:
+    """Return one portable, high-contrast plain-text section heading.
+
+    The underline rule carries no information; the bracketed label already
+    separates sections. `rule=False` suppresses it for dense repeat renders
+    while keeping the stable heading text itself unchanged.
+    """
+    if not rule:
+        return label
     return label + "\n" + fill * 64
 
 
@@ -124,7 +136,12 @@ def concise_recognition(value: str) -> str:
     return value
 
 
-def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
+def render_rail(
+    card: dict[str, Any],
+    rail_definition: RailDefinition,
+    *,
+    orientation: bool = True,
+) -> str:
     """Render the ASCII workflow rail for one validated card.
 
     A rail is a straight line with one marker for each pinned phase. A
@@ -132,6 +149,10 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
     Fails closed if the card's own rail_total disagrees with the rail
     definition's phase count, instead of drawing a rail whose text and
     columns silently disagree.
+
+    `orientation=False` suppresses the two invariant lines - the stage
+    header and the marker legend - which are byte-identical at every phase.
+    Both fail-closed contract checks still run in either mode.
     """
     position = card["rail_position"]
     rail = int(position["rail"])
@@ -190,23 +211,34 @@ def render_rail(card: dict[str, Any], rail_definition: RailDefinition) -> str:
         phase_cursor += len(phases)
     header_line = "".join(header_characters).rstrip()
 
-    lines = [
-        header_line,
-        phase_line,
-        f"RAIL · {PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}"
-        + f" · step {rail}/{rail_total}"
-        + f" · {position['stage']} {phase}/{phase_total}",
-    ]
-    lines.append("● complete   ◉ current   ○ not reached")
+    lines = []
+    if orientation:
+        lines.append(header_line)
+    lines.append(phase_line)
+    # The phase line above already names the current phase and marks it with
+    # `◉`, so repeating the name here is the card's second encoding of one
+    # fact. The rail summary keeps only what the graphic cannot show.
+    lines.append(
+        f"RAIL · step {rail}/{rail_total}"
+        + f" · {position['stage']} {phase}/{phase_total}"
+    )
+    if orientation:
+        lines.append("● complete   ◉ current   ○ not reached")
     return "\n".join(lines)
 
 
-def earliest_unmet_gate(card: dict[str, Any]) -> str:
-    """Name the current phase gate without confusing it with gate status."""
+def earliest_unmet_gate(card: dict[str, Any], *, name_phase: bool = True) -> str:
+    """Name the current phase gate without confusing it with gate status.
+
+    `name_phase=False` drops the phase prefix for callers that have already
+    named the phase on an adjacent line. The gate is always the current
+    phase's gate, so the prefix adds no fact there.
+    """
+    prefix = f"{card['phase']} " if name_phase else ""
     if card.get("gate") == "Blocked":
-        return f"{card['phase']} blocker gate"
+        return f"{prefix}blocker gate"
     if card.get("required_proof"):
-        return f"{card['phase']} evidence gate"
+        return f"{prefix}evidence gate"
     return "none in the current validated card"
 
 
@@ -258,8 +290,9 @@ def render_evidence_status(
         else:
             value = "not claimed"
         lines.extend(labeled_lines("EVIDENCE", f"{category} · {value}"))
-    if not lines:
-        lines.extend(labeled_lines("EVIDENCE", "None claimed."))
+    # No line when nothing is claimed and nothing is required: absence is
+    # already silence. The EVIDENCE label is reserved for real evidence, so
+    # seeing it always means the card has something to say.
     return lines
 
 
@@ -277,32 +310,34 @@ def render_project_guidance(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
+    orientation: bool = True,
 ) -> str:
     """Render the [AEC: Project Guidance] block for one validated card.
 
     This block states where the task sits on the workflow, what to do next,
     and what AEC is and is not allowed to do.
+
+    `orientation=False` suppresses the invariant framing - heading rules,
+    section rules, the stage header, the marker legend, and the read-only
+    authority statement - which is byte-identical at every phase. Nothing
+    that depends on the card is suppressed by that flag.
     """
     position = card["rail_position"]
     transition = card.get("transition_request") or {}
     lines = [
-        section_heading("[AEC: Project Guidance]"),
-        render_rail(card, rail_definition),
-        LIGHT_RULE,
+        section_heading("[AEC: Project Guidance]", rule=orientation),
+        render_rail(card, rail_definition, orientation=orientation),
     ]
+    if orientation:
+        lines.append(LIGHT_RULE)
     if task_id:
         lines.extend(labeled_lines("TASK", task_id))
-    lines.extend(
-        labeled_lines(
-            "CURRENT",
-            f"{PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}"
-            f" · {position['stage']} · step {position['rail']}/{position['rail_total']}",
-        )
-    )
+    # No CURRENT line: the rail summary above is a strict superset of it,
+    # carrying the same phase, stage, and step plus the stage sub-position.
     lines.extend(
         labeled_lines(
             "GATE",
-            f"{card['gate']} · {earliest_unmet_gate(card)}",
+            f"{card['gate']} · {earliest_unmet_gate(card, name_phase=False)}",
         )
     )
     required_proof = card.get("required_proof") or []
@@ -368,31 +403,34 @@ def render_project_guidance(
                 ),
             )
         )
-    else:
-        lines.extend(labeled_lines("BLOCKERS", "None recorded."))
+    # No BLOCKERS line when nothing is blocking: "None recorded." is negative
+    # space, and absence can be silence. The label appearing at all is the
+    # signal. This is suppression, not deletion - the two branches above still
+    # render whenever a blocker exists.
     lines.extend(render_evidence_status(card, evidence or []))
     finished = card.get("finished") or []
     for item in finished:
         lines.extend(labeled_lines("DONE WHEN", item))
-    lines.append(LIGHT_RULE)
-    lines.extend(
-        labeled_lines(
-            "AUTHORITY",
-            "AEC is advisory and read-only. You own execution, task/GitHub state, "
-            "tests, merge, deployment, rollback, and sensitive data.",
+    if orientation:
+        lines.append(LIGHT_RULE)
+        lines.extend(
+            labeled_lines(
+                "AUTHORITY",
+                "AEC is advisory and read-only. You own execution, task/GitHub "
+                "state, tests, merge, deployment, rollback, and sensitive data.",
+            )
         )
-    )
     return "\n".join(lines)
 
 
-def render_mentoring(card: dict[str, Any]) -> str:
+def render_mentoring(card: dict[str, Any], *, orientation: bool = True) -> str:
     """Render the [AEC: Mentoring] block for one validated card.
 
     This block teaches back the lesson behind the current gate, so the
     reason for the gate is clear, not just its name.
     """
     mentoring = card.get("mentoring") or {}
-    lines = [section_heading("[AEC: Mentoring]")]
+    lines = [section_heading("[AEC: Mentoring]", rule=orientation)]
     lesson = mentoring.get("lesson")
     if lesson:
         lines.extend(labeled_lines("LESSON", lesson))
@@ -412,7 +450,10 @@ def render_mentoring(card: dict[str, Any]) -> str:
 
 
 def render_consumer_evidence_context(
-    card: dict[str, Any], evidence: list[dict[str, Any]]
+    card: dict[str, Any],
+    evidence: list[dict[str, Any]],
+    *,
+    orientation: bool = True,
 ) -> str | None:
     """Render rejected consumer facts outside AEC guidance and gate semantics."""
     transition = card.get("transition_request") or {}
@@ -430,7 +471,9 @@ def render_consumer_evidence_context(
     )
     if not pending:
         return None
-    lines = [section_heading("[Consumer: Evidence Context]", fill="─")]
+    lines = [
+        section_heading("[Consumer: Evidence Context]", fill="─", rule=orientation)
+    ]
     for item in pending:
         lines.extend(
             labeled_lines(
@@ -442,7 +485,7 @@ def render_consumer_evidence_context(
     return "\n".join(lines)
 
 
-def render_decision(card: dict[str, Any]) -> str | None:
+def render_decision(card: dict[str, Any], *, orientation: bool = True) -> str | None:
     """Render the [AEC: Decision] block, or return None if there is no fork.
 
     Returns None when `decision_support` is null. A card only carries
@@ -454,7 +497,7 @@ def render_decision(card: dict[str, Any]) -> str | None:
         return None
 
     lines = [
-        section_heading("[AEC: Decision]"),
+        section_heading("[AEC: Decision]", rule=orientation),
         *labeled_lines("QUESTION", support["question"]),
         "",
     ]
@@ -513,11 +556,16 @@ def render_human(
     evidence: list[dict[str, Any]] | None = None,
     blockers: list[dict[str, Any]] | None = None,
     task_id: str | None = None,
+    orientation: bool = False,
 ) -> str:
     """Render one validated card as human coaching text.
 
     Renders only what the card contains. A field that is absent or empty is
     left out, never replaced with a placeholder.
+
+    The default dense render omits invariant chrome. `orientation=True`
+    restores the full orienting frame for the first render of a task, where
+    the reader has not yet learned the surface.
     """
     sections = [
         render_project_guidance(
@@ -526,16 +574,20 @@ def render_human(
             evidence=evidence,
             blockers=blockers,
             task_id=task_id,
+            orientation=orientation,
         )
     ]
-    consumer_context = render_consumer_evidence_context(card, evidence or [])
+    consumer_context = render_consumer_evidence_context(
+        card, evidence or [], orientation=orientation
+    )
     if consumer_context is not None:
         sections.append(consumer_context)
-    sections.append(render_mentoring(card))
-    decision = render_decision(card)
+    sections.append(render_mentoring(card, orientation=orientation))
+    decision = render_decision(card, orientation=orientation)
     if decision is not None:
         sections.append(decision)
-    return f"\n{LIGHT_RULE}\n".join(sections) + "\n"
+    separator = f"\n{LIGHT_RULE}\n" if orientation else "\n"
+    return separator.join(sections) + "\n"
 
 
 def render_compact(card: dict[str, Any]) -> str:
@@ -578,4 +630,5 @@ def render_interaction(
         evidence=evidence,
         blockers=blockers,
         task_id=task_id,
+        orientation=trigger in ORIENTATION_TRIGGERS,
     )
