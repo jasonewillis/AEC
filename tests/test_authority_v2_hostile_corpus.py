@@ -59,14 +59,17 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # (tests/test_generate_source_declaration.py) for #74.
 # Bumped 2026-07-29: +1 in-tree adversarial replay corpus
 # (tests/test_admission_attack_corpus.py) for #67.
-EXPECTED_DISTINCT_FROZEN_PATHS = 54
-EXPECTED_SOURCE_BASELINE_PATHS = 46
+# Bumped 2026-08-03: +1 staged-successor promotion proof
+# (tests/test_admission_staged_successor.py) for #65.
+EXPECTED_DISTINCT_FROZEN_PATHS = 55
+EXPECTED_SOURCE_BASELINE_PATHS = 47
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
     "aec/consumer.py",
     "aec/mentor.py",
     "tests/test_admission_root_v1.py",
+    "tests/test_admission_staged_successor.py",
     "tests/test_agent_adapters.py",
     "tests/test_authority_v2_hostile_corpus.py",
     "tests/test_blueprint_skills.py",

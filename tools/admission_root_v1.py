@@ -16,7 +16,7 @@ BEHAVIOR_IDENTITY = (
     "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
 )
 TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:33588f0e16ad9894b0e9808d584774211bbf789a2791e29e75886681cf403659"
+    "sha256:d46d5ec556efbe040ae90253a0b3c0a2cb0fb16f63186d8763bc813a7e194a5f"
 )
 REGULAR_MODE = "100644"
 OUTCOMES = (
@@ -42,6 +42,12 @@ class FileBaseline(NamedTuple):
 
 VALIDATOR_PATH = "tools/admission_root_v1.py"
 ACTIVE_WORKFLOW_PATH = ".github/workflows/candidate-admission.yml"
+# One base-owned staging slot for the next validator. Its presence in the BASE
+# revision is the only thing that can authorize a validator-changing candidate,
+# and the promotion spends it (see validate_candidate). A candidate cannot
+# create its own grant: the file is read from the base checkout, never from the
+# candidate tree.
+STAGED_SUCCESSOR_PATH = "tools/admission_root_next_v1.py"
 
 DECLARATION_PATH = ".github/admission/v1/source-declaration.json"
 DECLARATION_SCHEMA_VERSION = "1.0.0"
@@ -189,8 +195,36 @@ def load_declaration(root: Path) -> SourceDeclaration:
     return parse_declaration((root / DECLARATION_PATH).read_bytes())
 
 
+def load_staged_successor(
+    root: Path, declaration: SourceDeclaration
+) -> bytes | None:
+    """Return the base-staged successor validator bytes, or None for no grant.
+
+    Fails closed. A grant exists only when the staged file is present as a
+    readable regular file AND its bytes match the digest the same revision's
+    own declaration binds for that path. Reading the file without that digest
+    check would make the grant strictly weaker than every other tracked path,
+    since a single unreviewed byte edit under the staging name would otherwise
+    authorize an arbitrary next validator. The declaration is the base's own,
+    loaded from the same checkout, so this is not a candidate-supplied claim.
+    """
+    staged = root / STAGED_SUCCESSOR_PATH
+    try:
+        if staged.is_symlink() or not staged.is_file():
+            return None
+        content = staged.read_bytes()
+    except OSError:
+        return None
+    if declaration.sources.get(STAGED_SUCCESSOR_PATH) != hashlib.sha256(
+        content
+    ).hexdigest():
+        return None
+    return content
+
+
 _BASE_ROOT = Path(__file__).resolve().parents[1]
 BASE_DECLARATION = load_declaration(_BASE_ROOT)
+BASE_STAGED_SUCCESSOR = load_staged_successor(_BASE_ROOT, BASE_DECLARATION)
 # Retained module names so existing callers keep one vocabulary. These describe
 # the base revision this validator ships inside, not a frozen forever-baseline.
 SOURCE_BASELINE: dict[str, str] = BASE_DECLARATION.sources
@@ -510,8 +544,16 @@ def validate_candidate(
     record_format: str,
     blobs: Mapping[str, bytes],
     authority: BaseAuthority,
+    staged_successor: bytes | None = BASE_STAGED_SUCCESSOR,
 ) -> AdmissionReport:
-    """Admit candidate Git data without importing or executing candidate code."""
+    """Admit candidate Git data without importing or executing candidate code.
+
+    `staged_successor` is base-owned, not candidate-owned: it defaults to the
+    bytes the base revision staged at STAGED_SUCCESSOR_PATH, and is a
+    parameter only so tests can construct a base that has or has not issued a
+    grant. Passing None means the base issued no grant, which is the ordinary
+    state of the repository.
+    """
     findings: set[str] = set()
     if not _authority_valid(authority):
         findings.add("BOOTSTRAP-001 BASE_AUTHORITY")
@@ -533,15 +575,35 @@ def validate_candidate(
     validator_content = (
         None if validator_record is None else blobs.get(validator_record.object_id)
     )
-    if (
-        validator_record is None
-        or validator_record.mode != REGULAR_MODE
-        or validator_record.object_id != authority.validator_blob_oid
-        or validator_content is None
-        or git_blob_oid(validator_content, len(validator_record.object_id))
-        != validator_record.object_id
-        or hashlib.sha256(validator_content).hexdigest() != authority.validator_sha256
-    ):
+    # Structural facts about the candidate's validator blob. These hold for
+    # both the unchanged-validator case and the promotion case: the path must
+    # exist as a regular file whose supplied bytes actually hash to the object
+    # ID the tree record names. Neither branch below relaxes any of this.
+    validator_intact = (
+        validator_record is not None
+        and validator_record.mode == REGULAR_MODE
+        and validator_content is not None
+        and git_blob_oid(validator_content, len(validator_record.object_id))
+        == validator_record.object_id
+    )
+    matches_baseline = (
+        validator_intact
+        and validator_record.object_id == authority.validator_blob_oid
+        and hashlib.sha256(validator_content).hexdigest() == authority.validator_sha256
+    )
+    # Base-staged successor promotion. The base pre-authorized exactly these
+    # bytes by committing them at STAGED_SUCCESSOR_PATH in a prior, ordinary
+    # pull request that did not touch the live validator. The grant is spent in
+    # the same candidate that uses it: the staged path must be absent from the
+    # candidate tree, so after promotion no grant remains and the exception
+    # closes behind itself. A candidate cannot promote and re-stage at once.
+    promotes_staged = (
+        validator_intact
+        and staged_successor is not None
+        and validator_content == staged_successor
+        and STAGED_SUCCESSOR_PATH.encode() not in by_path
+    )
+    if not (matches_baseline or promotes_staged):
         findings.add("ADMISSION-001 EXACT_BASELINE")
     workflow_record = by_path.get(ACTIVE_WORKFLOW_PATH.encode())
     if (
@@ -591,6 +653,7 @@ def self_check(root: Path) -> tuple[str, ...]:
             DECLARATION_PATH,
             DECLARATION_SCHEMA_VERSION,
             VALIDATOR_PATH,
+            STAGED_SUCCESSOR_PATH,
             ACTIVE_WORKFLOW_PATH,
             list(OUTCOMES),
         ],
