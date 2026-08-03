@@ -4,14 +4,21 @@
 Combines the two consumer-side tools ported from the HealthRAG pilot (AEC
 issues #58 and #52) behind a single command:
 
+    python3.12 -m tools.aec_coach doctor
     python3.12 -m tools.aec_coach state --task <id> --phase <phase> --lane <lane>
     python3.12 -m tools.aec_coach checkpoint <state-file>
 
-`state` builds an ignored local `tmp/aec-state.json` from proven Git facts
-plus explicit flags (see aec/state_builder.py). `checkpoint` validates that
-state against the resolver and renders the card. Default output is human
-coaching text (`[AEC: Project Guidance]`, `[AEC: Mentoring]`); pass
-`--format json` for the machine-readable card.
+`doctor` is the single preflight command a consumer runs before trusting a
+pinned AEC checkout. It reports the pin, the released contract versions, and
+both connection probes in one pass. `state` builds an ignored local
+`tmp/aec-state.json` from proven Git facts plus explicit flags (see
+aec/state_builder.py). `checkpoint` validates that state against the resolver
+and renders the card. Default output is human coaching text
+(`[AEC: Project Guidance]`, `[AEC: Mentoring]`); pass `--format json` for the
+machine-readable card.
+
+`doctor` only resolves and reports. It never registers a hook, writes
+consumer state, or mutates any lifecycle, review, merge, or deploy state.
 """
 
 from __future__ import annotations
@@ -26,6 +33,7 @@ from typing import Any
 
 from aec.consumer import ConsumerStateRejection, resolve_consumer_state
 from aec.human_render import RenderFailure, default_rail_definition, render_human
+from aec.release_manifest import validate_release_descriptor
 from aec.state_builder import (
     AEC_SELF_PROFILE,
     BuildStateFailure,
@@ -33,11 +41,23 @@ from aec.state_builder import (
     parse_blocker,
     parse_evidence,
 )
+from tools.validate_consumer_connection import (
+    ConnectionFailure,
+    DEFAULT_MATERIAL_PROBE,
+    DEFAULT_ROUTINE_PROBE,
+    validate_connection,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCEDURE_CATALOG_PATH = ROOT / "config" / "procedures" / "ticket-to-pr.json"
 WORKFLOW_PATH = ROOT / "config" / "workflows" / "ticket-to-pr.json"
+RELEASE_DESCRIPTOR_PATH = ROOT / "config" / "release" / "aec-release.json"
+
+# The probes `doctor` reports, in the order it reports them. Both must be
+# present in the connection receipt and both must carry status PASS before any
+# report line is printed; see require_probe_receipts.
+DOCTOR_REQUIRED_PROBES = ("routine", "material")
 
 
 class CoachFailure(RuntimeError):
@@ -77,6 +97,91 @@ def utc_now() -> str:
     """Return the current UTC time in the contract's required format."""
     now = datetime.now(timezone.utc).replace(microsecond=0)
     return now.isoformat().replace("+00:00", "Z")
+
+
+def require_probe_receipts(receipt: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return one receipt per required probe, or fail closed before reporting.
+
+    This is `doctor`'s fail-closed guard and the reason the command cannot
+    print a `PASS` line it did not earn. `validate_connection` raises on a
+    rejected probe, so the happy path never reaches a missing or non-PASS
+    entry -- but "the current caller happens to raise first" is not a
+    property a consumer-facing preflight command should depend on. A future
+    receipt shape that reports a probe as skipped, absent, or anything other
+    than PASS must stop the report rather than be rendered as one, because the
+    whole value of `doctor` is that its output is a claim about probes that
+    actually ran.
+    """
+    entries = receipt.get("probes")
+    if type(entries) is not list:
+        raise CoachFailure("connection receipt has no probes list")
+    by_name: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        if type(entry) is not dict:
+            raise CoachFailure("connection receipt probe entry is malformed")
+        by_name[str(entry.get("probe"))] = entry
+    for name in DOCTOR_REQUIRED_PROBES:
+        entry = by_name.get(name)
+        if entry is None:
+            raise CoachFailure(f"connection receipt is missing the {name} probe")
+        if entry.get("status") != "PASS":
+            raise CoachFailure(
+                f"{name} probe did not report PASS "
+                f"(status={entry.get('status')!r}); refusing to report a pin as usable"
+            )
+    return by_name
+
+
+def contract_line(descriptor: dict[str, Any]) -> str:
+    """Render the released contract versions this checkout declares."""
+    errors = validate_release_descriptor(descriptor)
+    if errors:
+        raise CoachFailure("release descriptor is invalid: " + "; ".join(errors))
+    contracts = descriptor["contracts"]
+    pairs = " ".join(f"{name}={contracts[name]}" for name in sorted(contracts))
+    return (
+        f"CONTRACT release={descriptor['release_version']} "
+        f"channel={descriptor['channel']} {pairs}"
+    )
+
+
+def doctor_report(revision: str, descriptor: dict[str, Any], receipt: dict[str, Any]) -> str:
+    """Build the whole `doctor` report, or raise before any line is printed."""
+    probes = require_probe_receipts(receipt)
+    lines = [
+        f"PIN revision={revision} repository={descriptor['repository']}",
+        contract_line(descriptor),
+    ]
+    for name in DOCTOR_REQUIRED_PROBES:
+        entry = probes[name]
+        support = "present" if entry.get("has_decision_support") else "absent"
+        lines.append(
+            f"{name.upper()} PASS gate={entry['gate']} decision_support={support}"
+        )
+    return "\n".join(lines)
+
+
+def run_doctor(arguments: argparse.Namespace) -> int:
+    """Prove a pinned checkout in one pass, keeping failures off standard output.
+
+    Reuses `tools.validate_consumer_connection.validate_connection`, the same
+    ROUTINE/MATERIAL probe path a consumer already runs, rather than building
+    probes here. Nothing is written and nothing is mutated.
+    """
+    try:
+        revision = current_revision()
+        descriptor = load_object(RELEASE_DESCRIPTOR_PATH, "release descriptor")
+        receipt = validate_connection(
+            arguments.routine, arguments.material, arguments.catalog
+        )
+        report = doctor_report(revision, descriptor, receipt)
+        if current_revision() != revision:
+            raise CoachFailure("HEAD changed while proving the pin")
+    except (CoachFailure, ConnectionFailure, OSError, ValueError) as error:
+        print(f"AEC coach doctor: FAIL: {error}", file=sys.stderr)
+        return 1
+    print(report)
+    return 0
 
 
 def run_state(arguments: argparse.Namespace) -> int:
@@ -152,6 +257,15 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse the state/checkpoint subcommand and its arguments."""
     parser = argparse.ArgumentParser(prog="aec-coach", description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Prove this pin, its contract versions, and both probes in one pass.",
+    )
+    doctor_parser.add_argument("--routine", type=Path, default=DEFAULT_ROUTINE_PROBE)
+    doctor_parser.add_argument("--material", type=Path, default=DEFAULT_MATERIAL_PROBE)
+    doctor_parser.add_argument("--catalog", type=Path, default=PROCEDURE_CATALOG_PATH)
+    doctor_parser.set_defaults(handler=run_doctor)
 
     state_parser = subparsers.add_parser(
         "state", help="Build one AEC coaching state file from proven Git facts."

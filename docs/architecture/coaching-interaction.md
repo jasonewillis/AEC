@@ -338,11 +338,14 @@ aec coach verify --task healthrag#33 --evidence tmp/proof.json
 aec coach outcome --task healthrag#33 --receipt tmp/outcome.json
 ```
 
-The complete command family above remains target state. AEC currently ships the bounded
-AEC-self `state` and `checkpoint` commands plus a consumer-capable
+The complete command family above remains target state. AEC currently ships `doctor`, the
+bounded AEC-self `state` and `checkpoint` commands, and a consumer-capable
 `UserPromptSubmit` hook renderer:
 
 ```text
+# Preflight, run from any pinned checkout before trusting a card:
+python3 -m tools.aec_coach doctor
+
 # AEC repository self-coaching only:
 python3 -m tools.aec_coach state --task aec#81 --phase Framing --lane INFRA
 python3 -m tools.aec_coach checkpoint tmp/aec-state.json
@@ -367,6 +370,18 @@ does not infer a trigger or lifecycle phase from prompt prose. A static command 
 is intentionally insufficient because it would choose full or compact output for every
 prompt. Structured output remains explicit through
 `aec_coach checkpoint --format json`.
+
+`doctor` exits `0` and prints one `PIN`, one `CONTRACT`, one `ROUTINE`, and one `MATERIAL`
+line, or exits nonzero and prints no report at all. It resolves both probes through
+`tools/validate_consumer_connection.py` rather than constructing its own, and reads the
+released contract versions from `config/release/aec-release.json`. It only resolves and
+reports: it registers nothing, writes nothing, and mutates nothing.
+
+The copyable install kit for a new consumer is `docs/consumer-kit/register-hook.md`
+(pin, hook registration, trigger selection, verification) and
+`docs/consumer-kit/state_producer_template.py` (a state producer bound to the consumer's
+own `HEAD` and profile). Both are copied into the consumer repository, not invoked from
+AEC, because the state file is a claim about the consumer's tree.
 
 The consumer owns hook registration, `AEC_STATE_PATH`, `AEC_ENVIRONMENT`, and production
 of the state file. Missing or rejected state emits `[AEC: Integration Blocked]` without
@@ -461,9 +476,9 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 | Gap | Current evidence | Required exit gate |
 | --- | --- | --- |
 | Framework admission | Source-changing PRs cannot currently satisfy the base-owned admission job. | A legitimate source transition passes its own admission and a tampered transition still fails. |
-| Consumer compatibility | A routine connection probe can pass while a material-decision consumer test fails. | Pin validation proves routine and material cards, rejection paths, and the human renderer. |
-| State construction | Consumers manually assemble a large state document. | One command builds ignored local state from proven facts and rejects missing facts. |
-| Human coaching | The renderer exists, but a consumer can discover AEC without invoking it at the prompt boundary. | A configured consumer prompt hook renders one complete `[AEC: Project Guidance]` and `[AEC: Mentoring]` card at meaningful triggers, compact state otherwise, and explicit failure without a fabricated rail. |
+| Consumer compatibility | `tools/validate_consumer_connection.py` already resolves a ROUTINE and a MATERIAL probe through the same pure adapter every consumer uses, and `--self-check` proves a pre-`d35f535` fixture is rejected with field-level guidance. `python3 -m tools.aec_coach doctor` now surfaces that proof plus the pin and the released contract versions as one preflight command. Both probes are AEC's own fixed fixtures, not a consumer's own contract, so a consumer-specific incompatibility can still pass them. | Pin validation proves routine and material cards, rejection paths, and the human renderer against a consumer's own contract, not only AEC's built-in probes. |
+| State construction | `aec/state_builder.py` already holds general construction logic and takes `profile` as a parameter, defaulting to `AEC_SELF_PROFILE` only when a caller omits it; `docs/consumer-kit/state_producer_template.py` is a copyable producer that supplies a consumer profile and the consumer's own HEAD. The producer is still copied and owned per consumer rather than invoked as a shipped command. | One command builds ignored local state from proven facts and rejects missing facts, without each consumer maintaining its own copied producer. |
+| Human coaching | The renderer exists, and `docs/consumer-kit/register-hook.md` now supplies copyable hook registration, trigger selection, and verification steps. A consumer can still discover AEC without invoking it at the prompt boundary, because registration remains consumer-owned by design. | A configured consumer prompt hook renders one complete `[AEC: Project Guidance]` and `[AEC: Mentoring]` card at meaningful triggers, compact state otherwise, and explicit failure without a fabricated rail. |
 | Learner adaptation | AEC has static teaching but no local learner profile. | Explanation depth can adapt without changing any engineering decision or authority fact. |
 | Reflection | Outcome receipts record closed coaching values, but no normal interaction collects them. | One local command records project impact and coaching value without sensitive content. |
 | Agent parity | Claude and Codex bind the same normalized decision. Human coaching parity is not proven. | Both agents render semantically identical project, mentor, and decision blocks. |
