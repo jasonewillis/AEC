@@ -1,0 +1,30 @@
+# Code owners for security-critical admission surfaces.
+#
+# STATUS: this file is currently INERT. GitHub only requests and requires
+# code-owner review when "Require a pull request before merging" with
+# "Require review from Code Owners" is enabled in branch protection. As of
+# 2026-08-03 `main` has `required_pull_request_reviews: null`, so nothing here
+# is enforced. It is recorded now so the intent is explicit and the rule takes
+# effect the moment a second maintainer makes required reviews practical.
+#
+# Do not treat the presence of this file as evidence that these paths are
+# reviewed. The enforcing control for the staged-successor path is the
+# admission workflow itself, not this file.
+
+# The admission validator decides what may enter the repository. A change here
+# changes what every future change is checked against.
+/tools/admission_root_v1.py                  @jasonewillis
+
+# The staged successor is pre-authorized replacement bytes for the validator
+# above. It is the one file whose contents a later pull request may promote
+# into the validator position without matching the current baseline, so it
+# carries the validator's authority one revision early. It is deliberately
+# listed even though it does not exist yet: it must be owned from the moment
+# it is first created, not after.
+/tools/admission_root_next_v1.py             @jasonewillis
+
+# The workflow that supplies base-owned authority values to the validator.
+/.github/workflows/candidate-admission.yml   @jasonewillis
+
+# The declaration that binds tracked sources to their digests.
+/.github/admission/v1/source-declaration.json @jasonewillis
