@@ -17,9 +17,21 @@
 # Do not treat the presence of this file as evidence that these paths were
 # reviewed before merging.
 
+# SCOPE RULE for this file: own a path if it EXECUTES during admission, or if
+# it DEFINES what admission checks. Do not extend ownership to every file whose
+# digest is transitively bound by the source declaration — that is already
+# covered by the declaration itself, and an over-broad map dilutes the signal
+# of what is genuinely trust-root.
+
 # The admission validator decides what may enter the repository. A change here
 # changes what every future change is checked against.
 /tools/admission_root_v1.py                  @jasonewillis
+
+# Executes during admission. `.github/workflows/candidate-admission.yml` invokes
+# `python3 -m tools.admission_root_v1`, which imports and runs the `tools`
+# package initializer before the validator module itself. It is one docstring
+# line today, but anything placed here runs with the validator.
+/tools/__init__.py                           @jasonewillis
 
 # Ownership map for the paths above. Listed so that, once required code-owner
 # approval is ever enabled, this file cannot be weakened or removed without the
