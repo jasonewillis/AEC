@@ -1,26 +1,39 @@
 # Code owners for security-critical admission surfaces.
 #
-# STATUS: this file is currently INERT. GitHub only requests and requires
-# code-owner review when "Require a pull request before merging" with
-# "Require review from Code Owners" is enabled in branch protection. As of
-# 2026-08-03 `main` has `required_pull_request_reviews: null`, so nothing here
-# is enforced. It is recorded now so the intent is explicit and the rule takes
-# effect the moment a second maintainer makes required reviews practical.
+# STATUS: NOT ENFORCED FOR MERGE.
 #
-# Do not treat the presence of this file as evidence that these paths are
-# reviewed. The enforcing control for the staged-successor path is the
-# admission workflow itself, not this file.
+# Two distinct behaviors must not be conflated:
+#   - GitHub may automatically REQUEST review from an owner listed here as
+#     soon as this file exists. That is advisory.
+#   - GitHub only REQUIRES an owner's approval before merging when branch
+#     protection enables required pull-request reviews with "Require review
+#     from Code Owners".
+#
+# As of 2026-08-03 `main` has `required_pull_request_reviews: null`, so no
+# approval here is mandatory and no merge is blocked by this file. Enabling
+# required reviews on a single-maintainer repository would block all work,
+# since GitHub does not permit self-approval.
+#
+# Do not treat the presence of this file as evidence that these paths were
+# reviewed before merging.
 
 # The admission validator decides what may enter the repository. A change here
 # changes what every future change is checked against.
 /tools/admission_root_v1.py                  @jasonewillis
 
-# The staged successor is pre-authorized replacement bytes for the validator
-# above. It is the one file whose contents a later pull request may promote
-# into the validator position without matching the current baseline, so it
-# carries the validator's authority one revision early. It is deliberately
-# listed even though it does not exist yet: it must be owned from the moment
-# it is first created, not after.
+# Ownership map for the paths above. Listed so that, once required code-owner
+# approval is ever enabled, this file cannot be weakened or removed without the
+# same approval it grants — otherwise the protections below could be dismantled
+# in one pull request and exploited in the next.
+/.github/CODEOWNERS                          @jasonewillis
+
+# PROPOSED PATH, NOT YET IMPLEMENTED. `tools/admission_root_next_v1.py` does
+# not exist on `main`, and `tools/admission_root_v1.py` contains no staged-
+# successor promotion rule today. Under the issue #65 design (prototyped, not
+# adopted) this path would hold pre-authorized replacement bytes that a later
+# pull request could promote into the validator position. It is listed before
+# it exists so that it is owned from its first commit rather than afterwards.
+# If issue #65 is resolved a different way, delete this entry.
 /tools/admission_root_next_v1.py             @jasonewillis
 
 # The workflow that supplies base-owned authority values to the validator.
