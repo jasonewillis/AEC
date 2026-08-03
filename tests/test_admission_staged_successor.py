@@ -32,9 +32,11 @@ from tools.admission_root_v1 import (
     GitRecord,
     GitRecordTreeView,
     _verify_local,
+    derive_promotion_declaration,
     git_blob_oid,
     load_staged_successor,
     parse_declaration,
+    render_declaration,
     validate_candidate,
 )
 
@@ -96,6 +98,8 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         undeclared: dict[str, bytes] | None = None,
         deletes: tuple[str, ...] = (),
         tamper: dict[str, bytes] | None = None,
+        declaration_edit=None,
+        declaration_render=None,
     ):
         """Return (entries, blobs) for one self-consistent candidate tree.
 
@@ -105,7 +109,10 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         its declared digest, `undeclared` places paths the declaration is not
         required to cover at all, `deletes` removes paths, and `tamper`
         rewrites path bytes WITHOUT updating the declaration, which is how a
-        hostile candidate looks.
+        hostile candidate looks. `declaration_edit` mutates the declaration
+        payload in place after every other section is settled, and
+        `declaration_render` replaces the canonical serializer, which is how a
+        candidate smuggles content or formatting into the declaration itself.
         """
         entries = dict(self.base_entries)
         blobs = dict(self.base_blobs)
@@ -140,9 +147,14 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         for path in deletes:
             entries.pop(path.encode(), None)
 
-        rendered = (
-            json.dumps(declaration, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-        ).encode("utf-8")
+        if declaration_edit is not None:
+            declaration_edit(declaration)
+        serialize = declaration_render or (
+            lambda payload: (
+                json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+            ).encode("utf-8")
+        )
+        rendered = serialize(declaration)
         oid = git_blob_oid(rendered)
         blobs[oid] = rendered
         entries[DECLARATION_PATH.encode()] = ("100644", oid)
@@ -312,6 +324,127 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
 
         self.assertFalse(report.passed)
         self.assertIn(ADMISSION_FINDING, report.findings)
+
+    # -- declaration derivation -------------------------------------------
+
+    def test_promotion_cannot_smuggle_a_payload_in_declaration_metadata(self) -> None:
+        """The declaration is not exempt; it is derived byte-for-byte.
+
+        Replay of the round-2 finding. `artifacts[*].closed_class` is free
+        text no other admission check constrains, and the declaration was
+        exempt from the base comparison because its digests legitimately move.
+        A 416-character candidate-chosen payload therefore rode through a
+        promotion with no findings at all. The promoted validator can read the
+        declaration, so that payload is a next grant.
+        """
+        payload = ("GRANT:" + "Zq7" * 137)[:416]
+        self.assertEqual(len(payload), 416)
+
+        def smuggle(declaration: dict) -> None:
+            target = sorted(declaration["artifacts"])[0]
+            declaration["artifacts"][target] = [
+                payload,
+                declaration["artifacts"][target][1],
+            ]
+
+        entries, blobs = self.snapshot(
+            validator=self.successor, declaration_edit=smuggle
+        )
+        self.assert_tree_is_locally_clean(entries, blobs)
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
+    def test_promotion_declaration_must_match_byte_for_byte_not_semantically(
+        self,
+    ) -> None:
+        """Formatting alone carries data, so equality must be at the bytes.
+
+        Same declaration content, different serialization: 4-space indent and
+        unsorted keys. A semantically-equal comparison would admit this, and
+        whitespace and key order are enough to encode an arbitrary payload.
+        """
+        entries, blobs = self.snapshot(
+            validator=self.successor,
+            declaration_render=lambda payload: (
+                json.dumps(payload, ensure_ascii=False, indent=4, sort_keys=False)
+                + "\n"
+            ).encode("utf-8"),
+        )
+        self.assert_tree_is_locally_clean(entries, blobs)
+        honest, _ = self.snapshot(validator=self.successor)
+        self.assertNotEqual(
+            entries[DECLARATION_PATH.encode()], honest[DECLARATION_PATH.encode()]
+        )
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
+    def test_derivation_drops_the_spent_grant_from_the_declaration(self) -> None:
+        """The derivation removes every section entry keyed on the grant.
+
+        The live base ships no staged file, so this exercises the shape a real
+        base-with-a-grant has: the staged path is declared in `sources` and
+        `python_paths`, the promotion deletes the file, and the derived
+        declaration must therefore no longer mention it anywhere.
+        """
+        staged_declaration = json.loads(json.dumps(self.base_declaration))
+        staged_declaration["sources"][STAGED_SUCCESSOR_PATH] = hashlib.sha256(
+            self.successor
+        ).hexdigest()
+        staged_declaration["python_paths"] = sorted(
+            staged_declaration["python_paths"] + [STAGED_SUCCESSOR_PATH]
+        )
+        base_raw = render_declaration(staged_declaration)
+
+        derived = derive_promotion_declaration(base_raw, self.successor)
+
+        self.assertIsNotNone(derived)
+        rebuilt = json.loads(derived.decode("utf-8"))
+        self.assertNotIn(STAGED_SUCCESSOR_PATH, rebuilt["sources"])
+        self.assertNotIn(STAGED_SUCCESSOR_PATH, rebuilt["python_paths"])
+        self.assertEqual(
+            rebuilt["sources"][VALIDATOR_PATH],
+            hashlib.sha256(self.successor).hexdigest(),
+        )
+        # Nothing else moved.
+        expected = json.loads(json.dumps(self.base_declaration))
+        expected["sources"][VALIDATOR_PATH] = hashlib.sha256(
+            self.successor
+        ).hexdigest()
+        self.assertEqual(rebuilt, expected)
+
+    def test_derivation_refuses_a_non_canonical_base_declaration(self) -> None:
+        """Fail closed when "base bytes plus the transformation" is ambiguous."""
+        padded = (
+            json.dumps(self.base_declaration, ensure_ascii=False, indent=4) + "\n"
+        ).encode("utf-8")
+
+        self.assertIsNone(derive_promotion_declaration(padded, self.successor))
+
+    def test_validator_render_matches_the_declaration_generator(self) -> None:
+        """The canonical writer is duplicated in two files; pin them together.
+
+        tools/admission_root_v1.py cannot import the generator (the generator
+        imports it, and the validator runs as a script from a checkout where
+        `tools` is not an importable package), so the serializer is written
+        twice. If they ever drift, an honest promotion's declaration stops
+        matching the derivation and the promotion path silently bricks.
+        """
+        from tools.generate_source_declaration import render
+
+        self.assertEqual(
+            render_declaration(self.base_declaration),
+            render(self.base_declaration).encode("utf-8"),
+        )
+        self.assertEqual(
+            render_declaration(self.base_declaration),
+            (ROOT / DECLARATION_PATH).read_bytes(),
+        )
 
     # -- O5 no regression --------------------------------------------------
 

@@ -56,6 +56,14 @@ DECLARATION_SCHEMA_VERSION = "1.0.0"
 # the validator itself and the declaration that must restate its digest are
 # the entire legitimate change set. Everything else is compared byte-for-byte
 # against the base checkout (see _promotion_is_minimal).
+#
+# These two are exempt from the base comparison only, NOT unconstrained. The
+# validator must equal the base-staged successor bytes, and the declaration
+# must equal a byte-exact derivation from the base declaration
+# (derive_promotion_declaration). Exempting the declaration outright was a
+# real channel: `artifacts[*].closed_class` is candidate-chosen free text that
+# no other check reads, so a promotion could carry an arbitrary payload for
+# the promoted validator to read as its next grant.
 PROMOTION_MUTABLE_PATHS = frozenset({VALIDATOR_PATH, DECLARATION_PATH})
 DECLARATION_FIELDS = {
     "artifacts",
@@ -229,6 +237,10 @@ def load_staged_successor(
 
 
 _BASE_ROOT = Path(__file__).resolve().parents[1]
+# The base declaration's raw bytes, not just its parsed form. A promotion's
+# declaration is derived from these bytes, so the derivation has to start from
+# the exact serialization the base actually committed.
+BASE_DECLARATION_RAW = (_BASE_ROOT / DECLARATION_PATH).read_bytes()
 BASE_DECLARATION = load_declaration(_BASE_ROOT)
 BASE_STAGED_SUCCESSOR = load_staged_successor(_BASE_ROOT, BASE_DECLARATION)
 # Retained module names so existing callers keep one vocabulary. These describe
@@ -581,7 +593,93 @@ def base_tree_digests() -> dict[bytes, tuple[str, str]]:
     return _BASE_TREE_DIGESTS
 
 
-def _promotion_is_minimal(view: TreeView) -> bool:
+def render_declaration(payload: object) -> bytes:
+    """Serialize one declaration in the repository's single canonical form.
+
+    This MUST stay byte-identical to `render()` in
+    tools/generate_source_declaration.py, which is what actually writes the
+    committed declaration. It is duplicated rather than imported because this
+    validator is executed directly (`python3 tools/admission_root_v1.py`) from
+    a base checkout where `tools` is not importable as a package, and because
+    the generator imports this module. tests/test_admission_staged_successor.py
+    pins the two against each other, so drift reds.
+
+    `sort_keys=True` removes key-order freedom, `indent=2` removes whitespace
+    freedom, and json.loads collapses duplicate keys, so a value that survives
+    a `render(loads(x)) == x` round trip has no residual encoding freedom left
+    to carry data in.
+    """
+    return (
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
+
+
+def derive_promotion_declaration(
+    base_raw: bytes, promoted_validator: bytes
+) -> bytes | None:
+    """Return the ONLY declaration bytes a legitimate promotion may ship.
+
+    A promotion is mechanical, so the declaration it needs is mechanical too:
+    take the base declaration and apply exactly the transformation the
+    promotion implies -
+
+      * rebind the validator's digest to the promoted bytes, in whichever
+        section the base declaration binds it,
+      * drop every entry keyed on the staged successor path, because that
+        file is deleted by the promotion,
+
+    then re-serialize with the canonical writer. Anything else the candidate
+    put in the declaration - a payload in `artifacts[*].closed_class`, a
+    reordered key, an extra space - makes the bytes differ and rejects.
+
+    Returns None (fail closed) if the base declaration is not itself in
+    canonical form, since then "the same bytes plus this transformation" is
+    not well defined and an honest promotion could not be distinguished from
+    a padded one.
+    """
+    try:
+        payload = json.loads(base_raw.decode("utf-8", errors="strict"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if type(payload) is not dict or render_declaration(payload) != base_raw:
+        return None
+
+    digest = hashlib.sha256(promoted_validator).hexdigest()
+    rebound = False
+    sources = payload.get("sources")
+    if type(sources) is dict and VALIDATOR_PATH in sources:
+        sources[VALIDATOR_PATH] = digest
+        rebound = True
+    closure = payload.get("proof_closure")
+    if type(closure) is dict and VALIDATOR_PATH in closure:
+        row = closure[VALIDATOR_PATH]
+        if type(row) is not list or len(row) != 2:
+            return None
+        closure[VALIDATOR_PATH] = [row[0], digest]
+        rebound = True
+    if not rebound:
+        return None
+
+    for section in (
+        "artifacts",
+        "proof_closure",
+        "sources",
+        "workflow_bundles",
+        "workflows",
+    ):
+        value = payload.get(section)
+        if type(value) is dict:
+            value.pop(STAGED_SUCCESSOR_PATH, None)
+    python_paths = payload.get("python_paths")
+    if type(python_paths) is not list:
+        return None
+    payload["python_paths"] = [
+        path for path in python_paths if path != STAGED_SUCCESSOR_PATH
+    ]
+    return render_declaration(payload)
+
+
+def _promotion_is_minimal(view: TreeView, promoted_validator: bytes) -> bool:
     """Return whether a promotion candidate changes nothing it has no business changing.
 
     A promotion replaces one validator with bytes the base already committed.
@@ -592,7 +690,8 @@ def _promotion_is_minimal(view: TreeView) -> bool:
         the caller),
       * the staged successor path deleted (the grant is spent),
       * the declaration modified, which is unavoidable because the digests it
-        binds move with the validator.
+        binds move with the validator - but modified to EXACTLY the derived
+        bytes and nothing else (derive_promotion_declaration).
 
     Without this, deleting the canonical staged path while ADDING any other
     path was admitted. A successor that reads its grant from the added path
@@ -600,6 +699,14 @@ def _promotion_is_minimal(view: TreeView) -> bool:
     next pull request could promote arbitrary bytes. This closes that
     generically: the restriction is "nothing else changed", not a blacklist of
     known staging names.
+
+    Merely exempting the declaration reopened the same hole one level down.
+    The declaration is a file the promoted validator can read, and several of
+    its fields (notably `artifacts[*].closed_class`) are free text no other
+    check constrains, so an exempt declaration is a candidate-controlled
+    channel. Deriving the whole file byte-for-byte closes it at the byte
+    level; a semantic comparison would not, because whitespace, key order and
+    duplicate keys carry data too.
 
     Fails closed on any inability to read the base checkout.
     """
@@ -625,7 +732,14 @@ def _promotion_is_minimal(view: TreeView) -> bool:
             or hashlib.sha256(entry.content).hexdigest() != digest
         ):
             return False
-    return True
+    derived = derive_promotion_declaration(BASE_DECLARATION_RAW, promoted_validator)
+    declaration_entry = view.get(DECLARATION_PATH.encode())
+    return (
+        derived is not None
+        and declaration_entry is not None
+        and declaration_entry.mode == REGULAR_MODE
+        and declaration_entry.content == derived
+    )
 
 
 def validate_candidate(
@@ -698,7 +812,7 @@ def validate_candidate(
         and staged_successor is not None
         and validator_content == staged_successor
         and STAGED_SUCCESSOR_PATH.encode() not in by_path
-        and _promotion_is_minimal(candidate_view)
+        and _promotion_is_minimal(candidate_view, validator_content)
     )
     if not (matches_baseline or promotes_staged):
         findings.add("ADMISSION-001 EXACT_BASELINE")
