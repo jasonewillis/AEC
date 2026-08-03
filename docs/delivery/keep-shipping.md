@@ -102,8 +102,9 @@ Three AEC rules override the portable defaults:
 - `python3 tools/validate_foundation.py` and `python3 -m unittest discover -s tests` green
   on the exact head, not on an earlier revision.
 - A red canary exists for every critical gate. A green-only check is not a proof harness.
-- Every mutation reds **only** the new test. If it reds pre-existing tests too, the new test
-  pins nothing.
+- Every mutation reds the new test, and you read **which** tests red. Sole-failure is good
+  evidence the test is specific, but it is not required for validity — a mutation can red a
+  focused new test and a broader existing one without the new test being redundant.
 - Findings from the adversarial pass recorded and resolved, or explicitly recorded as
   unresolved with the reason.
 - Assumptions, tradeoffs, and anything unverified written where a reviewer sees them.
@@ -116,8 +117,12 @@ because of the 10% you could not.
 ## Autonomy is not recklessness
 
 What the project marks as gated stays gated: credentials and secrets, destructive
-operations, force-pushes to shared branches, and anything the repository's `AGENTS.md` names
-explicitly. Those are the only things between you and shipping.
+operations, force-pushes to shared branches, and anything `AGENTS.md` names explicitly.
+
+Those are hard guardrails, **not the complete set of gates** — the nine escalation triggers
+in `.claude/SHIPPING_CONTEXT.md` also apply, including material forks. An earlier draft of
+this paragraph said guardrails were "the only things between you and shipping," which
+contradicted that list and read as permission to resolve a material fork alone.
 
 One AEC-specific caution earned on 2026-08-03: several controls in this repository reported
 success while enforcing nothing — a required check that was not required, a review gate
