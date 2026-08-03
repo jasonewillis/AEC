@@ -51,6 +51,12 @@ STAGED_SUCCESSOR_PATH = "tools/admission_root_next_v1.py"
 
 DECLARATION_PATH = ".github/admission/v1/source-declaration.json"
 DECLARATION_SCHEMA_VERSION = "1.0.0"
+# The only paths a promotion candidate may differ from its base on, besides
+# deleting the spent grant. A promotion is a mechanical byte replacement, so
+# the validator itself and the declaration that must restate its digest are
+# the entire legitimate change set. Everything else is compared byte-for-byte
+# against the base checkout (see _promotion_is_minimal).
+PROMOTION_MUTABLE_PATHS = frozenset({VALIDATOR_PATH, DECLARATION_PATH})
 DECLARATION_FIELDS = {
     "artifacts",
     "proof_closure",
@@ -538,6 +544,90 @@ def _verify_local(view: TreeView) -> tuple[tuple[str, ...], SourceDeclaration]:
     return tuple(findings), declared
 
 
+_BASE_TREE_DIGESTS: dict[bytes, tuple[str, str]] | None = None
+
+
+def base_tree_digests() -> dict[bytes, tuple[str, str]]:
+    """Return path -> (mode, sha256) for every tracked path in the base checkout.
+
+    This is the base side of a candidate-versus-base change set. It is read
+    from the base revision this validator ships inside - the same checkout
+    BASE_DECLARATION and BASE_STAGED_SUCCESSOR already come from - so it is
+    base-owned, never candidate-supplied, and needs no new input to
+    validate_candidate.
+
+    It deliberately covers the whole tracked tree rather than only the paths
+    the declaration binds. The declaration covers .py, .json, workflow, and
+    proof-closure paths; a promotion candidate that plants, say,
+    `tools/grant.bin` would sit entirely outside it. Minimality has to be
+    judged over every tracked path or it is not minimality.
+
+    Computed lazily and cached: it costs a `git ls-files` plus one read per
+    tracked file, and only the promotion branch ever needs it.
+    """
+    global _BASE_TREE_DIGESTS
+    if _BASE_TREE_DIGESTS is None:
+        view = FilesystemTreeView(_BASE_ROOT)
+        digests: dict[bytes, tuple[str, str]] = {}
+        for path in view.paths():
+            entry = view.get(path)
+            if entry is None:
+                raise ValueError("Base checkout has an unreadable tracked path")
+            digests[path] = (
+                entry.mode,
+                hashlib.sha256(entry.content).hexdigest(),
+            )
+        _BASE_TREE_DIGESTS = digests
+    return _BASE_TREE_DIGESTS
+
+
+def _promotion_is_minimal(view: TreeView) -> bool:
+    """Return whether a promotion candidate changes nothing it has no business changing.
+
+    A promotion replaces one validator with bytes the base already committed.
+    That has no legitimate reason to add, delete, or edit anything else, so the
+    candidate's change set relative to base must be exactly:
+
+      * `tools/admission_root_v1.py` modified (to the staged bytes, checked by
+        the caller),
+      * the staged successor path deleted (the grant is spent),
+      * the declaration modified, which is unavoidable because the digests it
+        binds move with the validator.
+
+    Without this, deleting the canonical staged path while ADDING any other
+    path was admitted. A successor that reads its grant from the added path
+    would then be installed together with a candidate-controlled grant, and the
+    next pull request could promote arbitrary bytes. This closes that
+    generically: the restriction is "nothing else changed", not a blacklist of
+    known staging names.
+
+    Fails closed on any inability to read the base checkout.
+    """
+    staged_key = STAGED_SUCCESSOR_PATH.encode()
+    exempt = {path.encode() for path in PROMOTION_MUTABLE_PATHS} | {staged_key}
+    try:
+        base_tree = base_tree_digests()
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+    # The base owns the grant, so the base tree is the base tree minus the
+    # grant it is spending. When the base genuinely carries a staged file this
+    # is the deletion the promotion must perform; when a grant was supplied
+    # without an on-disk staged file there is simply nothing to delete.
+    if view.paths() != frozenset(base_tree) - {staged_key}:
+        return False
+    for path, (mode, digest) in base_tree.items():
+        if path in exempt:
+            continue
+        entry = view.get(path)
+        if (
+            entry is None
+            or entry.mode != mode
+            or hashlib.sha256(entry.content).hexdigest() != digest
+        ):
+            return False
+    return True
+
+
 def validate_candidate(
     *,
     raw_records: bytes,
@@ -568,7 +658,8 @@ def validate_candidate(
     # Nothing here imports or executes candidate code, so ADMISSION-002 holds.
     # The base still owns the validator and workflow identities checked below,
     # so a candidate cannot restate the gate that judges it.
-    local_findings, _declared = _verify_local(GitRecordTreeView(by_path, blobs))
+    candidate_view = GitRecordTreeView(by_path, blobs)
+    local_findings, _declared = _verify_local(candidate_view)
     if local_findings:
         findings.add("ADMISSION-001 EXACT_BASELINE")
     validator_record = by_path.get(VALIDATOR_PATH.encode())
@@ -597,11 +688,17 @@ def validate_candidate(
     # the same candidate that uses it: the staged path must be absent from the
     # candidate tree, so after promotion no grant remains and the exception
     # closes behind itself. A candidate cannot promote and re-stage at once.
+    #
+    # Deleting the canonical staged path is necessary but not sufficient: the
+    # candidate must also change NOTHING else (_promotion_is_minimal), or it
+    # could delete the spent grant while planting a fresh one under any other
+    # name for the promoted validator to read.
     promotes_staged = (
         validator_intact
         and staged_successor is not None
         and validator_content == staged_successor
         and STAGED_SUCCESSOR_PATH.encode() not in by_path
+        and _promotion_is_minimal(candidate_view)
     )
     if not (matches_baseline or promotes_staged):
         findings.add("ADMISSION-001 EXACT_BASELINE")

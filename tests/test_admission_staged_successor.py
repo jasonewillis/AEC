@@ -24,16 +24,11 @@ import unittest
 from pathlib import Path
 
 from tools.admission_root_v1 import (
-    ARTIFACT_BASELINE,
     DECLARATION_PATH,
-    PROOF_CLOSURE_BASELINE,
-    PYTHON_PATHS,
-    SOURCE_BASELINE,
     STAGED_SUCCESSOR_PATH,
     VALIDATOR_PATH,
-    WORKFLOW_TRANSITION_BASELINE,
-    WORKFLOW_TRANSITION_BUNDLES,
     BaseAuthority,
+    FilesystemTreeView,
     GitRecord,
     GitRecordTreeView,
     _verify_local,
@@ -71,29 +66,17 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         blobs: dict[str, bytes] = {}
         entries: dict[bytes, tuple[str, str]] = {}
 
-        def add(path: str, content: bytes, mode: str = "100644") -> None:
-            oid = git_blob_oid(content)
-            blobs[oid] = content
-            entries[path.encode()] = (mode, oid)
-
-        for path in SOURCE_BASELINE:
-            add(path, (ROOT / path).read_bytes())
-        for path in ARTIFACT_BASELINE:
-            add(path, (ROOT / path).read_bytes())
-        for path, bundle in WORKFLOW_TRANSITION_BUNDLES.items():
-            add(path, (ROOT / bundle).read_bytes())
-        for path, baseline in PROOF_CLOSURE_BASELINE.items():
-            source = ROOT / path
-            content = (
-                source.readlink().as_posix().encode()
-                if baseline.mode == "120000"
-                else source.read_bytes()
-            )
-            add(path, content, baseline.mode)
-        for path in PYTHON_PATHS:
-            if path.encode() not in entries:
-                add(path, (ROOT / path).read_bytes())
-        add(DECLARATION_PATH, (ROOT / DECLARATION_PATH).read_bytes())
+        # The candidate snapshot is the WHOLE tracked tree, exactly as CI
+        # supplies it (`git ls-tree -r --full-tree`), not just the paths the
+        # declaration binds. Promotion minimality is judged over every tracked
+        # path, so a partial snapshot would look like a mass deletion.
+        base_view = FilesystemTreeView(ROOT)
+        for raw_path in base_view.paths():
+            entry = base_view.get(raw_path)
+            assert entry is not None, raw_path
+            oid = git_blob_oid(entry.content)
+            blobs[oid] = entry.content
+            entries[raw_path] = (entry.mode, oid)
 
         cls.base_blobs = blobs
         cls.base_entries = entries
@@ -109,14 +92,20 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         validator: bytes | None = None,
         staged: bytes | None = None,
         sources: dict[str, bytes] | None = None,
+        workflows: dict[str, bytes] | None = None,
+        undeclared: dict[str, bytes] | None = None,
+        deletes: tuple[str, ...] = (),
         tamper: dict[str, bytes] | None = None,
     ):
         """Return (entries, blobs) for one self-consistent candidate tree.
 
         `validator` replaces the live validator bytes, `staged` places a
         staged successor file in the candidate tree, `sources` replaces other
-        declared source paths, and `tamper` rewrites path bytes WITHOUT
-        updating the declaration, which is how a hostile candidate looks.
+        declared source paths, `workflows` replaces a workflow and restates
+        its declared digest, `undeclared` places paths the declaration is not
+        required to cover at all, `deletes` removes paths, and `tamper`
+        rewrites path bytes WITHOUT updating the declaration, which is how a
+        hostile candidate looks.
         """
         entries = dict(self.base_entries)
         blobs = dict(self.base_blobs)
@@ -139,6 +128,17 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
             place(path, content, declare=True)
         if staged is not None:
             place(STAGED_SUCCESSOR_PATH, staged, declare=True)
+        for path, content in (workflows or {}).items():
+            oid = git_blob_oid(content)
+            blobs[oid] = content
+            entries[path.encode()] = ("100644", oid)
+            declaration["workflows"][path] = hashlib.sha256(content).hexdigest()
+        for path, content in (undeclared or {}).items():
+            oid = git_blob_oid(content)
+            blobs[oid] = content
+            entries[path.encode()] = ("100644", oid)
+        for path in deletes:
+            entries.pop(path.encode(), None)
 
         rendered = (
             json.dumps(declaration, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
@@ -241,6 +241,78 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertIn(ADMISSION_FINDING, report.findings)
 
+    # -- promotion minimality ---------------------------------------------
+
+    def test_promotion_cannot_plant_an_alternate_staging_path(self) -> None:
+        """The re-staging block must not be escapable by renaming the grant.
+
+        Deleting the canonical staged path while ADDING a second, candidate-
+        controlled staging file was admitted before promotion minimality
+        existed. If the promoted validator reads its grant from that added
+        path, one promotion installs a candidate-controlled grant and the next
+        pull request can promote arbitrary bytes. The tree is locally clean,
+        so only the minimality clause can reject it.
+        """
+        alternate = "tools/admission_root_next_v2.py"
+        entries, blobs = self.snapshot(
+            validator=self.successor, sources={alternate: self.impostor}
+        )
+        self.assertNotIn(STAGED_SUCCESSOR_PATH.encode(), entries)
+        self.assertIn(alternate.encode(), entries)
+        self.assert_tree_is_locally_clean(entries, blobs)
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
+    def test_promotion_cannot_add_an_undeclared_path(self) -> None:
+        """Minimality is generic, not a blacklist of known staging names.
+
+        A planted path the declaration is not required to cover at all - no
+        .py, .json, or workflow suffix - is outside every digest section, so
+        nothing but the change-set comparison can see it.
+        """
+        entries, blobs = self.snapshot(
+            validator=self.successor,
+            undeclared={"tools/successor-grant.bin": self.impostor},
+        )
+        self.assert_tree_is_locally_clean(entries, blobs)
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
+    def test_promotion_cannot_carry_an_unrelated_source_change(self) -> None:
+        """A promotion is a mechanical replacement; it may edit nothing else.
+
+        The same edit is admitted on its own (see the ordinary-source-change
+        test below), which is what makes this a minimality finding rather than
+        an incidental one.
+        """
+        changed = (ROOT / "tools/aec_coach.py").read_bytes() + b"\n# smuggled\n"
+        entries, blobs = self.snapshot(
+            validator=self.successor, sources={"tools/aec_coach.py": changed}
+        )
+        self.assert_tree_is_locally_clean(entries, blobs)
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
+    def test_promotion_cannot_delete_an_unrelated_path(self) -> None:
+        """Only the spent grant may disappear in a promotion."""
+        entries, blobs = self.snapshot(validator=self.successor, deletes=("LICENSE",))
+        self.assertNotIn(b"LICENSE", entries)
+        self.assert_tree_is_locally_clean(entries, blobs)
+
+        report = self.prove(entries, blobs, staged_successor=self.successor)
+
+        self.assertFalse(report.passed)
+        self.assertIn(ADMISSION_FINDING, report.findings)
+
     # -- O5 no regression --------------------------------------------------
 
     def test_ordinary_source_change_still_passes(self) -> None:
@@ -274,13 +346,24 @@ class StagedSuccessorPromotionTests(unittest.TestCase):
         self.assertIn(ADMISSION_FINDING, report.findings)
 
     def test_workflow_identity_is_unaffected_by_a_grant(self) -> None:
-        """A grant must not let a candidate move the active workflow."""
-        entries, blobs = self.snapshot(validator=self.successor)
+        """A grant must not let a candidate move the active workflow.
+
+        Deliberately NOT a promotion: the validator is left at the baseline, so
+        the promotion-minimality clause never runs and the base-owned workflow
+        blob identity is the ONLY thing that can reject this tree. The
+        declaration is regenerated for the rogue workflow bytes too, so
+        `_verify_local` is clean and cannot reject on a stale digest. An
+        earlier version of this test skipped that regeneration and therefore
+        passed for the wrong reason: it stayed green even with the
+        workflow-authority guard deleted.
+        """
         content = (ROOT / ".github/workflows/candidate-admission.yml").read_bytes()
-        rogue = content + b"\n# rogue\n"
-        oid = git_blob_oid(rogue)
-        blobs[oid] = rogue
-        entries[b".github/workflows/candidate-admission.yml"] = ("100644", oid)
+        entries, blobs = self.snapshot(
+            workflows={
+                ".github/workflows/candidate-admission.yml": content + b"\n# rogue\n"
+            }
+        )
+        self.assert_tree_is_locally_clean(entries, blobs)
 
         report = self.prove(entries, blobs, staged_successor=self.successor)
 
