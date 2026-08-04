@@ -143,6 +143,51 @@ class DoctorRefusesUnearnedPassTests(unittest.TestCase):
                     aec_coach.require_probe_receipts(receipt)
                 self.assertIn("did not report PASS", str(caught.exception))
 
+    def test_a_receipt_omitting_has_decision_support_is_refused(self) -> None:
+        """The report renders this key; the guard, not `.get()`, must supply it.
+
+        Reading it with `.get()` turned a missing key into
+        `MATERIAL PASS decision_support=absent` -- a PASS line describing the
+        exact material-decision incompatibility `doctor` was built to catch.
+        Deleting the has_decision_support checks in require_probe_receipts
+        reds this test and the two below.
+        """
+        for name in ("routine", "material"):
+            with self.subTest(probe=name):
+                receipt = passing_receipt()
+                index = 0 if name == "routine" else 1
+                del receipt["probes"][index]["has_decision_support"]
+                with self.assertRaises(aec_coach.CoachFailure) as caught:
+                    aec_coach.require_probe_receipts(receipt)
+                self.assertIn("has_decision_support", str(caught.exception))
+
+    def test_a_non_boolean_has_decision_support_is_refused(self) -> None:
+        for value in ("true", 1, None, [], {}):
+            with self.subTest(value=value):
+                receipt = passing_receipt()
+                receipt["probes"][1]["has_decision_support"] = value
+                with self.assertRaises(aec_coach.CoachFailure) as caught:
+                    aec_coach.require_probe_receipts(receipt)
+                self.assertIn("has_decision_support", str(caught.exception))
+
+    def test_a_probe_proving_the_wrong_decision_support_shape_is_refused(self) -> None:
+        """A material probe that proved no decision support is an incompatible pin."""
+        for index, name in ((0, "routine"), (1, "material")):
+            with self.subTest(probe=name):
+                receipt = passing_receipt()
+                receipt["probes"][index]["has_decision_support"] = not (
+                    receipt["probes"][index]["has_decision_support"]
+                )
+                with self.assertRaises(aec_coach.CoachFailure) as caught:
+                    aec_coach.require_probe_receipts(receipt)
+                self.assertIn("decision_support", str(caught.exception))
+
+    def test_doctor_report_never_renders_an_unproven_decision_support(self) -> None:
+        receipt = passing_receipt()
+        del receipt["probes"][1]["has_decision_support"]
+        with self.assertRaises(aec_coach.CoachFailure):
+            aec_coach.doctor_report("0" * 40, descriptor(), receipt)
+
     def test_a_malformed_receipt_is_refused(self) -> None:
         for receipt in ({}, {"probes": "routine"}, {"probes": ["routine"]}):
             with self.subTest(receipt=receipt):
@@ -173,6 +218,20 @@ class DoctorContractLineTests(unittest.TestCase):
         del broken["contracts"]
         with self.assertRaises(aec_coach.CoachFailure) as caught:
             aec_coach.contract_line(broken)
+        self.assertIn("release descriptor is invalid", str(caught.exception))
+
+    def test_a_descriptor_missing_repository_fails_closed_not_by_traceback(self) -> None:
+        """The PIN line reads `repository`; validation must run before that read.
+
+        Building the PIN line first raised `KeyError` on a malformed
+        descriptor -- an uncaught traceback rather than the advertised
+        "release descriptor is invalid" path. Fail-closed held, but by
+        accident and with the wrong message.
+        """
+        broken = descriptor()
+        del broken["repository"]
+        with self.assertRaises(aec_coach.CoachFailure) as caught:
+            aec_coach.doctor_report("0" * 40, broken, passing_receipt())
         self.assertIn("release descriptor is invalid", str(caught.exception))
 
     def test_the_contract_line_names_every_declared_contract(self) -> None:

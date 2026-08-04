@@ -13,10 +13,16 @@ page is the whole of them.
 Vendor AEC at one exact commit, then prove that commit before you trust a card:
 
 ```bash
+printf 'tmp/\n.local/\n' >> .gitignore
 git clone https://github.com/jasonewillis/AEC .local/aec
 git -C .local/aec checkout <full-40-character-commit>
 (cd .local/aec && python3 -m tools.aec_coach doctor)
 ```
+
+Ignore `.local/` *before* you clone. `.local/aec` is a second Git repository
+inside yours; a later `git add -A` with it untracked commits it as an embedded
+repository (gitlink) rather than as files, which is both wrong and confusing to
+undo. `tmp/` is ignored here for the same reason — step 2 writes state into it.
 
 `doctor` exits `0` and prints four lines: `PIN`, `CONTRACT`, `ROUTINE`, and
 `MATERIAL`. A nonzero exit means this pin is not usable from your project yet;
@@ -27,13 +33,29 @@ routine check still passes, which is the incident this command exists to catch.
 
 ## Step 2 — Produce state
 
-Copy `state_producer_template.py` into your repository (for example
-`scripts/aec_state.py`), fill in the three marked constants, and run it before
-each coaching interaction. It writes an ignored local file, by convention
+Copy `state_producer_template.py` into your repository and run it before each
+coaching interaction. It writes an ignored local file, by convention
 `tmp/aec-state.json`. That file is yours; AEC never writes it.
 
 ```bash
-echo "tmp/" >> .gitignore
+cp .local/aec/docs/consumer-kit/state_producer_template.py scripts/aec_state.py
+```
+
+Now edit the three constants under `CONFIGURE` in your copy. All three are
+required — the template refuses to run until at least `CONSUMER_PROJECT` is
+yours:
+
+| Constant | Set it to |
+| --- | --- |
+| `AEC_CHECKOUT` | Where you vendored AEC. `.local/aec` if you followed step 1. |
+| `CONSUMER_PROJECT` | Your repository as `owner/repository`. **Required.** Leaving the placeholder exits `1` with `aec state: FAIL: set CONSUMER_PROJECT before using this template`. |
+| `PROFILE_VERSION` | Any string you bump when you edit this file, e.g. `my-repository:1.0.0`. |
+
+The template resolves your repository root as its own parent's parent
+(`Path(__file__).resolve().parents[1]`), so `scripts/aec_state.py` works
+unchanged. At any other depth, adjust that line — see the comment on it.
+
+```bash
 python3 scripts/aec_state.py --task myrepo#12 --phase Framing --lane FEATURE
 ```
 
@@ -84,15 +106,40 @@ argument cannot do it, because it would pick the same output for every prompt.
 
 ## Step 5 — Verify the install
 
+Run these from your repository root:
+
 ```bash
 (cd .local/aec && python3 -m tools.aec_coach doctor)
 python3 scripts/aec_state.py --task myrepo#12 --phase Framing --lane FEATURE
-(cd .local/aec && python3 -m tools.aec_coach checkpoint "$PWD/../../tmp/aec-state.json")
+python3 .local/aec/tools/aec_coach.py checkpoint \
+  --project-root "$PWD" "$PWD/tmp/aec-state.json"
 ```
 
-The third command prints the human card. If it prints
-`[AEC: Integration Blocked]`, your state was missing or rejected — that is the
-designed failure, not a bug. AEC never renders a workflow rail it cannot prove.
+`--project-root` is not optional here, and it is the one flag most likely to be
+dropped. Your state file binds to *your* `HEAD`; `checkpoint` defaults to
+proving the revision of the checkout it runs from, which is AEC's. Two
+repositories never share a `HEAD`, so omitting the flag rejects every state
+you can possibly produce:
+
+```text
+AEC coach checkpoint: FAIL: consumer state rejected:
+{"accepted":false,"card":null,"code":"CONSUMER_STATE_MISMATCH",...}
+```
+
+The flag supplies the revision to compare against. It does not weaken the
+comparison — a state built at a commit you have since moved past is still
+rejected, which is the point.
+
+The third command prints the human card and exits `0`. Any rejection exits
+nonzero, prints nothing on standard output, and prints one
+`AEC coach checkpoint: FAIL: <reason>` line on standard error. That is the
+designed failure, not a bug: AEC never renders a workflow rail it cannot prove.
+
+`[AEC: Integration Blocked]` is a *different* signal, and you will not see it
+here. Only the registered prompt hook (step 3) emits it, because a hook must
+stay non-blocking for the host prompt and so reports failure as visible text
+with exit `0`, where `checkpoint` is a command and reports failure as an exit
+code.
 
 ## What stays yours
 

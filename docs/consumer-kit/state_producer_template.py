@@ -57,8 +57,28 @@ PROFILE_VERSION = "your-repository:1.0.0"
 # Below here is the copied wiring. Read it, but you should not need to edit it.
 # --------------------------------------------------------------------------
 
+# `parents[1]` assumes this file sits exactly one directory below your
+# repository root, which is what `scripts/aec_state.py` (the path this kit
+# recommends) gives you. It is a fixed count, not a search: at the repository
+# root use `parents[0]`, at `scripts/aec/state.py` use `parents[2]`. Get it
+# wrong and AEC_ROOT resolves to a directory that does not exist, and the
+# import below fails with ModuleNotFoundError rather than anything that names
+# this line -- so check it before anything else if that is what you see.
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 AEC_ROOT = (REPOSITORY_ROOT / AEC_CHECKOUT).resolve()
+if not (AEC_ROOT / "aec").is_dir():
+    raise SystemExit(
+        f"aec state: FAIL: no AEC checkout at {AEC_ROOT}; check AEC_CHECKOUT and "
+        "the parents[N] count on REPOSITORY_ROOT above"
+    )
+
+# This puts AEC's top-level packages (`aec`, and also `tools`, `tests`,
+# `config`) ahead of your repository's for the lifetime of this process. That
+# is deliberate: the one job of this script is to build state against the
+# pinned AEC you proved with `doctor`, and appending instead would let a
+# same-named directory of yours silently supply a different `aec` than the one
+# you pinned. The process writes a state file and exits, so the precedence
+# never outlives it -- but do not add unrelated imports below this line.
 sys.path.insert(0, str(AEC_ROOT))
 
 from aec.state_builder import (  # noqa: E402  (path setup must precede this import)
