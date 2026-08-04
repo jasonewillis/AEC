@@ -322,7 +322,7 @@
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
     "tests/test_aec_prompt_hook.py": "43c3297a620b85337101d84447097e6e94b0b52a559624a98e8a06ac768fc68a",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "fa6ad131aee751cfe98e415cfccbd3fc19124c2fef3a44444797314e7ef641e3",
+    "tests/test_authority_v2_hostile_corpus.py": "21ae1cdc90df733589e5311d7dc9db3da042279e1d4ee72ac64447e5e003ce71",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "50d4ab647da0022b7a60b3a918661da18950ffdc3ed11f77859d67aff137043f",
     "tests/test_consumer_install_kit.py": "31774b8dcab972da60c2e93b8a17935e31aff2a6e06d7b6fb5f020efe3966e58",
