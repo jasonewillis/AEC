@@ -32,8 +32,9 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # The tuple holds duplicates by construction, because the literal tail repeats 17
 # paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
 # it is the real coverage number, and it cannot be inflated back to green by
-# adding a repeat. Of the 52 distinct paths, 44 arrive via SOURCE_BASELINE and
-# only 8 are pinned independently of the declaration.
+# adding a repeat. Of the 55 distinct paths, 47 arrive via SOURCE_BASELINE and
+# only 8 are pinned independently of the declaration. Keep these three numbers in
+# step with the two constants below whenever either is bumped.
 #
 # Bump these deliberately when adding or removing tracked source.
 #

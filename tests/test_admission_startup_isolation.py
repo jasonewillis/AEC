@@ -13,11 +13,29 @@ distinguish real isolation from a hook that never would have run. The
 not run under the isolated one, on the same interpreter, in the same directory,
 with the same environment.
 
-Measured 2026-08-03 on CPython 3.12.1, 3.12.13, and 3.14.6: a hook written at the
-*repository root* is not imported by `site` under either invocation form, because
-CPython inserts the `-m` invocation root into `sys.path` after `site` has already
-run. That is why the repository-root case asserts only the isolated half and the
-`PYTHONPATH` case carries the both-halves proof.
+Every runtime test reads its flags from the workflow rather than hardcoding `-S`,
+so deleting the flag from the shipped command reds this file instead of leaving a
+canary that proves only what it was handed.
+
+Not every startup-affecting flag is a safe substitute. Measured 2026-08-03 on
+CPython 3.14.6, against the same `PYTHONPATH` hook and the real validator:
+
+    (none)      exit=0  marker=PRESENT
+    -S          exit=0  marker=ABSENT
+    -I          exit=1  marker=ABSENT    ModuleNotFoundError: tools
+    -P          exit=1  marker=PRESENT   ModuleNotFoundError: tools
+
+`-I` and `-P` drop the script directory from `sys.path`, which breaks
+`python3 -m tools.*` outright; `-P` does not even block the hook. A regex that
+accepted them would stay green while bricking admission for every candidate, so
+`test_shipped_flags_do_not_break_the_validator` executes whatever the workflow
+actually ships instead of trusting the pattern.
+
+A hook written at the *repository root* is not imported by `site` under either
+invocation form, because CPython inserts the `-m` invocation root into `sys.path`
+after `site` has already run. That premise correction is recorded here as prose
+because it is not a property of this change: an assertion about it would be
+trivially true with and without `-S` and would prove nothing about isolation.
 """
 
 from __future__ import annotations
@@ -34,8 +52,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github/workflows/candidate-admission.yml"
 
-ISOLATED_INVOCATION = re.compile(r"python3 (?:-I|-P|-S)[^\n]*-m tools\.admission_root_v1")
-ANY_INVOCATION = re.compile(r"python3 [^\n]*-m tools\.admission_root_v1")
+INVOCATION = re.compile(r"python3((?: -[A-Za-z]+)*) -m tools\.admission_root_v1")
+REQUIRED_FLAG = "-S"
 
 HOOK_SOURCE = (
     "import os\n"
@@ -43,6 +61,13 @@ HOOK_SOURCE = (
     "with open(marker, 'w', encoding='utf-8') as handle:\n"
     "    handle.write('startup hook executed')\n"
 )
+
+
+def shipped_flag_sets() -> list[list[str]]:
+    """Return the interpreter flags of every admission invocation in the workflow."""
+
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    return [match.split() for match in INVOCATION.findall(workflow)]
 
 
 def write_hook(directory: Path) -> Path:
@@ -75,8 +100,25 @@ class AdmissionStartupIsolationTests(unittest.TestCase):
         env["PYTHONDONTWRITEBYTECODE"] = "1"
         return env
 
+    def isolation_flags(self) -> list[str]:
+        """The flag set the workflow ships, asserted to be uniform across invocations."""
+
+        flag_sets = shipped_flag_sets()
+        self.assertTrue(flag_sets, "no admission invocation found in the workflow")
+        self.assertEqual(
+            [sorted(flags) for flags in flag_sets],
+            [sorted(flag_sets[0])] * len(flag_sets),
+            "admission invocations disagree about interpreter flags",
+        )
+        return flag_sets[0]
+
     def test_reachable_startup_hook_runs_without_isolation(self) -> None:
-        """Red half: without `-S` the hook executes inside the admission process."""
+        """Red half: without isolation flags the hook executes inside the process.
+
+        This is the non-isolated control, so it carries no flags by construction.
+        It reds if the fixture hook ever stops being reachable, which is what makes
+        the isolated half below mean anything.
+        """
 
         with tempfile.TemporaryDirectory() as tmp:
             marker = write_hook(Path(tmp))
@@ -91,15 +133,15 @@ class AdmissionStartupIsolationTests(unittest.TestCase):
                 "the fixture hook never ran, so the isolated half proves nothing",
             )
 
-    def test_reachable_startup_hook_is_blocked_by_isolation(self) -> None:
-        """Green half: the same hook cannot execute under the shipped `-S` form."""
+    def test_reachable_startup_hook_is_blocked_by_shipped_flags(self) -> None:
+        """Green half: the same hook cannot execute under the shipped invocation."""
 
         with tempfile.TemporaryDirectory() as tmp:
             marker = write_hook(Path(tmp))
             env = self.base_env()
             env["PYTHONPATH"] = tmp
 
-            result = run_validator(["-S"], env)
+            result = run_validator(self.isolation_flags(), env)
 
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertFalse(
@@ -107,43 +149,35 @@ class AdmissionStartupIsolationTests(unittest.TestCase):
                 "a startup hook executed inside an isolated admission interpreter",
             )
 
-    def test_isolation_does_not_break_validator_imports(self) -> None:
-        """`-S` removes site-packages; the validator is standard library only."""
+    def test_shipped_flags_do_not_break_the_validator(self) -> None:
+        """The shipped flags must actually run: `-I` and `-P` do not.
 
-        result = run_validator(["-S"], self.base_env())
+        Isolation that exits 1 with `No module named tools` is not isolation, it is
+        an outage. This runs the exact flag set from the workflow rather than a
+        hardcoded `-S`, so swapping in a plausible-looking harder flag reds here.
+        """
+
+        flags = self.isolation_flags()
+
+        self.assertIn(
+            REQUIRED_FLAG,
+            flags,
+            "the workflow no longer disables `site` for admission invocations",
+        )
+
+        result = run_validator(flags, self.base_env())
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stderr, "")
 
-    def test_repository_root_hook_never_executes_under_isolation(self) -> None:
-        """A repository-root `sitecustomize.py` cannot reach the isolated process."""
-
-        marker = ROOT / "marker"
-        hook = ROOT / "sitecustomize.py"
-        self.assertFalse(hook.exists(), "repository already carries a startup hook")
-        self.assertFalse(marker.exists(), "unexpected marker file in the repository")
-        try:
-            write_hook(ROOT)
-            result = run_validator(["-S"], self.base_env())
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertFalse(
-                marker.exists(),
-                "a repository-root startup hook executed during admission",
-            )
-        finally:
-            hook.unlink(missing_ok=True)
-            marker.unlink(missing_ok=True)
-
     def test_workflow_isolates_both_admission_invocations(self) -> None:
-        """Every admission invocation in the workflow carries an isolation flag."""
+        """Every admission invocation in the workflow carries the isolation flag."""
 
-        workflow = WORKFLOW.read_text(encoding="utf-8")
-        isolated = ISOLATED_INVOCATION.findall(workflow)
-        every = ANY_INVOCATION.findall(workflow)
+        flag_sets = shipped_flag_sets()
 
-        self.assertEqual(len(isolated), 2, workflow)
-        self.assertEqual(len(every), 2, workflow)
-        self.assertEqual(sorted(isolated), sorted(every))
+        self.assertEqual(len(flag_sets), 2, flag_sets)
+        for flags in flag_sets:
+            self.assertIn(REQUIRED_FLAG, flags, flag_sets)
 
 
 if __name__ == "__main__":
