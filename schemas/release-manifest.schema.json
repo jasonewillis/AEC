@@ -25,7 +25,7 @@
       "additionalProperties": false,
       "properties": {
         "consumer_state": {"const": "1.0.0"},
-        "human_render": {"const": "1.4.0"},
+        "human_render": {"const": "1.5.0"},
         "public_card": {"const": "3.0.0"},
         "resolution_decision": {"const": "4.0.0"},
         "resolution_request": {"const": "2.0.0"},

@@ -10,7 +10,7 @@
     ],
     "config/release/aec-release.json": [
       "configuration",
-      "163a00203a0d62e11ab3bf1b416319e130ae0b83130eb1563f91b3a36b93fcd9"
+      "1c6a1aad61556dea30dc8dd564990dc6fbcc424cc285f8223fbc069ce327ca06"
     ],
     "config/resolver/resolver-program.json": [
       "configuration",
@@ -58,7 +58,7 @@
     ],
     "schemas/release-manifest.schema.json": [
       "schema",
-      "2ccc4214e20cb5835a865b8b4ace420733cfbd69bb01ad272aca124492f7056a"
+      "27535eb991349f8c6df1827cf5741752044368e8e01d49a3b6c54b183d09cd78"
     ],
     "schemas/resolution-decision.schema.json": [
       "schema",
@@ -304,7 +304,7 @@
     "aec/adapters.py": "62b9712b0e21d66383a51605236e97289abcaf963bfa5218c210c29d05e15a73",
     "aec/cards.py": "d28d23cfd2775dd881291c9ac2bf28e108691b17ec35da75c325ae2504acd5f5",
     "aec/contracts.py": "becbc8a60685f96474ac01d4821612357e237e64b3ae0259267abbdce3d5b87b",
-    "aec/human_render.py": "a3f541576f31251b2687c7e66478c6920a514fc620462ce4eb49be986b2309da",
+    "aec/human_render.py": "9303235d87952af01fbd225e9687a1a80b8ae149d727a44b4bd424a1a16e865a",
     "aec/mentor.py": "1784bd63fa295b3588280efc585fce74f2d00dfb4ad65cebc3aea5e64d088ec9",
     "aec/mentoring.py": "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e",
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
@@ -315,8 +315,8 @@
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
     "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
-    "tests/test_aec_coach.py": "7a99bfdc7af9e2b6c148575835a000bdda4cb22479ccd134b7d0fb8c0f639296",
-    "tests/test_aec_prompt_hook.py": "7f40e893b60c507053005764a1e39e716b381abb0b3201507300763f13924337",
+    "tests/test_aec_coach.py": "d8d8130b63e8e8c5afd991f26feba499a9652ee889f54060f0834c8137e7ac68",
+    "tests/test_aec_prompt_hook.py": "43c3297a620b85337101d84447097e6e94b0b52a559624a98e8a06ac768fc68a",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
     "tests/test_authority_v2_hostile_corpus.py": "13224a4f308bd5c8e2bcbc83703197ff5174ea17087b4935dfcfef6907f0f0b4",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
@@ -325,7 +325,7 @@
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",
     "tests/test_foundation_validation.py": "b5838db8777a5be29ef30252fb3f49457e678e652c3862cf63543a430ac570a8",
     "tests/test_generate_source_declaration.py": "8de5cfde4f38ccfb22da5b5f0620b3d788b25b74cc3792109170fabecd60b8b3",
-    "tests/test_human_render.py": "793e76bfa5e2220ec453e615a03337fa5578f28f067eb4b176059bfca43dfdeb",
+    "tests/test_human_render.py": "25c31b6c63068fae25ed05371ed15c16e5a71fe520ed61c492dcd78076a2ec37",
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
@@ -336,7 +336,7 @@
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_builder.py": "3ca30bd3594eed617d67ad2472f81cafd9f7c3ae77284595e0e6978756d19182",
     "tools/admission_root_v1.py": "f12017bf1f6dba4c3333dd5049788de5efb812b929f38a6927cad520777e843e",
-    "tools/aec_coach.py": "4740c7ca2ef6bb87c94ff51af0bab179541af8641939dfff0162fee53c1f8ca3",
+    "tools/aec_coach.py": "54f8fa1fc3affbc2e427788641c90c89fa7cdaa3311951a3314a7f429e360098",
     "tools/aec_prompt_hook.py": "8eb9024883be1814661a9e85c380729ce03f3424becebe415addb81addbd42a0",
     "tools/generate_source_declaration.py": "ed74448dd8661264e446c6807b711f11fad44f85b3445d2dc042ef0d4f477f8c",
     "tools/prove_agent_adapter_parity.py": "1f55e0d378068bff6b265e5fa15d032b9287a768d03cb580ebafe758cf448000",

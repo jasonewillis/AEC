@@ -223,7 +223,7 @@ validated card.
 | Recommended next procedure          |  | Recognition heuristic               |
 | Required proof                      |  | Material tradeoff                   |
 | Exact finished condition            |  | One optional reflection question    |
-| Consumer authority boundary         |  | Learner-appropriate explanation     |
+| Consumer authority boundary*        |  | Learner-appropriate explanation     |
 +------------------+------------------+  +------------------+------------------+
                    |                                        |
                    +------------------+---------------------+
@@ -231,6 +231,12 @@ validated card.
                                       v
                          One deterministic coaching response
 ```
+
+Every row above is card-derived and always rendered, with one exception: the consumer
+authority boundary is invariant text, so it is orientation chrome and appears only on
+the three orienting triggers (see the human-render interaction contract below). The
+lesson, the reason the gate exists, and the recognition heuristic are never chrome and
+are never suppressed.
 
 The project block is concise and actionable. The mentor block teaches the engineering
 judgment behind it. A learner profile may change explanation depth or suppress repeated
@@ -391,10 +397,13 @@ invocation is not coaching interaction.
 
 ### Human-render interaction contract
 
-`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.4.0`. It retains the stable
+`aec.human_render.HUMAN_RENDER_CONTRACT_VERSION` is `1.5.0`. It retains the stable
 `[AEC: Project Guidance]` and `[AEC: Mentoring]` headings while adding a terminal-safe
-visual hierarchy. Full cards use major and supporting rules, compact labels, wrapped
-context, and only relevant evidence categories. The rail, guidance, evidence, finished
+visual hierarchy. Full cards use compact labels, wrapped context, and only the evidence
+categories the card actually claims or requires. Major and supporting rules, the stage
+header, the marker legend, and the read-only authority statement are orientation chrome:
+rendered for `task-intake`, `status-request`, and `phase-transition`, and suppressed for
+the other five full-card triggers. The rail, guidance, evidence, finished
 condition, mentoring, and authority boundary still come from one validated card and
 exact-bound consumer snapshot. `routine-progress` still emits one deterministic compact
 line. The renderer never remembers a prior phase or selects a lifecycle transition; the
@@ -413,6 +422,30 @@ headroom, so a one-character phase display-name change (for example,
 lengthening `Deploy/Observe`) could overflow and raise `RenderFailure`. The
 wider ceiling restores headroom without changing any other rendering
 behavior; all other sections keep wrapping at the same relative width.
+
+`1.5.0` makes invariant chrome conditional rather than unconditional, and
+removes three strict duplicates. Half of every card previously carried no
+phase-specific information, and one card named its phase five times. No card
+field, resolver output, or hashed value changes: `card_hash` and
+`resolution_hash` are byte-identical at all nine phases.
+
+- Orientation chrome (heading and section rules, stage header, marker legend,
+  and the `AUTHORITY` read-only statement) renders for the three triggers where
+  the reader cannot be assumed to hold the frame — `task-intake`,
+  `status-request`, `phase-transition` — and is suppressed for the other five.
+  `render_human(..., orientation=True)` forces it, and `aec_coach checkpoint`
+  defaults to it because a CLI invocation carries no session continuity;
+  `--dense` opts out.
+- `BLOCKERS` renders only when a blocker exists or the validated gate is
+  `Blocked`; `EVIDENCE` renders only when evidence is claimed or required. The
+  `EVIDENCE` loop covers every class `evidence_class()` can return, including
+  the `project-verified` fallback, so an absent line always means the card had
+  nothing to say rather than that the renderer could not say it.
+- Removed as strict duplicates: the `CURRENT` line (a subset of the `RAIL`
+  summary above it) and the phase prefix on the `GATE` line (the gate is always
+  the current phase's gate). The `RAIL` summary keeps naming the phase in words:
+  the `◉` marker encodes the same fact, but only for a reader holding the
+  legend that the dense render suppresses.
 
 Agents should invoke the same interface automatically at Framing, a material decision,
 Verify, Review, PR, Deploy, and outcome reflection. A person may request the same

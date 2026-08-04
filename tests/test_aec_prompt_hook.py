@@ -136,7 +136,7 @@ class PromptHookTests(unittest.TestCase):
         self.assertEqual(0, result.returncode, result.stderr)
         self.assertIn("[AEC: Project Guidance]", result.stdout)
         self.assertIn("[AEC: Mentoring]", result.stdout)
-        self.assertIn("RAIL · step 8/9", result.stdout)
+        self.assertIn("RAIL · PR · step 8/9", result.stdout)
 
     def test_valid_state_renders_required_human_sections(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -167,7 +167,7 @@ class PromptHookTests(unittest.TestCase):
         self.assertEqual(0, first.returncode, first.stderr)
         self.assertEqual(0, second.returncode, second.stderr)
         self.assertEqual(first.stdout, second.stdout)
-        self.assertIn("RAIL · step 8/9", first.stdout)
+        self.assertIn("RAIL · PR · step 8/9", first.stdout)
 
     def test_routine_progress_is_compact(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

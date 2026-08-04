@@ -328,7 +328,16 @@ def run_checkpoint(arguments: argparse.Namespace) -> int:
         if arguments.format == "json":
             rendered = json.dumps(card, indent=2, sort_keys=True)
         else:
-            rendered = render_human(card, default_rail_definition())
+            # Orientation on by default. `render_interaction` can suppress the
+            # frame because its trigger proves the reader is mid-task; a CLI
+            # invocation carries no such proof - each run is a fresh process
+            # with no session memory - so the read-only AUTHORITY boundary,
+            # the marker legend, and the stage header must stay reachable here.
+            rendered = render_human(
+                card,
+                default_rail_definition(),
+                orientation=not arguments.dense,
+            )
     except (CoachFailure, RenderFailure, OSError, ValueError) as error:
         print(f"AEC coach checkpoint: FAIL: {error}", file=sys.stderr)
         return 1
@@ -384,6 +393,14 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         choices=("human", "json"),
         default="human",
         help="Output format. human (default) renders coaching text.",
+    )
+    checkpoint_parser.add_argument(
+        "--dense",
+        action="store_true",
+        help=(
+            "Suppress the orienting frame (stage header, marker legend, "
+            "section rules, authority statement) for a repeat human render."
+        ),
     )
     checkpoint_parser.set_defaults(handler=run_checkpoint)
 

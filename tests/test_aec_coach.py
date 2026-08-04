@@ -120,6 +120,33 @@ class StateThenCheckpointTests(unittest.TestCase):
                 "How should AEC invoke the pinned mentoring adapter?", rendered.stdout
             )
 
+    def test_human_checkpoint_orients_by_default_and_dense_opts_out(self) -> None:
+        # `render_interaction` may suppress the orienting frame because its
+        # trigger proves the reader is mid-task. The CLI has no trigger and no
+        # session memory - each run is a fresh process - so the read-only
+        # AUTHORITY boundary and the marker legend must stay reachable here.
+        # Reds if the CLI is wired to the dense default.
+        with tempfile.TemporaryDirectory() as directory:
+            out_path = build_state_file(Path(directory), phase="Framing")
+
+            oriented = run_coach("checkpoint", str(out_path))
+            self.assertEqual(0, oriented.returncode, oriented.stderr)
+            self.assertIn(
+                "AEC is advisory and read-only.",
+                oriented.stdout,
+            )
+            self.assertIn("● complete   ◉ current   ○ not reached", oriented.stdout)
+
+            dense = run_coach("checkpoint", str(out_path), "--dense")
+            self.assertEqual(0, dense.returncode, dense.stderr)
+            self.assertNotIn("AEC is advisory and read-only.", dense.stdout)
+            self.assertNotIn(
+                "● complete   ◉ current   ○ not reached", dense.stdout
+            )
+            # Suppression is chrome-only: the card itself is unchanged.
+            self.assertIn("RAIL · Framing · step 2/9", dense.stdout)
+            self.assertIn("LESSON", dense.stdout)
+
     def test_stale_decision_context_is_rejected_at_state_build_time(self) -> None:
         # Red canary: a decision_context whose context.revision is a
         # well-formed SHA for a DIFFERENT commit than resolved HEAD (a stale

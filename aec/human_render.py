@@ -34,7 +34,7 @@ def default_rail_definition() -> RailDefinition:
     return RailDefinition(phase_names=PHASE_RAIL, stage_groups=stage_groups)
 
 
-HUMAN_RENDER_CONTRACT_VERSION = "1.4.0"
+HUMAN_RENDER_CONTRACT_VERSION = "1.5.0"
 TEXT_WIDTH = 104
 LABEL_WIDTH = 9
 LIGHT_RULE = "─" * 64
@@ -52,9 +52,19 @@ FULL_CARD_TRIGGERS: tuple[str, ...] = (
 INTERACTION_TRIGGERS = frozenset((*FULL_CARD_TRIGGERS, "routine-progress"))
 # Orientation chrome (stage header, marker legend, rules, and the read-only
 # authority statement) teaches the surface itself, not the current task. It is
-# rendered on the first interaction of a task and suppressed on repeat renders,
-# where it would restate constants the reader has already been given.
-ORIENTATION_TRIGGERS = frozenset(("task-intake",))
+# suppressed on repeat renders, where it would restate constants the reader has
+# already been given, and restored at the three moments where the reader cannot
+# be assumed to still hold the frame:
+#   - `task-intake`: the first render of a task, for a reader new to the surface.
+#   - `status-request`: an explicit "where am I", which is what a returning human
+#     or a freshly started agent asks after losing session context.
+#   - `phase-transition`: the frame itself moved, so the stage header and the
+#     marker legend carry new information rather than restating a constant.
+# The remaining five full-card triggers are mid-phase events reported to a reader
+# who was already oriented by one of the three above.
+ORIENTATION_TRIGGERS = frozenset(
+    ("task-intake", "status-request", "phase-transition")
+)
 PHASE_DISPLAY_NAMES = {"Deploy": "Deploy/Observe"}
 EVIDENCE_CLASS_BY_KIND = {
     "base-head-binding": "source-audited",
@@ -70,6 +80,19 @@ EVIDENCE_CLASS_BY_KIND = {
     "live-observation": "live-data-verified",
     "stacked-base-readiness": "source-audited",
 }
+# Every class `evidence_class()` can return, in reading order. `project-verified`
+# is the fallback class, so it covers every kind absent from the map above -
+# including Intake's own `outcome-statement` and `owner-and-boundary` proofs.
+# Omitting it here would let a card print a PROOF class that EVIDENCE could never
+# confirm, which is the one failure this section exists to prevent.
+EVIDENCE_CLASS_ORDER: tuple[str, ...] = (
+    "source-audited",
+    "test-verified",
+    "ci-verified",
+    "runtime-verified",
+    "live-data-verified",
+    "project-verified",
+)
 TRADEOFF_DIMENSIONS: tuple[str, ...] = (
     "maintainability",
     "quality",
@@ -215,11 +238,23 @@ def render_rail(
     if orientation:
         lines.append(header_line)
     lines.append(phase_line)
-    # The phase line above already names the current phase and marks it with
-    # `◉`, so repeating the name here is the card's second encoding of one
-    # fact. The rail summary keeps only what the graphic cannot show.
+    # The summary names the current phase in words. The `◉` on the phase line
+    # above encodes the same fact graphically, but only for a reader holding
+    # the marker legend - which the dense render suppresses. Without this the
+    # phase is named exactly once, in a glyph, while NEXT names the *following*
+    # phase, so a reader can plausibly read themselves into the wrong phase.
+    # One unambiguous naming is a fact; the five the card used to carry were
+    # repetition.
+    # Named from the rail index, not from `card["phase"]`, so the words and the
+    # `◉` can never disagree about which marker the reader is standing on.
+    marked = (
+        phase_names[current_index]
+        if 0 <= current_index < len(phase_names)
+        else str(card["phase"])
+    )
+    current_phase = PHASE_DISPLAY_NAMES.get(marked, marked)
     lines.append(
-        f"RAIL · step {rail}/{rail_total}"
+        f"RAIL · {current_phase} · step {rail}/{rail_total}"
         + f" · {position['stage']} {phase}/{phase_total}"
     )
     if orientation:
@@ -267,13 +302,7 @@ def render_evidence_status(
     for kind in card.get("required_proof") or []:
         required_by_category.setdefault(evidence_class(kind), []).append(kind)
     lines: list[str] = []
-    for category in (
-        "source-audited",
-        "test-verified",
-        "ci-verified",
-        "runtime-verified",
-        "live-data-verified",
-    ):
+    for category in EVIDENCE_CLASS_ORDER:
         kinds = sorted(set(accepted.get(category, [])))
         missing = sorted(set(required_by_category.get(category, [])))
         if not kinds and not missing:
@@ -290,9 +319,11 @@ def render_evidence_status(
         else:
             value = "not claimed"
         lines.extend(labeled_lines("EVIDENCE", f"{category} · {value}"))
-    # No line when nothing is claimed and nothing is required: absence is
-    # already silence. The EVIDENCE label is reserved for real evidence, so
-    # seeing it always means the card has something to say.
+    # No line when nothing is claimed and nothing is required for any class:
+    # absence is already silence. The EVIDENCE label is reserved for real
+    # evidence, so seeing it always means the card has something to say. The
+    # loop covers every class `evidence_class()` can return, so "nothing to
+    # say" is a statement about the card, never about this function's reach.
     return lines
 
 
@@ -346,8 +377,11 @@ def render_project_guidance(
         lines.extend(
             labeled_lines(
                 "NEXT",
-                f"Stay in {PHASE_DISPLAY_NAMES.get(card['phase'], card['phase'])}. "
-                "Get the proof below.",
+                # Not "Stay in <phase>": the RAIL summary above already names
+                # the phase in words, and this branch's whole point is that the
+                # phase does not change. The contrast a reader needs is with the
+                # other branch, which names a *different* phase to check.
+                "Stay in this phase. Get the proof below.",
             )
         )
         proof_by_class: dict[str, list[str]] = {}
