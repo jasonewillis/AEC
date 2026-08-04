@@ -84,6 +84,10 @@ MATERIAL_DECISION_CONTEXT = {
             "threshold": "Zero unrelated import failures in the focused UI proof run.",
             "unit": "failures",
         },
+        "falsifier": (
+            "The pinned adapter is invoked and the same normalized request "
+            "still resolves to a different decision hash."
+        ),
         "principal_uncertainty": (
             "Whether any production entry point still imports the ML stack eagerly."
         ),
@@ -300,6 +304,21 @@ class ResolverTracerTests(unittest.TestCase):
         missing_uncertainty = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
         del missing_uncertainty["recommendation"]["principal_uncertainty"]
         invalid_contexts.append(missing_uncertainty)
+
+        # RED CANARY for #59. A recommendation that never says what would
+        # refute it can be marked supported because the measure moved for an
+        # unrelated reason -- right answer, wrong reason, with nothing in the
+        # contract able to catch it. Absent falsifier, absent card.
+        missing_falsifier = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        del missing_falsifier["recommendation"]["falsifier"]
+        invalid_contexts.append(missing_falsifier)
+
+        # Blank is not a falsifier. The field being present must not be
+        # satisfiable by whitespace, the same bar every other prose field here
+        # is held to.
+        blank_falsifier = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
+        blank_falsifier["recommendation"]["falsifier"] = "   "
+        invalid_contexts.append(blank_falsifier)
 
         unmeasurable = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
         unmeasurable["recommendation"]["expected_result"]["measure"] = "Faster Builds"

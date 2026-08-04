@@ -1,16 +1,358 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "canonical_integer": {
+      "pattern": "^(?:0|-?[1-9][0-9]*)$(?![\\s\\S])",
+      "type": "string"
+    },
+    "decision_context": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "additionalProperties": false,
+          "properties": {
+            "owner": {
+              "enum": [
+                "agent",
+                "consumer-owner",
+                "external"
+              ]
+            },
+            "reason": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            }
+          },
+          "required": [
+            "owner",
+            "reason"
+          ],
+          "type": "object"
+        },
+        "choices": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "identity": {
+                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
+                "type": "string"
+              },
+              "summary": {
+                "minLength": 1,
+                "pattern": ".*\\S.*",
+                "type": "string"
+              },
+              "tradeoffs": {
+                "additionalProperties": false,
+                "properties": {
+                  "maintainability": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "quality": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "reversibility": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "risk": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "maintainability",
+                  "quality",
+                  "reversibility",
+                  "risk",
+                  "scope"
+                ],
+                "type": "object"
+              }
+            },
+            "required": [
+              "identity",
+              "summary",
+              "tradeoffs"
+            ],
+            "type": "object"
+          },
+          "maxItems": 3,
+          "minItems": 2,
+          "type": "array"
+        },
+        "context": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_quality": {
+              "enum": [
+                "direct-verified",
+                "indirect",
+                "assumed"
+              ]
+            },
+            "revision": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "evidence_quality",
+            "revision"
+          ],
+          "type": "object"
+        },
+        "question": {
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "type": "string"
+        },
+        "recommendation": {
+          "additionalProperties": false,
+          "properties": {
+            "choice": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            },
+            "confidence": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "expected_result": {
+              "additionalProperties": false,
+              "properties": {
+                "baseline": {
+                  "$ref": "#/$defs/canonical_integer"
+                },
+                "direction": {
+                  "enum": [
+                    "increase",
+                    "decrease",
+                    "hold"
+                  ]
+                },
+                "measure": {
+                  "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
+                  "type": "string"
+                },
+                "target": {
+                  "$ref": "#/$defs/canonical_integer"
+                },
+                "threshold": {
+                  "minLength": 1,
+                  "pattern": ".*\\S.*",
+                  "type": "string"
+                },
+                "unit": {
+                  "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "baseline",
+                "direction",
+                "measure",
+                "target",
+                "threshold",
+                "unit"
+              ],
+              "type": "object"
+            },
+            "falsifier": {
+              "description": "The observation that would show this recommendation was wrong. Not doubt (principal_uncertainty), not timing (revisit_when), and not the target (expected_result) -- the thing that, if seen, refutes it.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "principal_uncertainty": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            },
+            "revisit_when": {
+              "items": {
+                "minLength": 1,
+                "pattern": ".*\\S.*",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array",
+              "uniqueItems": true
+            },
+            "why": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            }
+          },
+          "required": [
+            "choice",
+            "confidence",
+            "expected_result",
+            "falsifier",
+            "principal_uncertainty",
+            "revisit_when",
+            "why"
+          ],
+          "type": "object"
+        },
+        "schema_version": {
+          "const": "2.0.0"
+        }
+      },
+      "required": [
+        "authority",
+        "choices",
+        "context",
+        "question",
+        "recommendation",
+        "schema_version"
+      ],
+      "type": "object"
+    }
+  },
   "$id": "https://github.com/jasonewillis/AEC/schemas/resolution-request.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "Intake",
+              "Framing"
+            ]
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {
+              "stage": {
+                "const": "Understand"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "Spec",
+              "Plan"
+            ]
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {
+              "stage": {
+                "const": "Design"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "Build",
+              "Verify"
+            ]
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {
+              "stage": {
+                "const": "Execute"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "phase": {
+            "enum": [
+              "Review",
+              "PR",
+              "Deploy"
+            ]
+          }
+        },
+        "required": [
+          "phase"
+        ]
+      },
+      "then": {
+        "properties": {
+          "workflow": {
+            "properties": {
+              "stage": {
+                "const": "Assure & Release"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
   "properties": {
     "available_procedures": {
       "items": {
         "additionalProperties": false,
         "properties": {
-          "identity": {"minLength": 1, "type": "string"},
-          "revision": {"minLength": 1, "type": "string"}
+          "identity": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "minLength": 1,
+            "type": "string"
+          }
         },
-        "required": ["identity", "revision"],
+        "required": [
+          "identity",
+          "revision"
+        ],
         "type": "object"
       },
       "type": "array",
@@ -20,8 +362,13 @@
       "items": {
         "additionalProperties": false,
         "properties": {
-          "active": {"type": "boolean"},
-          "identity": {"minLength": 1, "type": "string"},
+          "active": {
+            "type": "boolean"
+          },
+          "identity": {
+            "minLength": 1,
+            "type": "string"
+          },
           "reason_code": {
             "enum": [
               "AUTHORITY_CONFLICT",
@@ -33,7 +380,11 @@
             "type": "string"
           }
         },
-        "required": ["active", "identity", "reason_code"],
+        "required": [
+          "active",
+          "identity",
+          "reason_code"
+        ],
         "type": "object"
       },
       "type": "array"
@@ -42,33 +393,61 @@
       "additionalProperties": false,
       "properties": {
         "capabilities": {
-          "items": {"minLength": 1, "type": "string"},
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
           "type": "array",
           "uniqueItems": true
         },
-        "identity": {"minLength": 1, "type": "string"},
-        "version": {"minLength": 1, "type": "string"}
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
       },
-      "required": ["capabilities", "identity", "version"],
+      "required": [
+        "capabilities",
+        "identity",
+        "version"
+      ],
       "type": "object"
     },
     "consumer_profile": {
       "additionalProperties": false,
       "properties": {
-        "aec_mode": {"const": "read-only-mentor"},
+        "aec_mode": {
+          "const": "read-only-mentor"
+        },
         "agent_adapters": {
-          "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+          "items": {
+            "minLength": 1,
+            "pattern": ".*\\S.*",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array"
         },
-        "lifecycle_authority": {"const": "consumer-owned"},
-        "profile_version": {"minLength": 1, "type": "string"},
+        "lifecycle_authority": {
+          "const": "consumer-owned"
+        },
+        "profile_version": {
+          "minLength": 1,
+          "type": "string"
+        },
         "project": {
           "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$(?![\\s\\S])",
           "type": "string"
         },
-        "schema_version": {"const": "1.0.0"},
-        "workflow": {"const": "ticket-to-pr"}
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "workflow": {
+          "const": "ticket-to-pr"
+        }
       },
       "required": [
         "aec_mode",
@@ -83,26 +462,52 @@
     },
     "decision_context": {
       "oneOf": [
-        {"$ref": "#/$defs/decision_context"},
-        {"type": "null"}
+        {
+          "$ref": "#/$defs/decision_context"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
-    "environment": {"minLength": 1, "type": "string"},
+    "environment": {
+      "minLength": 1,
+      "type": "string"
+    },
     "evidence": {
       "items": {
         "additionalProperties": false,
         "properties": {
-          "accepted": {"type": "boolean"},
-          "environment": {"minLength": 1, "type": "string"},
-          "kind": {"minLength": 1, "type": "string"},
-          "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
+          "accepted": {
+            "type": "boolean"
+          },
+          "environment": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          }
         },
-        "required": ["accepted", "environment", "kind", "revision"],
+        "required": [
+          "accepted",
+          "environment",
+          "kind",
+          "revision"
+        ],
         "type": "object"
       },
       "type": "array"
     },
-    "lane": {"minLength": 1, "type": "string"},
+    "lane": {
+      "minLength": 1,
+      "type": "string"
+    },
     "phase": {
       "enum": [
         "Intake",
@@ -122,40 +527,89 @@
         "facts": {
           "additionalProperties": false,
           "properties": {
-            "require_exact_environment": {"type": "boolean"},
-            "require_exact_revision": {"type": "boolean"}
+            "require_exact_environment": {
+              "type": "boolean"
+            },
+            "require_exact_revision": {
+              "type": "boolean"
+            }
           },
-          "required": ["require_exact_environment", "require_exact_revision"],
+          "required": [
+            "require_exact_environment",
+            "require_exact_revision"
+          ],
           "type": "object"
         },
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {"minLength": 1, "type": "string"}
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "type": "string"
+        }
       },
-      "required": ["facts", "identity", "revision"],
+      "required": [
+        "facts",
+        "identity",
+        "revision"
+      ],
       "type": "object"
     },
     "required_procedure": {
       "additionalProperties": false,
       "properties": {
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {"minLength": 1, "type": "string"}
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "type": "string"
+        }
       },
-      "required": ["identity", "revision"],
+      "required": [
+        "identity",
+        "revision"
+      ],
       "type": "object"
     },
-    "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-    "schema_version": {"const": "2.0.0"},
-    "task_id": {"minLength": 1, "type": "string"},
+    "revision": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "2.0.0"
+    },
+    "task_id": {
+      "minLength": 1,
+      "type": "string"
+    },
     "workflow": {
       "additionalProperties": false,
       "properties": {
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {"minLength": 1, "type": "string"},
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "type": "string"
+        },
         "stage": {
-          "enum": ["Understand", "Design", "Execute", "Assure & Release"]
+          "enum": [
+            "Understand",
+            "Design",
+            "Execute",
+            "Assure & Release"
+          ]
         }
       },
-      "required": ["identity", "revision", "stage"],
+      "required": [
+        "identity",
+        "revision",
+        "stage"
+      ],
       "type": "object"
     }
   },
@@ -174,179 +628,6 @@
     "schema_version",
     "task_id",
     "workflow"
-  ],
-  "$defs": {
-    "canonical_integer": {
-      "pattern": "^(?:0|-?[1-9][0-9]*)$(?![\\s\\S])",
-      "type": "string"
-    },
-    "decision_context": {
-      "additionalProperties": false,
-      "properties": {
-        "authority": {
-          "additionalProperties": false,
-          "properties": {
-            "owner": {"enum": ["agent", "consumer-owner", "external"]},
-            "reason": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
-          },
-          "required": ["owner", "reason"],
-          "type": "object"
-        },
-        "choices": {
-          "items": {
-            "additionalProperties": false,
-            "properties": {
-              "identity": {
-                "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
-                "type": "string"
-              },
-              "summary": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-              "tradeoffs": {
-                "additionalProperties": false,
-                "properties": {
-                  "maintainability": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "quality": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "reversibility": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "risk": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "scope": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
-                },
-                "required": ["maintainability", "quality", "reversibility", "risk", "scope"],
-                "type": "object"
-              }
-            },
-            "required": ["identity", "summary", "tradeoffs"],
-            "type": "object"
-          },
-          "maxItems": 3,
-          "minItems": 2,
-          "type": "array"
-        },
-        "context": {
-          "additionalProperties": false,
-          "properties": {
-            "evidence_quality": {"enum": ["direct-verified", "indirect", "assumed"]},
-            "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
-          },
-          "required": ["evidence_quality", "revision"],
-          "type": "object"
-        },
-        "question": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-        "recommendation": {
-          "additionalProperties": false,
-          "properties": {
-            "choice": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-            "confidence": {"enum": ["high", "medium", "low"]},
-            "expected_result": {
-              "additionalProperties": false,
-              "properties": {
-                "baseline": {"$ref": "#/$defs/canonical_integer"},
-                "direction": {"enum": ["increase", "decrease", "hold"]},
-                "measure": {
-                  "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
-                  "type": "string"
-                },
-                "target": {"$ref": "#/$defs/canonical_integer"},
-                "threshold": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                "unit": {
-                  "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
-                  "type": "string"
-                }
-              },
-              "required": [
-                "baseline",
-                "direction",
-                "measure",
-                "target",
-                "threshold",
-                "unit"
-              ],
-              "type": "object"
-            },
-            "principal_uncertainty": {
-              "minLength": 1,
-              "pattern": ".*\\S.*",
-              "type": "string"
-            },
-            "revisit_when": {
-              "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-              "minItems": 1,
-              "type": "array",
-              "uniqueItems": true
-            },
-            "why": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
-          },
-          "required": [
-            "choice",
-            "confidence",
-            "expected_result",
-            "principal_uncertainty",
-            "revisit_when",
-            "why"
-          ],
-          "type": "object"
-        },
-        "schema_version": {"const": "2.0.0"}
-      },
-      "required": [
-        "authority",
-        "choices",
-        "context",
-        "question",
-        "recommendation",
-        "schema_version"
-      ],
-      "type": "object"
-    }
-  },
-  "allOf": [
-    {
-      "if": {
-        "properties": {"phase": {"enum": ["Intake", "Framing"]}},
-        "required": ["phase"]
-      },
-      "then": {
-        "properties": {
-          "workflow": {
-            "properties": {"stage": {"const": "Understand"}}
-          }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {"phase": {"enum": ["Spec", "Plan"]}},
-        "required": ["phase"]
-      },
-      "then": {
-        "properties": {
-          "workflow": {"properties": {"stage": {"const": "Design"}}}
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {"phase": {"enum": ["Build", "Verify"]}},
-        "required": ["phase"]
-      },
-      "then": {
-        "properties": {
-          "workflow": {"properties": {"stage": {"const": "Execute"}}}
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {"phase": {"enum": ["Review", "PR", "Deploy"]}},
-        "required": ["phase"]
-      },
-      "then": {
-        "properties": {
-          "workflow": {
-            "properties": {"stage": {"const": "Assure & Release"}}
-          }
-        }
-      }
-    }
   ],
   "title": "AEC Normalized Resolution Request",
   "type": "object"

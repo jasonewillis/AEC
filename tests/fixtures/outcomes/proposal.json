@@ -1,13 +1,17 @@
 {
   "blockers": [],
   "capabilities": {
-    "capabilities": ["normalized-resolution"],
+    "capabilities": [
+      "normalized-resolution"
+    ],
     "identity": "portable-python",
     "version": "portable-python:1.0.0"
   },
   "consumer_profile": {
     "aec_mode": "read-only-mentor",
-    "agent_adapters": ["example-adapter"],
+    "agent_adapters": [
+      "example-adapter"
+    ],
     "lifecycle_authority": "consumer-owned",
     "profile_version": "example:1.0.0",
     "project": "example-owner/example-repo",
@@ -59,6 +63,7 @@
         "threshold": "Zero unrelated import failures in the focused proof run.",
         "unit": "failures"
       },
+      "falsifier": "Unrelated import failures drop to zero in a build where the import boundary was never applied, showing something else removed them.",
       "principal_uncertainty": "Whether another entry point still imports it eagerly.",
       "revisit_when": [
         "The optional dependency becomes required for every application entry point.",

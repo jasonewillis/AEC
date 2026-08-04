@@ -258,6 +258,7 @@ RECOMMENDATION_FIELDS = {
     "choice",
     "confidence",
     "expected_result",
+    "falsifier",
     "principal_uncertainty",
     "revisit_when",
     "why",
@@ -410,6 +411,8 @@ def _validate_decision_support(value: object) -> list[str]:
             errors.append("decision_support recommendation must name a declared choice")
         if not _non_empty_string(recommendation.get("why")):
             errors.append("decision_support recommendation reason is invalid")
+        if not _non_empty_string(recommendation.get("falsifier")):
+            errors.append("decision_support recommendation falsifier must be a non-empty string")
         if not _non_empty_string(recommendation.get("principal_uncertainty")):
             errors.append("decision_support principal uncertainty is invalid")
         confidence = recommendation.get("confidence")

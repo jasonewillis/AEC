@@ -4,7 +4,7 @@
       "card": {
         "anti_example": "A task list omits ownership, proof, or a stop condition.",
         "authoritative": false,
-        "card_hash": "sha256:f8e5b71c89e831e9fb9cf11b67b984b56a176096681e8e1f394a736f6462ab7a",
+        "card_hash": "sha256:023b40112407deddf3520b3dd60f9032450c93b3746bd7f3f6f61885bedd196e",
         "decision_support": {
           "authority": {
             "owner": "consumer-owner",
@@ -50,6 +50,7 @@
               "threshold": "Zero unrelated import failures in the focused proof run.",
               "unit": "failures"
             },
+            "falsifier": "Unrelated import failures drop to zero in a build where the import boundary was never applied, showing something else removed them.",
             "principal_uncertainty": "Whether another entry point still imports it eagerly.",
             "revisit_when": [
               "The optional dependency becomes required for every application entry point.",
@@ -91,7 +92,7 @@
           "proof-and-stop-rules",
           "vertical-slice-plan"
         ],
-        "resolution_hash": "sha256:a1adb43af1647fc14eb37b56945da7903eccb07f999e0f0cf4f32b1e032330a4",
+        "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
         "schema_version": "3.0.0",
         "transition_request": {
           "authoritative": false,
@@ -157,6 +158,7 @@
               "threshold": "Zero unrelated import failures in the focused proof run.",
               "unit": "failures"
             },
+            "falsifier": "Unrelated import failures drop to zero in a build where the import boundary was never applied, showing something else removed them.",
             "principal_uncertainty": "Whether another entry point still imports it eagerly.",
             "revisit_when": [
               "The optional dependency becomes required for every application entry point.",
@@ -177,7 +179,7 @@
         ],
         "input_bindings": {
           "procedure_catalog": "sha256:982cbc933842683edee7c95bb9fc19e8c86a4d50721c11a4e6ca28cb6595d996",
-          "resolution_request": "sha256:830e03908b66c016ed98d83b353fb135ca04d7e110830bb8d95870a923085cba"
+          "resolution_request": "sha256:d32d339da459e12e2a0d92465a02ba56d530ea95e2c8f51caba2b3c37660c050"
         },
         "lane": "GENERAL",
         "mentoring": {
@@ -207,7 +209,7 @@
           "identity": "plan-vertical-delivery",
           "revision": "plan-vertical-delivery:1.0.0"
         },
-        "resolution_hash": "sha256:a1adb43af1647fc14eb37b56945da7903eccb07f999e0f0cf4f32b1e032330a4",
+        "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
         "revision": "0123456789abcdef0123456789abcdef01234567",
         "schema_version": "4.0.0",
         "source_identities": {
@@ -234,7 +236,7 @@
           "transfer": "full"
         },
         "decision": {
-          "resolution_hash": "sha256:a1adb43af1647fc14eb37b56945da7903eccb07f999e0f0cf4f32b1e032330a4",
+          "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
           "revision": "0123456789abcdef0123456789abcdef01234567",
           "selected_choice": "isolate-import-boundary"
         },

@@ -359,8 +359,17 @@ def validate_connection(
 # `recommendation`. self_check asserts this set exactly, structurally, so a
 # diagnosis that silently stops reporting one of them fails self-check instead
 # of passing by coincidence.
+# Six since #59 added `falsifier`: a pre-#48 decision context predates that
+# field as well, so a correct diagnosis names it alongside the original five.
 PREVIOUS_CONTRACT_EXPECTED_MISSING_FIELDS = frozenset(
-    {"context", "schema_version", "confidence", "expected_result", "principal_uncertainty"}
+    {
+        "confidence",
+        "context",
+        "expected_result",
+        "falsifier",
+        "principal_uncertainty",
+        "schema_version",
+    }
 )
 
 
