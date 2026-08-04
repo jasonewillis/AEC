@@ -85,6 +85,38 @@ def tracked_python_paths() -> list[str]:
     )
 
 
+def undeclared_untracked_python() -> list[str]:
+    """Return non-ignored, untracked .py paths this declaration cannot see.
+
+    `tracked_python` enumerates with `git ls-files`, so a .py file that exists
+    but has never been staged is invisible to it. `--check` would then print
+    "source declaration is current" while a file that changes `python_paths`
+    the moment it is added sits in the tree.
+
+    That is not hypothetical. Both `Foundation gate` failures on 2026-08-03
+    were the identical assertion, `Tuples differ: () != ('python_paths',)`,
+    from exactly this: a local run reported green, `git add` followed, and CI
+    red on the same content. There was no local signal at all, because the two
+    checks that could have spoken -- this one and `self_check` -- both
+    enumerate from the index and were structurally blind to the file.
+
+    `--exclude-standard` is deliberate: a genuinely ignored scratch file is not
+    a hazard, because it will never enter the declaration. An untracked,
+    non-ignored .py is, because the next `git add -A` puts it there.
+    """
+    output = subprocess.run(
+        ["git", "ls-files", "-z", "--others", "--exclude-standard", "--", "*.py"],
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+    ).stdout
+    return sorted(
+        path
+        for path in output.decode("utf-8").split("\0")
+        if path and ("/" not in path or path.startswith(("aec/", "tests/", "tools/")))
+    )
+
+
 def build_declaration() -> dict:
     """Recompute sources and python_paths; keep every other section pinned."""
     current = json.loads(DECLARATION_PATH.read_text(encoding="utf-8"))
@@ -135,6 +167,16 @@ def main(argv: list[str] | None = None) -> int:
             parse_declaration(committed.encode("utf-8"))
         except ValueError as error:
             print(f"FAIL source declaration does not parse: {error}")
+            return 1
+        # A green here is a claim about the tree at merge, not about the working
+        # directory. Untracked .py files make those two trees differ.
+        pending = undeclared_untracked_python()
+        if pending:
+            print(
+                "FAIL source declaration is current for the index, but these "
+                "untracked Python files will change python_paths when staged: "
+                + ", ".join(pending)
+            )
             return 1
         print("PASS source declaration is current")
         return 0

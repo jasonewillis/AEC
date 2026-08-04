@@ -69,14 +69,17 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # docs/consumer-kit/state_producer_template.py needed: that template is a
 # tracked, copy-and-run .py outside the coverage clause, so it can never be a
 # frozen path itself and had nothing executing it.
-EXPECTED_DISTINCT_FROZEN_PATHS = 57
+# Bumped 2026-08-03: +1 for tests/test_declaration_sees_untracked_python.py, the
+# canary for the untracked-.py control. Both Foundation gate failures that day
+# were the identical `python_paths` assertion; the control closes the local gap.
+EXPECTED_DISTINCT_FROZEN_PATHS = 58
 # Bumped 2026-08-03 alongside the count above: tests/test_consumer_install_kit.py
 # is a new tracked source path, so it enters the declaration as well as the tree.
 #
 # Bumped again 2026-08-03: +1 for tests/test_docs_links.py, which resolves every
 # documentation path this repository names. This canary fired on it correctly and
 # is the reason the addition is recorded here rather than absorbed silently.
-EXPECTED_SOURCE_BASELINE_PATHS = 49
+EXPECTED_SOURCE_BASELINE_PATHS = 50
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
