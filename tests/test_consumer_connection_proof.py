@@ -212,7 +212,7 @@ class AuthoritativeCardRejectionTests(unittest.TestCase):
     Before this fix, `run_probe` checked `transition_request.executes` and
     `.mutates` but never `authoritative`, at either of its two locations on
     the card (the top-level field and `transition_request.authoritative`).
-    AEC is never an authority owner (see docs/consumer-contract.md), so a
+    AEC is never an authority owner (see docs/architecture/consumer-contract.md), so a
     card claiming authority is a contract violation the connection proof
     exists to catch. `resolve_consumer_state` never actually renders such a
     card today, so these tests construct one directly with a FakeCard and

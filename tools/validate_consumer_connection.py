@@ -311,7 +311,7 @@ def run_probe(
         card.get("transition_request", {}).get("mutates") is not False
     ):
         raise ConnectionFailure(f"{name} probe resolved to an effectful decision")
-    # AEC is never an authority owner (see docs/consumer-contract.md's authority
+    # AEC is never an authority owner (see docs/architecture/consumer-contract.md's authority
     # owner enum: agent, consumer-owner, external -- AEC itself is excluded).
     # authoritative is carried in two places on the card: the top-level field
     # and transition_request.authoritative. Both must be checked; checking

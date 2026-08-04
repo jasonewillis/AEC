@@ -109,20 +109,36 @@ a release unless repository release immutability is enabled.
 
 ## Documentation
 
-- [Architecture](docs/architecture/overview.md)
-- [Coaching interaction](docs/architecture/coaching-interaction.md)
+**Architecture** — what AEC is and what it refuses to do.
+
+- [Overview](docs/architecture/overview.md)
+- [Operating model](docs/architecture/operating-model.md)
+- [Coaching interaction](docs/architecture/coaching-interaction.md) — target interaction,
+  gap map, and the trustworthy-beta release gate
+- [Consumer contract](docs/architecture/consumer-contract.md)
 - [Deterministic resolver](docs/architecture/resolver.md)
-- [Decision outcomes](docs/architecture/decision-outcomes.md)
 - [Agent adapter parity](docs/architecture/agent-adapters.md)
+- [Decision outcomes](docs/architecture/decision-outcomes.md)
 - [Private course lens](docs/architecture/private-course-lens.md)
-- [Operating model](docs/operating-model.md)
+
+**Adopting AEC** — start here if you are wiring a consumer repository.
+
+- [Register the read-only hook](docs/consumer-kit/register-hook.md)
 - [Ticket-to-PR workflow](docs/workflows/ticket-to-pr.md)
 - [Milestone runbook](docs/runbooks/milestone.md)
-- [Course traceability](docs/course-traceability/README.md)
+
+**Provenance and delivery**
+
 - [Provenance and licensing](docs/provenance.md)
-- [Consumer contract](docs/consumer-contract.md)
-- [Release notes](docs/releases/v0.1.0.md)
+- [Course traceability](docs/course-traceability/README.md)
 - [Delivery roadmap](docs/delivery/roadmap.md)
+- [Release notes](docs/releases/v0.1.0.md)
+
+**History** — closed audit artifacts, retained for provenance. Do not read these as
+current status; each carries a closure header saying what has since changed.
+
+- [Handoff reconciliation](docs/history/handoff-reconciliation.md)
+- [FedJobAdvisor migration map](docs/history/fedjobadvisor-migration-map.md)
 
 ## Source boundaries
 

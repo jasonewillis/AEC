@@ -53,10 +53,15 @@ routine-only connection proof can miss a material-decision incompatibility and n
 use still requires consumer-authored state. AEC now owns the canonical human renderer
 and the framework-side prompt-hook entrypoint; no consumer is configured by that fact.
 Each consumer must still pin the revision, provide fresh revision-bound state, select
-full-card versus compact triggers, and register the read-only hook. Resolve the framework
-admission blocker first, then deliver consumer adoption, compatibility proof, learner
-boundary, outcome interaction, and the two-consumer pilot in the sequence defined by
-the coaching-interaction contract.
+full-card versus compact triggers, and register the read-only hook.
+
+This paragraph used to instruct the reader to "resolve the framework admission blocker
+first". That ordering was retired on 2026-08-03: `admit` became a required check and now
+passes ordinary source PRs. Admission blocks only a PR that changes
+`tools/admission_root_v1.py` or `.github/workflows/candidate-admission.yml`
+([#65](https://github.com/jasonewillis/AEC/issues/65)). Consumer adoption, compatibility
+proof, learner boundary, outcome interaction, and the two-consumer pilot follow the
+sequence in the coaching-interaction contract and do not wait on it.
 
 ## Completion rule
 

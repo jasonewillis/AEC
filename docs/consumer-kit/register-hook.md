@@ -152,5 +152,5 @@ code.
 | Evidence requirements, finished conditions | Testing and evidence production |
 | Outcome evaluation, recognition heuristics | Hook registration, state file, secrets |
 
-See `docs/consumer-contract.md` for the full contract and
+See `docs/architecture/consumer-contract.md` for the full contract and
 `docs/architecture/coaching-interaction.md` for the trust boundary.
