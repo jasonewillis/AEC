@@ -12,6 +12,8 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from aec.contracts import validate_project_profile
+
 
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 
@@ -152,6 +154,17 @@ def build_state(
     Nothing is defaulted into existence except `profile`, which defaults to
     AEC coaching its own repository.
     """
+    # A caller-supplied profile is the one field that can carry an authority
+    # claim into a state file. `checkpoint` already refuses such a state, but
+    # refusing it only at render time means `state` writes an unusable file and
+    # exits 0 -- fail-late, and indistinguishable from success to any script
+    # reading the exit code. The read-only boundary belongs at construction.
+    resolved_profile = AEC_SELF_PROFILE if profile is None else profile
+    profile_errors = validate_project_profile(resolved_profile)
+    if profile_errors:
+        raise BuildStateFailure(
+            "consumer profile rejected: " + "; ".join(sorted(profile_errors))
+        )
     if not task:
         raise BuildStateFailure("task must be non-empty")
     if not lane:
@@ -193,7 +206,7 @@ def build_state(
             "identity": "aec-coach-common",
             "version": "aec-coach-common:1.0.0",
         },
-        "consumer_profile": profile if profile is not None else AEC_SELF_PROFILE,
+        "consumer_profile": resolved_profile,
         "effects": {"executes": False, "mutates": False},
         "environment": {"identity": environment},
         "evidence": evidence_records,

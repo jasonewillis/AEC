@@ -271,6 +271,17 @@ def run_state(arguments: argparse.Namespace) -> int:
         )
         catalog = load_object(PROCEDURE_CATALOG_PATH, "procedure catalog")
         workflow = load_object(WORKFLOW_PATH, "workflow definition")
+        # Both default to AEC itself, so an existing caller that passes neither
+        # keeps today's behaviour byte for byte. They travel together on
+        # purpose: a state carrying another repository's revision under AEC's
+        # profile, or AEC's revision under another project's name, describes a
+        # repository that does not exist.
+        project_root = arguments.project_root.resolve()
+        profile = (
+            load_object(arguments.profile, "consumer profile")
+            if arguments.profile is not None
+            else AEC_SELF_PROFILE
+        )
         state = build_state(
             task=arguments.task,
             phase=arguments.phase,
@@ -279,10 +290,10 @@ def run_state(arguments: argparse.Namespace) -> int:
             expires_minutes=arguments.expires_minutes,
             evidence=evidence,
             blockers=blockers,
-            revision=current_revision(),
+            revision=current_revision(project_root),
             catalog=catalog,
             workflow=workflow,
-            profile=AEC_SELF_PROFILE,
+            profile=profile,
             decision_context=decision_context,
         )
         out_path = arguments.out.resolve()
@@ -376,6 +387,26 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     state_parser.add_argument("--decision-context", type=Path, default=None)
     state_parser.add_argument("--environment", default="local")
     state_parser.add_argument("--expires-minutes", type=int, default=30)
+    state_parser.add_argument(
+        "--project-root",
+        type=Path,
+        default=ROOT,
+        help=(
+            "Repository whose exact HEAD this state claims. Defaults to this AEC "
+            "checkout; point it at your own repository to build a state bound to "
+            "your HEAD rather than AEC's."
+        ),
+    )
+    state_parser.add_argument(
+        "--profile",
+        type=Path,
+        default=None,
+        help=(
+            "JSON consumer profile naming your project. Defaults to AEC coaching "
+            "its own repository. A state built for another repository with AEC's "
+            "profile would misreport whose work it describes."
+        ),
+    )
     state_parser.set_defaults(handler=run_state)
 
     checkpoint_parser = subparsers.add_parser(
