@@ -1,10 +1,17 @@
 """Every documentation path this repository names must resolve.
 
-Moving a document is a silent operation: nothing in the test suite noticed when
-`docs/consumer-contract.md` was referenced from `README.md`, from two source
-comments, and from three sibling documents at once. A relocation could rot all
-six references and every gate would stay green, because the only control was a
-reader happening to click the link.
+Moving a document is a silent operation: nothing in the test suite noticed that
+the consumer contract, before it moved under `docs/architecture/`, was
+referenced from `README.md`, from two source comments, and from three sibling
+documents at once. A relocation could rot all six references and every gate
+would stay green, because the only control was a reader happening to click the
+link.
+
+The historical path is deliberately not spelled out above. This module is
+itself scanned by the second test below, so naming a since-moved path here
+would red the suite — which is the control working, and is exactly how this
+docstring was caught: the first green run happened while this file was still
+untracked, so `git ls-files` excluded it and it could not see itself.
 
 This is that control. It walks the tracked tree and resolves two reference
 classes:
