@@ -65,7 +65,11 @@ class ResolverBlockerPrecedenceTests(unittest.TestCase):
         self.assertIsInstance(first, ResolutionRejection)
         self.assertEqual(first, second)
         self.assertEqual(
-            ("blockers[0].reason_code is unsupported",),
+            (
+                "blockers[0].reason_code is unsupported; accepted: "
+                "AUTHORITY_CONFLICT, EVIDENCE_CONTRADICTED, "
+                "LIFECYCLE_STATE_STALE, POLICY_CONFLICT, PRIVATE_INPUT_INCLUDED",
+            ),
             first.errors,
         )
 

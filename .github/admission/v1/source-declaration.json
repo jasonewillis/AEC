@@ -38,7 +38,7 @@
     ],
     "schemas/consumer-state.schema.json": [
       "schema",
-      "c24e11e68689d579ac464e0d8d329027ba86495879224e9dacec04720ac97ba8"
+      "cdd82400199ee49aad50c7d610bb82484ca1bb1aca2e70e1200f39ae73a3ec8d"
     ],
     "schemas/course-inventory.schema.json": [
       "schema",
@@ -320,12 +320,12 @@
     "aec/mentoring.py": "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e",
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
     "aec/release_manifest.py": "4c329331d0df1b342763ad2d429436794f6a676185651bb94466c202282261d7",
-    "aec/resolver.py": "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39",
+    "aec/resolver.py": "ddb7830078e0597a74ead3c70ca1d98001066a21f30c042ec258032724266127",
     "aec/review_attestation.py": "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db",
     "aec/state_builder.py": "1adc553b9c7a6bfd6268a0276e124ca92b674eaaea8b15d47cddd66daf05d759",
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
-    "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
+    "tests/test_admission_root_v1.py": "5732f4efd68b837ab36e7b348a1cd76a875bd0e42e0ea60c25ddb4b81f4c799d",
     "tests/test_aec_coach.py": "73970ae3cb28ec16aefa291e02a2d6adf37c5108025b78ac3134dafa48a4ae47",
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
     "tests/test_aec_opts_into_its_own_coaching.py": "9dc7d99209f3a997ded030f389b555161b9b617951fa5abfc8ef2c91ab463b39",
@@ -335,7 +335,7 @@
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "50d4ab647da0022b7a60b3a918661da18950ffdc3ed11f77859d67aff137043f",
     "tests/test_consumer_install_kit.py": "31774b8dcab972da60c2e93b8a17935e31aff2a6e06d7b6fb5f020efe3966e58",
-    "tests/test_consumer_interface.py": "eaa68a7aed86a14ac209f1507acdc7b94a75b86bd8ed924e99d4f369fbf4ccf9",
+    "tests/test_consumer_interface.py": "4abdecd303b373b23792247a0420d21495afec0f98febf8c79242bd496de5764",
     "tests/test_declaration_sees_untracked_python.py": "824de553f65cccfd1800324e80d29cdd7a28ee48f3e2e28b651db7afcd89d285",
     "tests/test_docs_links.py": "c35dd3edd06c50295dca8ec6f80a12d69338805e1217a72dd0abed0541b9c8ed",
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",
@@ -349,7 +349,7 @@
     "tests/test_release_api_evidence.py": "dd52db457de6c83224745f71c856ee1a053575d9da00e56c3b32c95474e623cd",
     "tests/test_release_manifest.py": "4fe8c230fd3d67a654afec7f5051769a69e314b1f4ade1e038b00b9768b9f14a",
     "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
-    "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
+    "tests/test_resolver_blocker_precedence.py": "6520eeb583c52041f7f727060c17afb0e5b1e231ffa37e7bfc19baec3242432e",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_binds_consumer_repo.py": "1a8ef425d76243d9f114432e69f16ea68a657e93673e6fb408eba5dcfb11a696",
     "tests/test_state_builder.py": "3ca30bd3594eed617d67ad2472f81cafd9f7c3ae77284595e0e6978756d19182",

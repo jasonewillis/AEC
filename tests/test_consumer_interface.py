@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from aec.resolver import BLOCKER_REASON_REGISTRY, validate_resolution_request
 from aec.consumer import (
     ConsumerCard,
     ConsumerStateRejection,
@@ -38,6 +39,70 @@ def materialize_case(state: dict[str, object], case: dict[str, object]) -> objec
         assert isinstance(target, dict)
         target[path[-1]] = case["value"]
     return value
+
+
+class BlockerReasonCodeVisibilityTests(unittest.TestCase):
+    """A schema-valid state must not then be refused for a value the schema allowed.
+
+    `BLOCKER_REASON_REGISTRY` accepts exactly five codes. The consumer-state
+    schema used to type `blockers[].reason_code` as a free-form string with
+    `minLength: 1` and no enum, so a consumer could build a state that passed
+    schema validation and still failed at render.
+
+    That is not hypothetical. The HealthRAG pilot declared a blocker with
+    `ACCEPTANCE_EVIDENCE_INCOMPLETE`, which IS a valid `reason_code` in
+    `config/procedures/ticket-to-pr.json` -- just not a valid *blocker* reason.
+    The two vocabularies look identical from the consumer side and are not.
+
+    The enum and the registry are now two statements of one fact, so this test
+    exists to stop them drifting. It does not assert the enum's contents
+    against a literal list: a third copy would be a third thing to drift.
+    """
+
+    def test_the_schema_enum_is_exactly_the_registry(self) -> None:
+        schema = load_json(ROOT / "schemas" / "consumer-state.schema.json")
+        assert isinstance(schema, dict)
+        reason_code = schema["properties"]["blockers"]["items"]["properties"][
+            "reason_code"
+        ]
+
+        self.assertIn("enum", reason_code, "reason_code must constrain its values")
+        self.assertEqual(
+            sorted(BLOCKER_REASON_REGISTRY),
+            sorted(reason_code["enum"]),
+            "the schema's accepted blocker codes disagree with the resolver's; a "
+            "consumer validating against this schema would build a state the "
+            "resolver then refuses",
+        )
+
+    def test_the_rejection_names_the_accepted_codes(self) -> None:
+        """RED CANARY: the message is the consumer's only discovery path."""
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/build.json")
+        assert isinstance(request, dict)
+        request = copy.deepcopy(request)
+        # The exact code the HealthRAG pilot used.
+        request["blockers"] = [
+            {
+                "active": True,
+                "identity": "blocker-x",
+                "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
+            }
+        ]
+
+        errors = [
+            error
+            for error in validate_resolution_request(request)
+            if "reason_code" in error
+        ]
+        self.assertTrue(errors, "an unsupported blocker reason must be refused")
+        for code in BLOCKER_REASON_REGISTRY:
+            with self.subTest(code=code):
+                self.assertIn(
+                    code,
+                    errors[0],
+                    "the rejection must name every accepted code, or a consumer "
+                    "has to read resolver source to learn the set",
+                )
 
 
 class ConsumerStateContractTests(unittest.TestCase):

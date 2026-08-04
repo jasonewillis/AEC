@@ -1,163 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/jasonewillis/AEC/schemas/consumer-state.schema.json",
-  "additionalProperties": false,
-  "properties": {
-    "blockers": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "active": {"type": "boolean"},
-          "identity": {"minLength": 1, "type": "string"},
-          "reason_code": {"minLength": 1, "type": "string"}
-        },
-        "required": ["active", "identity", "reason_code"],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "capabilities": {
-      "additionalProperties": false,
-      "properties": {
-        "capabilities": {
-          "items": {"minLength": 1, "type": "string"},
-          "type": "array",
-          "uniqueItems": true
-        },
-        "identity": {"minLength": 1, "type": "string"},
-        "version": {"minLength": 1, "type": "string"}
-      },
-      "required": ["capabilities", "identity", "version"],
-      "type": "object"
-    },
-    "consumer_profile": {"$ref": "#/$defs/consumer_profile"},
-    "decision_context": {
-      "oneOf": [
-        {"$ref": "#/$defs/decision_context"},
-        {"type": "null"}
-      ]
-    },
-    "effects": {
-      "additionalProperties": false,
-      "properties": {
-        "executes": {"const": false},
-        "mutates": {"const": false}
-      },
-      "required": ["executes", "mutates"],
-      "type": "object"
-    },
-    "environment": {
-      "additionalProperties": false,
-      "properties": {"identity": {"minLength": 1, "type": "string"}},
-      "required": ["identity"],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "accepted": {"type": "boolean"},
-          "environment": {"minLength": 1, "type": "string"},
-          "kind": {"minLength": 1, "type": "string"},
-          "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
-        },
-        "required": ["accepted", "environment", "kind", "revision"],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "expires_at": {"format": "date-time", "pattern": "Z$", "type": "string"},
-    "observed_at": {"format": "date-time", "pattern": "Z$", "type": "string"},
-    "policy": {
-      "additionalProperties": false,
-      "properties": {
-        "facts": {
-          "additionalProperties": false,
-          "properties": {
-            "require_exact_environment": {"const": true},
-            "require_exact_revision": {"const": true}
-          },
-          "required": ["require_exact_environment", "require_exact_revision"],
-          "type": "object"
-        },
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {"minLength": 1, "type": "string"}
-      },
-      "required": ["facts", "identity", "revision"],
-      "type": "object"
-    },
-    "procedures": {
-      "additionalProperties": false,
-      "properties": {
-        "available": {
-          "items": {"$ref": "#/$defs/procedure_reference"},
-          "type": "array",
-          "uniqueItems": true
-        },
-        "required": {"$ref": "#/$defs/procedure_reference"}
-      },
-      "required": ["available", "required"],
-      "type": "object"
-    },
-    "provider": {
-      "additionalProperties": false,
-      "properties": {
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {
-          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$",
-          "type": "string"
-        }
-      },
-      "required": ["identity", "revision"],
-      "type": "object"
-    },
-    "revision": {
-      "additionalProperties": false,
-      "properties": {
-        "identity": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
-      },
-      "required": ["identity"],
-      "type": "object"
-    },
-    "schema_version": {"const": "1.0.0"},
-    "task": {
-      "additionalProperties": false,
-      "properties": {"identity": {"minLength": 1, "type": "string"}},
-      "required": ["identity"],
-      "type": "object"
-    },
-    "workflow_position": {
-      "additionalProperties": false,
-      "properties": {
-        "lane": {"minLength": 1, "type": "string"},
-        "phase": {
-          "enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]
-        },
-        "stage": {"enum": ["Understand", "Design", "Execute", "Assure & Release"]},
-        "workflow": {"const": "ticket-to-pr"},
-        "workflow_revision": {"minLength": 1, "type": "string"}
-      },
-      "required": ["lane", "phase", "stage", "workflow", "workflow_revision"],
-      "type": "object"
-    }
-  },
-  "required": [
-    "blockers",
-    "capabilities",
-    "consumer_profile",
-    "effects",
-    "environment",
-    "evidence",
-    "expires_at",
-    "observed_at",
-    "policy",
-    "procedures",
-    "provider",
-    "revision",
-    "schema_version",
-    "task",
-    "workflow_position"
-  ],
   "$defs": {
     "canonical_integer": {
       "pattern": "^(?:0|-?[1-9][0-9]*)$(?![\\s\\S])",
@@ -166,20 +7,35 @@
     "consumer_profile": {
       "additionalProperties": false,
       "properties": {
-        "aec_mode": {"const": "read-only-mentor"},
+        "aec_mode": {
+          "const": "read-only-mentor"
+        },
         "agent_adapters": {
-          "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+          "items": {
+            "minLength": 1,
+            "pattern": ".*\\S.*",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array"
         },
-        "lifecycle_authority": {"const": "consumer-owned"},
-        "profile_version": {"minLength": 1, "type": "string"},
+        "lifecycle_authority": {
+          "const": "consumer-owned"
+        },
+        "profile_version": {
+          "minLength": 1,
+          "type": "string"
+        },
         "project": {
           "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$(?![\\s\\S])",
           "type": "string"
         },
-        "schema_version": {"const": "1.0.0"},
-        "workflow": {"const": "ticket-to-pr"}
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "workflow": {
+          "const": "ticket-to-pr"
+        }
       },
       "required": [
         "aec_mode",
@@ -198,10 +54,23 @@
         "authority": {
           "additionalProperties": false,
           "properties": {
-            "owner": {"enum": ["agent", "consumer-owner", "external"]},
-            "reason": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+            "owner": {
+              "enum": [
+                "agent",
+                "consumer-owner",
+                "external"
+              ]
+            },
+            "reason": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            }
           },
-          "required": ["owner", "reason"],
+          "required": [
+            "owner",
+            "reason"
+          ],
           "type": "object"
         },
         "choices": {
@@ -212,21 +81,55 @@
                 "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
                 "type": "string"
               },
-              "summary": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "summary": {
+                "minLength": 1,
+                "pattern": ".*\\S.*",
+                "type": "string"
+              },
               "tradeoffs": {
                 "additionalProperties": false,
                 "properties": {
-                  "maintainability": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "quality": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "reversibility": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "risk": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-                  "scope": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+                  "maintainability": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "quality": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "reversibility": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "risk": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  },
+                  "scope": {
+                    "minLength": 1,
+                    "pattern": ".*\\S.*",
+                    "type": "string"
+                  }
                 },
-                "required": ["maintainability", "quality", "reversibility", "risk", "scope"],
+                "required": [
+                  "maintainability",
+                  "quality",
+                  "reversibility",
+                  "risk",
+                  "scope"
+                ],
                 "type": "object"
               }
             },
-            "required": ["identity", "summary", "tradeoffs"],
+            "required": [
+              "identity",
+              "summary",
+              "tradeoffs"
+            ],
             "type": "object"
           },
           "maxItems": 3,
@@ -236,29 +139,69 @@
         "context": {
           "additionalProperties": false,
           "properties": {
-            "evidence_quality": {"enum": ["direct-verified", "indirect", "assumed"]},
-            "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"}
+            "evidence_quality": {
+              "enum": [
+                "direct-verified",
+                "indirect",
+                "assumed"
+              ]
+            },
+            "revision": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
           },
-          "required": ["evidence_quality", "revision"],
+          "required": [
+            "evidence_quality",
+            "revision"
+          ],
           "type": "object"
         },
-        "question": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+        "question": {
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "type": "string"
+        },
         "recommendation": {
           "additionalProperties": false,
           "properties": {
-            "choice": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
-            "confidence": {"enum": ["high", "medium", "low"]},
+            "choice": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            },
+            "confidence": {
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
             "expected_result": {
               "additionalProperties": false,
               "properties": {
-                "baseline": {"$ref": "#/$defs/canonical_integer"},
-                "direction": {"enum": ["increase", "decrease", "hold"]},
+                "baseline": {
+                  "$ref": "#/$defs/canonical_integer"
+                },
+                "direction": {
+                  "enum": [
+                    "increase",
+                    "decrease",
+                    "hold"
+                  ]
+                },
                 "measure": {
                   "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
                   "type": "string"
                 },
-                "target": {"$ref": "#/$defs/canonical_integer"},
-                "threshold": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                "target": {
+                  "$ref": "#/$defs/canonical_integer"
+                },
+                "threshold": {
+                  "minLength": 1,
+                  "pattern": ".*\\S.*",
+                  "type": "string"
+                },
                 "unit": {
                   "pattern": "^[a-z0-9][a-z0-9-]{0,63}$(?![\\s\\S])",
                   "type": "string"
@@ -280,12 +223,20 @@
               "type": "string"
             },
             "revisit_when": {
-              "items": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+              "items": {
+                "minLength": 1,
+                "pattern": ".*\\S.*",
+                "type": "string"
+              },
               "minItems": 1,
               "type": "array",
               "uniqueItems": true
             },
-            "why": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+            "why": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            }
           },
           "required": [
             "choice",
@@ -297,7 +248,9 @@
           ],
           "type": "object"
         },
-        "schema_version": {"const": "2.0.0"}
+        "schema_version": {
+          "const": "2.0.0"
+        }
       },
       "required": [
         "authority",
@@ -312,27 +265,56 @@
     "procedure_reference": {
       "additionalProperties": false,
       "properties": {
-        "identity": {"minLength": 1, "type": "string"},
-        "revision": {"minLength": 1, "type": "string"}
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "type": "string"
+        }
       },
-      "required": ["identity", "revision"],
+      "required": [
+        "identity",
+        "revision"
+      ],
       "type": "object"
     }
   },
+  "$id": "https://github.com/jasonewillis/AEC/schemas/consumer-state.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
   "allOf": [
     {
       "if": {
         "properties": {
           "workflow_position": {
-            "properties": {"phase": {"enum": ["Intake", "Framing"]}},
-            "required": ["phase"]
+            "properties": {
+              "phase": {
+                "enum": [
+                  "Intake",
+                  "Framing"
+                ]
+              }
+            },
+            "required": [
+              "phase"
+            ]
           }
         },
-        "required": ["workflow_position"]
+        "required": [
+          "workflow_position"
+        ]
       },
       "then": {
         "properties": {
-          "workflow_position": {"properties": {"stage": {"const": "Understand"}}}
+          "workflow_position": {
+            "properties": {
+              "stage": {
+                "const": "Understand"
+              }
+            }
+          }
         }
       }
     },
@@ -340,15 +322,32 @@
       "if": {
         "properties": {
           "workflow_position": {
-            "properties": {"phase": {"enum": ["Spec", "Plan"]}},
-            "required": ["phase"]
+            "properties": {
+              "phase": {
+                "enum": [
+                  "Spec",
+                  "Plan"
+                ]
+              }
+            },
+            "required": [
+              "phase"
+            ]
           }
         },
-        "required": ["workflow_position"]
+        "required": [
+          "workflow_position"
+        ]
       },
       "then": {
         "properties": {
-          "workflow_position": {"properties": {"stage": {"const": "Design"}}}
+          "workflow_position": {
+            "properties": {
+              "stage": {
+                "const": "Design"
+              }
+            }
+          }
         }
       }
     },
@@ -356,15 +355,32 @@
       "if": {
         "properties": {
           "workflow_position": {
-            "properties": {"phase": {"enum": ["Build", "Verify"]}},
-            "required": ["phase"]
+            "properties": {
+              "phase": {
+                "enum": [
+                  "Build",
+                  "Verify"
+                ]
+              }
+            },
+            "required": [
+              "phase"
+            ]
           }
         },
-        "required": ["workflow_position"]
+        "required": [
+          "workflow_position"
+        ]
       },
       "then": {
         "properties": {
-          "workflow_position": {"properties": {"stage": {"const": "Execute"}}}
+          "workflow_position": {
+            "properties": {
+              "stage": {
+                "const": "Execute"
+              }
+            }
+          }
         }
       }
     },
@@ -372,20 +388,342 @@
       "if": {
         "properties": {
           "workflow_position": {
-            "properties": {"phase": {"enum": ["Review", "PR", "Deploy"]}},
-            "required": ["phase"]
+            "properties": {
+              "phase": {
+                "enum": [
+                  "Review",
+                  "PR",
+                  "Deploy"
+                ]
+              }
+            },
+            "required": [
+              "phase"
+            ]
           }
         },
-        "required": ["workflow_position"]
+        "required": [
+          "workflow_position"
+        ]
       },
       "then": {
         "properties": {
           "workflow_position": {
-            "properties": {"stage": {"const": "Assure & Release"}}
+            "properties": {
+              "stage": {
+                "const": "Assure & Release"
+              }
+            }
           }
         }
       }
     }
+  ],
+  "properties": {
+    "blockers": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "identity": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "reason_code": {
+            "enum": [
+              "AUTHORITY_CONFLICT",
+              "EVIDENCE_CONTRADICTED",
+              "LIFECYCLE_STATE_STALE",
+              "POLICY_CONFLICT",
+              "PRIVATE_INPUT_INCLUDED"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "active",
+          "identity",
+          "reason_code"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "capabilities": {
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "capabilities",
+        "identity",
+        "version"
+      ],
+      "type": "object"
+    },
+    "consumer_profile": {
+      "$ref": "#/$defs/consumer_profile"
+    },
+    "decision_context": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/decision_context"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "effects": {
+      "additionalProperties": false,
+      "properties": {
+        "executes": {
+          "const": false
+        },
+        "mutates": {
+          "const": false
+        }
+      },
+      "required": [
+        "executes",
+        "mutates"
+      ],
+      "type": "object"
+    },
+    "environment": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "type": "boolean"
+          },
+          "environment": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "kind": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "accepted",
+          "environment",
+          "kind",
+          "revision"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "pattern": "Z$",
+      "type": "string"
+    },
+    "policy": {
+      "additionalProperties": false,
+      "properties": {
+        "facts": {
+          "additionalProperties": false,
+          "properties": {
+            "require_exact_environment": {
+              "const": true
+            },
+            "require_exact_revision": {
+              "const": true
+            }
+          },
+          "required": [
+            "require_exact_environment",
+            "require_exact_revision"
+          ],
+          "type": "object"
+        },
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "facts",
+        "identity",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "procedures": {
+      "additionalProperties": false,
+      "properties": {
+        "available": {
+          "items": {
+            "$ref": "#/$defs/procedure_reference"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "required": {
+          "$ref": "#/$defs/procedure_reference"
+        }
+      },
+      "required": [
+        "available",
+        "required"
+      ],
+      "type": "object"
+    },
+    "provider": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "revision": {
+          "pattern": "^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity",
+        "revision"
+      ],
+      "type": "object"
+    },
+    "revision": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "task": {
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity"
+      ],
+      "type": "object"
+    },
+    "workflow_position": {
+      "additionalProperties": false,
+      "properties": {
+        "lane": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "phase": {
+          "enum": [
+            "Intake",
+            "Framing",
+            "Spec",
+            "Plan",
+            "Build",
+            "Verify",
+            "Review",
+            "PR",
+            "Deploy"
+          ]
+        },
+        "stage": {
+          "enum": [
+            "Understand",
+            "Design",
+            "Execute",
+            "Assure & Release"
+          ]
+        },
+        "workflow": {
+          "const": "ticket-to-pr"
+        },
+        "workflow_revision": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "lane",
+        "phase",
+        "stage",
+        "workflow",
+        "workflow_revision"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "blockers",
+    "capabilities",
+    "consumer_profile",
+    "effects",
+    "environment",
+    "evidence",
+    "expires_at",
+    "observed_at",
+    "policy",
+    "procedures",
+    "provider",
+    "revision",
+    "schema_version",
+    "task",
+    "workflow_position"
   ],
   "title": "AEC Consumer State Provider Record",
   "type": "object"
