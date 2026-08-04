@@ -269,6 +269,114 @@ def validate_decision_context(
     return errors
 
 
+# --- Observation records (#131) ------------------------------------------
+#
+# Agents notice things -- a recurring shape, something warranting inspection --
+# and surface them as prose that evaporates into the transcript. The example
+# that prompted this named three real instances and a transferable principle,
+# and was still unactionable: it said nothing about what to do, who decides, or
+# what would show the pattern was not real.
+#
+# AEC does not generate that missing content. It refuses to render an
+# observation that lacks it. The forcing function is the value; the authorship
+# stays with the agent, exactly as it does for decision_context.
+OBSERVATION_CONTEXT_SCHEMA_VERSION = "1.0.0"
+OBSERVATION_CONTEXT_FIELDS = {
+    "action",
+    "authority",
+    "confidence",
+    "context",
+    "instances",
+    "recognition_heuristic",
+    "refuted_if",
+    "schema_version",
+    "statement",
+}
+# Two is the bar because one instance is a hunch. Jason's universal contract
+# states it directly: "Count observations before calling something a pattern."
+# Making it a field turns that rule into something a validator can hold.
+MINIMUM_OBSERVATION_INSTANCES = 2
+
+
+def validate_observation_context(
+    value: object,
+    field: str = "observation_context",
+    *,
+    revision: object = None,
+) -> list[str]:
+    """Validate one closed agent observation, or accept its absence.
+
+    Null is the correct representation for a turn that noticed nothing, the
+    same way a routine step carries a null decision context. Silence is not a
+    defect.
+    """
+    if value is None:
+        return []
+    if type(value) is not dict or set(value) != OBSERVATION_CONTEXT_FIELDS:
+        return [f"{field} fields do not match the contract"]
+
+    errors: list[str] = []
+    if value.get("schema_version") != OBSERVATION_CONTEXT_SCHEMA_VERSION:
+        errors.append(
+            f"{field}.schema_version must equal {OBSERVATION_CONTEXT_SCHEMA_VERSION}"
+        )
+    for name in ("statement", "recognition_heuristic", "refuted_if"):
+        if not _non_empty_string(value.get(name)):
+            errors.append(f"{field}.{name} must be a non-empty string")
+
+    # `action` is nullable on purpose: "watch this" is a legitimate outcome, and
+    # forcing a fabricated next step would be worse than admitting there is not
+    # one yet. Null must be explicit rather than absent, so the author states it.
+    action = value.get("action")
+    if action is not None and not _non_empty_string(action):
+        errors.append(f"{field}.action must be a non-empty string or null")
+
+    instances = value.get("instances")
+    if type(instances) is not list or not all(
+        _non_empty_string(item) for item in instances
+    ):
+        errors.append(f"{field}.instances must be a list of non-empty strings")
+    elif len(instances) < MINIMUM_OBSERVATION_INSTANCES:
+        errors.append(
+            f"{field}.instances needs at least {MINIMUM_OBSERVATION_INSTANCES} "
+            "concrete identities; one occurrence is a hunch, not a pattern"
+        )
+    elif len(instances) != len(set(instances)):
+        errors.append(f"{field}.instances must name distinct occurrences")
+
+    context = value.get("context")
+    errors.extend(_validate_context(context, f"{field}.context", revision))
+
+    authority = value.get("authority")
+    if type(authority) is not dict or set(authority) != AUTHORITY_FIELDS:
+        errors.append(f"{field}.authority fields do not match the contract")
+    else:
+        if authority.get("owner") not in AUTHORITY_OWNERS:
+            errors.append(f"{field}.authority.owner is unsupported")
+        if not _non_empty_string(authority.get("reason")):
+            errors.append(f"{field}.authority.reason must be a non-empty string")
+
+    confidence = value.get("confidence")
+    if confidence not in SUPPORTING_EVIDENCE_QUALITY:
+        errors.append(f"{field}.confidence is unsupported")
+    elif (
+        type(context) is dict
+        and context.get("evidence_quality")
+        not in SUPPORTING_EVIDENCE_QUALITY[confidence]
+    ):
+        errors.append(f"{field}.confidence exceeds the declared evidence quality")
+    return errors
+
+
+def normalized_observation_context(value: object) -> dict[str, Any] | None:
+    """Return an already validated observation with a precise type."""
+    if value is None:
+        return None
+    if type(value) is not dict:
+        raise TypeError("observation context must be an object or null")
+    return value
+
+
 def normalized_decision_context(value: object) -> dict[str, Any] | None:
     """Return an already validated decision context with a precise type."""
     if value is None:
