@@ -176,6 +176,33 @@ class SourceContractTests(unittest.TestCase):
         self.assertEqual(PROJECT_PROFILE_FIELDS, set(consumer_schema["required"]))
         self.assertEqual([], validate_resolution_request(fixture))
 
+    def test_decision_schema_pins_the_effect_fields_to_false(self) -> None:
+        """The schema must state the same read-only claim the code enforces.
+
+        `aec/consumer.py` rejects an effectful consumer state twice over, and a
+        behavioural canary covers it, so this is not the runtime control. It is
+        the AGENTS.md rule that schema, validator, fixtures and documentation
+        must agree: `schemas/resolution-decision.schema.json` is never loaded by
+        production code, so nothing else would notice it drifting away from what
+        the code does and quietly becoming wrong documentation.
+
+        The neighbouring pin in test_admission_root_v1 compares the file's
+        sha256 to a literal. That reds for ANY edit, so it is reset during
+        legitimate schema changes -- a widening hidden inside one of those would
+        pass unremarked. This asserts the meaning instead of the bytes.
+        """
+        schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
+
+        for field in ("executes", "mutates"):
+            with self.subTest(field=field):
+                self.assertEqual(
+                    {"const": False},
+                    schema["properties"][field],
+                    f"{field} must be pinned to false, not merely typed as a "
+                    "boolean; a decision that may declare itself effectful is "
+                    "not the contract AEC publishes",
+                )
+
     def test_schema_and_validator_require_the_same_resolution_fields(self) -> None:
         schema = load_json(ROOT / "schemas" / "resolution-decision.schema.json")
 

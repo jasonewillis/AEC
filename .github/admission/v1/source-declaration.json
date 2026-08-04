@@ -339,7 +339,7 @@
     "tests/test_declaration_sees_untracked_python.py": "824de553f65cccfd1800324e80d29cdd7a28ee48f3e2e28b651db7afcd89d285",
     "tests/test_docs_links.py": "c35dd3edd06c50295dca8ec6f80a12d69338805e1217a72dd0abed0541b9c8ed",
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",
-    "tests/test_foundation_validation.py": "b5838db8777a5be29ef30252fb3f49457e678e652c3862cf63543a430ac570a8",
+    "tests/test_foundation_validation.py": "63ce46177fc2193af3ebdd350944dab7248032a89b1a5bb15e2de56ced3c2b21",
     "tests/test_generate_source_declaration.py": "8de5cfde4f38ccfb22da5b5f0620b3d788b25b74cc3792109170fabecd60b8b3",
     "tests/test_human_render.py": "25c31b6c63068fae25ed05371ed15c16e5a71fe520ed61c492dcd78076a2ec37",
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
