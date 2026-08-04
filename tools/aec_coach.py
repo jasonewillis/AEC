@@ -328,11 +328,25 @@ def run_checkpoint(arguments: argparse.Namespace) -> int:
         if arguments.format == "json":
             rendered = json.dumps(card, indent=2, sort_keys=True)
         else:
-            rendered = render_human(card, default_rail_definition())
+            # Orientation on by default. `render_interaction` can suppress the
+            # frame because its trigger proves the reader is mid-task; a CLI
+            # invocation carries no such proof - each run is a fresh process
+            # with no session memory - so the read-only AUTHORITY boundary,
+            # the marker legend, and the stage header must stay reachable here.
+            rendered = render_human(
+                card,
+                default_rail_definition(),
+                orientation=not arguments.dense,
+            )
     except (CoachFailure, RenderFailure, OSError, ValueError) as error:
         print(f"AEC coach checkpoint: FAIL: {error}", file=sys.stderr)
         return 1
-    print(rendered)
+    # `rendered` already ends in a newline. `print` would add a second, emitting a
+    # trailing blank line that only the CLI sees — the density tests call
+    # `render_human` directly and cannot observe it. That blank line counts as
+    # invariant chrome under issue #115's own metric, and it was enough to push the
+    # shipped output past the 25% gate the in-process tests reported as passing.
+    sys.stdout.write(rendered if rendered.endswith("\n") else rendered + "\n")
     return 0
 
 
@@ -384,6 +398,14 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         choices=("human", "json"),
         default="human",
         help="Output format. human (default) renders coaching text.",
+    )
+    checkpoint_parser.add_argument(
+        "--dense",
+        action="store_true",
+        help=(
+            "Suppress the orienting frame (stage header, marker legend, "
+            "section rules, authority statement) for a repeat human render."
+        ),
     )
     checkpoint_parser.set_defaults(handler=run_checkpoint)
 

@@ -11,6 +11,7 @@ those same constants rather than re-reading JSON.
 from __future__ import annotations
 
 import json
+import re
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,14 +19,18 @@ from pathlib import Path
 from aec.cards import PHASE_RAIL, STAGE_PHASES, validate_public_card
 from aec.consumer import ConsumerStateRejection, resolve_consumer_state
 from aec.human_render import (
+    EVIDENCE_CLASS_BY_KIND,
+    EVIDENCE_CLASS_ORDER,
     FULL_CARD_TRIGGERS,
     HUMAN_RENDER_CONTRACT_VERSION,
+    ORIENTATION_TRIGGERS,
     RAIL_CONNECTOR,
     TEXT_WIDTH,
     PHASE_DISPLAY_NAMES,
     RailDefinition,
     RenderFailure,
     default_rail_definition,
+    evidence_class,
     render_decision,
     render_human,
     render_interaction,
@@ -33,7 +38,7 @@ from aec.human_render import (
     render_project_guidance,
     render_rail,
 )
-from aec.state_builder import build_state
+from aec.state_builder import AEC_SELF_PROFILE, build_state
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,7 +52,7 @@ WORKFLOW = json.loads(
 
 class HumanRenderContractTests(unittest.TestCase):
     def test_mentoring_heading_remains_the_stable_contract(self) -> None:
-        self.assertEqual("1.4.0", HUMAN_RENDER_CONTRACT_VERSION)
+        self.assertEqual("1.5.0", HUMAN_RENDER_CONTRACT_VERSION)
 
 
 def minimal_card(
@@ -121,7 +126,12 @@ class RenderRailTests(unittest.TestCase):
         self.assertIn("Intake ◉", marker_line)
         self.assertEqual(1, marker_line.count("◉"))
         self.assertEqual(0, marker_line.count("●"))
+        # Twice, and deliberately: once as an unlabeled `◉` on the marker line,
+        # once in words on the summary. The dense render suppresses the marker
+        # legend, so the graphic alone does not name the phase to a reader who
+        # was never given the key.
         self.assertIn("RAIL · Intake · step 1/9 · Understand 1/2", rail_text)
+        self.assertEqual(2, rail_text.count("Intake"))
         self.assertNotIn("blocking:", rail_text)
 
     def test_marker_placement_for_late_phase(self) -> None:
@@ -302,9 +312,11 @@ class RenderProjectGuidanceTests(unittest.TestCase):
         lines = text.splitlines()
         self.assertEqual("[AEC: Project Guidance]", lines[0])
         self.assertEqual("═" * 64, lines[1])
-        self.assertIn("CURRENT  Framing · Understand · step 2/9", text)
+        # The rail summary replaced CURRENT, which was a strict subset of it.
+        self.assertIn("RAIL · Framing · step 2/9 · Understand 2/2", text)
+        self.assertNotIn("CURRENT", text)
         self.assertIn("GATE     Evidence needed", text)
-        self.assertIn("NEXT     Stay in Framing.", text)
+        self.assertIn("NEXT     Stay in this phase.", text)
         self.assertIn("PROOF    source-audited · independent-review", text)
         self.assertIn("DONE WHEN A recorded example condition is met.", text)
         self.assertIn("AEC is advisory and read-only.", text)
@@ -323,10 +335,13 @@ class RenderProjectGuidanceTests(unittest.TestCase):
 
         text = render_project_guidance(card, RAIL_DEFINITION)
 
-        self.assertIn("NEXT     Stay in PR.", text)
+        # The phase is named on the RAIL summary, not restated here.
+        self.assertIn("RAIL · PR · step 8/9", text)
+        self.assertIn("NEXT     Stay in this phase.", text)
         self.assertIn("PROOF    ci-verified · current-required-checks", text)
         self.assertIn("GATE     Evidence needed", text)
-        self.assertIn("BLOCKERS None recorded.", text)
+        # Nothing is blocking, so the card says nothing about blockers.
+        self.assertNotIn("BLOCKERS", text)
         self.assertIn("You own execution, task/GitHub state, tests, merge", text)
 
     def test_labels_the_phase_not_a_procedure(self) -> None:
@@ -434,11 +449,23 @@ class RenderDecisionTests(unittest.TestCase):
 
 class RenderHumanTests(unittest.TestCase):
     def test_contains_both_required_blocks_and_a_single_trailing_newline(self) -> None:
-        text = render_human(minimal_card(), RAIL_DEFINITION)
+        text = render_human(minimal_card(), RAIL_DEFINITION, orientation=True)
 
         self.assertIn("[AEC: Project Guidance]", text)
         self.assertIn("[AEC: Mentoring]", text)
         self.assertIn("\n────────────────────────────────────────────────────────────────\n", text)
+        self.assertTrue(text.endswith("\n"))
+        self.assertFalse(text.endswith("\n\n"))
+
+    def test_dense_render_keeps_both_required_blocks_and_one_trailing_newline(
+        self,
+    ) -> None:
+        text = render_human(minimal_card(), RAIL_DEFINITION)
+
+        self.assertIn("[AEC: Project Guidance]", text)
+        self.assertIn("[AEC: Mentoring]", text)
+        self.assertNotIn("────", text)
+        self.assertNotIn("═", text)
         self.assertTrue(text.endswith("\n"))
         self.assertFalse(text.endswith("\n\n"))
 
@@ -649,6 +676,290 @@ class RenderHumanTests(unittest.TestCase):
             "required: independent-review)",
             text,
         )
+
+
+def resolved_card_for_phase(phase: str, *, revision: str = "c" * 40) -> dict[str, object]:
+    """Resolve one real AEC-self card at `phase`, bypassing no validation."""
+    state = build_state(
+        task="aec#115",
+        phase=phase,
+        lane="INFRA",
+        environment="local",
+        expires_minutes=30,
+        evidence=[],
+        blockers=[],
+        revision=revision,
+        catalog=CATALOG,
+        workflow=WORKFLOW,
+        profile=AEC_SELF_PROFILE,
+        observed_at=datetime(2026, 8, 3, 12, 0, tzinfo=timezone.utc),
+    )
+    result = resolve_consumer_state(
+        state,
+        CATALOG,
+        current_time="2026-08-03T12:01:00Z",
+        expected_environment="local",
+        expected_revision=revision,
+    )
+    if isinstance(result, ConsumerStateRejection):  # pragma: no cover - guard
+        raise AssertionError(f"fixture state rejected at {phase}")
+    return result.to_dict()
+
+
+def invariant_chrome_lines(text: str, other: str) -> list[str]:
+    """Return the lines of `text` that carry no phase-specific information.
+
+    This is issue #115's two-phase diff, applied in-process: a line is
+    invariant chrome when it is blank, is a horizontal rule, or is
+    byte-identical to a line of a card rendered at a different phase.
+    """
+    lines = text.splitlines()
+    common = set(lines) & set(other.splitlines())
+    return [
+        line
+        for line in lines
+        if not line.strip()
+        or set(line.strip()) <= set("=-═─")
+        or line in common
+    ]
+
+
+def phase_mentions(text: str, phase: str) -> int:
+    """Count whole-word mentions of one phase name.
+
+    Substring counting is wrong at short phase names: `"PROOF".count("PR")`
+    is 1, so a `PR` card would score every PROOF label as a phase mention and
+    the repetition budget below would measure the renderer's vocabulary
+    instead of its repetition.
+    """
+    return len(re.findall(rf"\b{re.escape(phase)}\b", text))
+
+
+class CardDensityTests(unittest.TestCase):
+    """Pins issue #115: a card must be mostly card, not mostly frame."""
+
+    def setUp(self) -> None:
+        self.intake = resolved_card_for_phase("Intake")
+        self.review = resolved_card_for_phase("Review")
+        self.intake_text = render_human(self.intake, RAIL_DEFINITION)
+        self.review_text = render_human(self.review, RAIL_DEFINITION)
+
+    def test_dense_card_carries_under_a_quarter_invariant_chrome(self) -> None:
+        for text, other in (
+            (self.intake_text, self.review_text),
+            (self.review_text, self.intake_text),
+        ):
+            chrome = invariant_chrome_lines(text, other)
+            total = len(text.splitlines())
+            with self.subTest(total=total):
+                self.assertLess(
+                    len(chrome) / total,
+                    0.25,
+                    f"{len(chrome)}/{total} lines are invariant chrome: {chrome}",
+                )
+
+    def test_dense_card_names_its_phase_at_most_twice(self) -> None:
+        for card, text in (
+            (self.intake, self.intake_text),
+            (self.review, self.review_text),
+        ):
+            phase = str(card["phase"])
+            with self.subTest(phase=phase):
+                self.assertLessEqual(phase_mentions(text, phase), 2, text)
+
+    def test_orientation_render_restores_the_teaching_frame(self) -> None:
+        # The suppressed chrome is a render-time choice, not a deletion: the
+        # first interaction of a task still teaches the surface.
+        text = render_interaction(self.intake, RAIL_DEFINITION, "task-intake")
+
+        self.assertIn("● complete   ◉ current   ○ not reached", text)
+        self.assertIn("AEC is advisory and read-only.", text)
+        self.assertIn("├", text)
+        self.assertIn("═" * 64, text)
+        # Even the teaching render does not restate the phase more than twice.
+        self.assertLessEqual(
+            phase_mentions(text, str(self.intake["phase"])), 2, text
+        )
+
+    def test_orientation_triggers_stay_a_pinned_minority(self) -> None:
+        # Without this the suppression canary below is vacuous: growing
+        # ORIENTATION_TRIGGERS to cover every full-card trigger restores the
+        # full frame everywhere - undoing issue #115 - while every `continue`
+        # skips its way to green.
+        self.assertEqual(
+            {"task-intake", "status-request", "phase-transition"},
+            set(ORIENTATION_TRIGGERS),
+        )
+        self.assertEqual(
+            ["gate-transition", "gate-failure", "review-finding", "pr-created",
+             "deploy-observe"],
+            [item for item in FULL_CARD_TRIGGERS if item not in ORIENTATION_TRIGGERS],
+        )
+
+    def test_repeat_interaction_render_stays_dense(self) -> None:
+        # The density measurement above calls `render_human` directly, so it
+        # cannot see a trigger-routing change. This one goes through the real
+        # `render_interaction` entry point that consumers use.
+        intake = render_interaction(self.intake, RAIL_DEFINITION, "gate-failure")
+        review = render_interaction(self.review, RAIL_DEFINITION, "gate-failure")
+        for text, other in ((intake, review), (review, intake)):
+            chrome = invariant_chrome_lines(text, other)
+            total = len(text.splitlines())
+            with self.subTest(total=total):
+                self.assertLess(
+                    len(chrome) / total,
+                    0.25,
+                    f"{len(chrome)}/{total} lines are invariant chrome: {chrome}",
+                )
+
+    def test_repeat_interactions_suppress_the_teaching_frame(self) -> None:
+        dense_triggers = [
+            item for item in FULL_CARD_TRIGGERS if item not in ORIENTATION_TRIGGERS
+        ]
+        self.assertTrue(
+            dense_triggers,
+            "every full-card trigger now orients: the suppression is dead",
+        )
+        for trigger in dense_triggers:
+            with self.subTest(trigger=trigger):
+                text = render_interaction(self.intake, RAIL_DEFINITION, trigger)
+                self.assertNotIn("● complete   ◉ current   ○ not reached", text)
+                self.assertNotIn("AEC is advisory and read-only.", text)
+                self.assertNotIn("═" * 64, text)
+                # The lesson, the reason for the gate, and the recognition
+                # heuristic are never chrome and are never suppressed.
+                self.assertIn("LESSON", text)
+                self.assertIn("WHY", text)
+                self.assertIn("WHEN", text)
+
+
+class NegativeSpaceSuppressionTests(unittest.TestCase):
+    """Red canary for issue #115: suppression must be conditional.
+
+    A change that deletes the BLOCKERS and EVIDENCE lines outright would
+    improve the average card by making an exceptional card lie. These tests
+    fail on that change and pass on conditional suppression.
+    """
+
+    def test_absent_blockers_and_evidence_produce_no_negative_space(self) -> None:
+        text = render_human(minimal_card(), RAIL_DEFINITION)
+
+        self.assertNotIn("BLOCKERS", text)
+        self.assertNotIn("EVIDENCE", text)
+
+    def test_present_blocker_and_accepted_evidence_still_render(self) -> None:
+        revision = "d" * 40
+        card = minimal_card(
+            phase_name="Review",
+            required_proof=["independent-review"],
+            revision=revision,
+        )
+        text = render_human(
+            card,
+            RAIL_DEFINITION,
+            evidence=[
+                {
+                    "accepted": True,
+                    "environment": "test",
+                    "kind": "base-head-binding",
+                    "revision": revision,
+                }
+            ],
+            blockers=[
+                {
+                    "active": True,
+                    "identity": "consumer-blocker-one",
+                    "reason_code": "AUTHORITY_CONFLICT",
+                }
+            ],
+        )
+
+        self.assertIn(
+            "BLOCKERS consumer-blocker-one (AUTHORITY_CONFLICT)",
+            text,
+        )
+        self.assertIn("EVIDENCE source-audited · partial", text)
+        self.assertIn("base-head-binding", text)
+
+    def test_default_class_evidence_is_not_silently_dropped(self) -> None:
+        # `project-verified` is the fallback class of `evidence_class()`, so it
+        # covers Intake's own proofs. A category loop that omits it prints a
+        # PROOF class that EVIDENCE can never confirm, on the very first card a
+        # reader sees. Reds if `project-verified` leaves EVIDENCE_CLASS_ORDER.
+        revision = "e" * 40
+        card = minimal_card(
+            phase_name="Intake",
+            required_proof=["owner-and-boundary"],
+            revision=revision,
+        )
+        accepted = {
+            "accepted": True,
+            "environment": "test",
+            "kind": "outcome-statement",
+            "revision": revision,
+        }
+
+        self.assertEqual("project-verified", evidence_class("outcome-statement"))
+        self.assertEqual("project-verified", evidence_class("owner-and-boundary"))
+
+        text = render_human(card, RAIL_DEFINITION, evidence=[accepted])
+
+        self.assertIn("PROOF    project-verified · owner-and-boundary", text)
+        self.assertIn(
+            "EVIDENCE project-verified · partial (verified: outcome-statement; "
+            "required: owner-and-boundary)",
+            text,
+        )
+
+    def test_every_evidence_class_can_reach_an_evidence_line(self) -> None:
+        # The reachability invariant behind the test above, stated directly:
+        # no kind may classify into a category the renderer never prints.
+        reachable = set(EVIDENCE_CLASS_ORDER)
+        classified = {
+            evidence_class(kind)
+            for kind in (*EVIDENCE_CLASS_BY_KIND, "focused-test-report:unit", "unmapped")
+        }
+
+        self.assertEqual(set(), classified - reachable)
+
+
+    def test_validated_blocked_gate_still_renders_its_rationale(self) -> None:
+        card = minimal_card()
+        card["gate"] = "Blocked"
+        card["rationale"] = {"summary": "An example validated blocker summary."}
+
+        text = render_human(card, RAIL_DEFINITION)
+
+        self.assertIn("BLOCKERS An example validated blocker summary.", text)
+        self.assertIn("blocker gate", text)
+
+
+class PhaseCueTests(unittest.TestCase):
+    """A dense card must still say, unambiguously, which phase you are in."""
+
+    def test_resolved_card_names_its_own_phase_in_words(self) -> None:
+        # Ready + no required proof is the case where NEXT names the *next*
+        # phase. Without a worded cue the current phase survives only as an
+        # unlabeled `◉` - the legend is suppressed - so a reader can read
+        # themselves into the following phase.
+        card = minimal_card(phase_name="Framing")
+        card["gate"] = "Ready"
+
+        text = render_human(card, RAIL_DEFINITION)
+        rail_summary = next(
+            line for line in text.splitlines() if line.startswith("RAIL ·")
+        )
+
+        self.assertIn("RAIL · Framing · step 2/9", rail_summary)
+        self.assertIn("Check whether", text)
+        self.assertLessEqual(phase_mentions(text, "Framing"), 2, text)
+
+    def test_rail_summary_names_the_marked_phase_in_both_modes(self) -> None:
+        card = minimal_card(phase_name="Framing")
+        for orientation in (True, False):
+            with self.subTest(orientation=orientation):
+                text = render_rail(card, RAIL_DEFINITION, orientation=orientation)
+                self.assertIn("RAIL · Framing · step 2/9 · Understand 2/2", text)
 
 
 if __name__ == "__main__":

@@ -120,6 +120,33 @@ class StateThenCheckpointTests(unittest.TestCase):
                 "How should AEC invoke the pinned mentoring adapter?", rendered.stdout
             )
 
+    def test_human_checkpoint_orients_by_default_and_dense_opts_out(self) -> None:
+        # `render_interaction` may suppress the orienting frame because its
+        # trigger proves the reader is mid-task. The CLI has no trigger and no
+        # session memory - each run is a fresh process - so the read-only
+        # AUTHORITY boundary and the marker legend must stay reachable here.
+        # Reds if the CLI is wired to the dense default.
+        with tempfile.TemporaryDirectory() as directory:
+            out_path = build_state_file(Path(directory), phase="Framing")
+
+            oriented = run_coach("checkpoint", str(out_path))
+            self.assertEqual(0, oriented.returncode, oriented.stderr)
+            self.assertIn(
+                "AEC is advisory and read-only.",
+                oriented.stdout,
+            )
+            self.assertIn("● complete   ◉ current   ○ not reached", oriented.stdout)
+
+            dense = run_coach("checkpoint", str(out_path), "--dense")
+            self.assertEqual(0, dense.returncode, dense.stderr)
+            self.assertNotIn("AEC is advisory and read-only.", dense.stdout)
+            self.assertNotIn(
+                "● complete   ◉ current   ○ not reached", dense.stdout
+            )
+            # Suppression is chrome-only: the card itself is unchanged.
+            self.assertIn("RAIL · Framing · step 2/9", dense.stdout)
+            self.assertIn("LESSON", dense.stdout)
+
     def test_stale_decision_context_is_rejected_at_state_build_time(self) -> None:
         # Red canary: a decision_context whose context.revision is a
         # well-formed SHA for a DIFFERENT commit than resolved HEAD (a stale
@@ -159,6 +186,59 @@ class StateThenCheckpointTests(unittest.TestCase):
             self.assertFalse(out_path.exists())
             self.assertIn(stale_revision, result.stderr)
             self.assertIn(head_revision, result.stderr)
+
+
+class ShippedOutputDensityTests(unittest.TestCase):
+    """Density measured at the CLI boundary, which is what a user actually sees.
+
+    Issue #115's density tests call `render_human` directly. That cannot observe
+    anything the command-line wrapper adds, and the wrapper was adding a trailing
+    blank line: `rendered` already ends in a newline and `print` appended a second.
+    Under #115's own metric a blank line is invariant chrome, so the shipped output
+    exceeded the 25% gate while every in-process test reported it passing.
+
+    This measures stdout, so it reds for any wrapper-level regression the pure-function
+    tests are structurally blind to.
+    """
+
+    def test_shipped_stdout_has_no_padding_the_render_tests_cannot_see(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = build_state_file(Path(directory))
+            for label, extra in (("dense", ["--dense"]), ("oriented", [])):
+                with self.subTest(mode=label):
+                    result = run_coach("checkpoint", *extra, str(state))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    stdout = result.stdout
+
+                    self.assertFalse(
+                        stdout.endswith("\n\n"),
+                        f"{label}: stdout ends in a blank line the render tests cannot see",
+                    )
+                    self.assertTrue(stdout.endswith("\n"), f"{label}: no trailing newline")
+
+                    body = stdout.rstrip("\n").split("\n")
+                    self.assertEqual(
+                        [line for line in body if not line.strip()],
+                        [],
+                        f"{label}: shipped output carries blank filler lines",
+                    )
+
+    def test_shipped_stdout_matches_the_pure_render_exactly(self) -> None:
+        """No wrapper may add or drop a line; otherwise the density gate lies again."""
+        with tempfile.TemporaryDirectory() as directory:
+            state = build_state_file(Path(directory))
+            result = run_coach("checkpoint", "--dense", str(state))
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            card = json.loads(run_coach("checkpoint", "--format", "json", str(state)).stdout)
+            rendered = aec_coach.render_human(
+                card, aec_coach.default_rail_definition(), orientation=False
+            )
+            self.assertEqual(
+                result.stdout.rstrip("\n").split("\n"),
+                rendered.rstrip("\n").split("\n"),
+                "the CLI emitted different lines than render_human produced",
+            )
 
 
 class OutputFormatTests(unittest.TestCase):
