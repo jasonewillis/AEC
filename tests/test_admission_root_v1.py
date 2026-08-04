@@ -11,14 +11,18 @@ import unittest
 from pathlib import Path
 
 from tools.admission_root_v1 import (
+    ACTIVE_WORKFLOW_PATH,
     ADMISSION_PROTOCOL,
     ARTIFACT_BASELINE,
     ARTIFACT_MANIFEST_ROOT,
     BEHAVIOR_IDENTITY,
     DECLARATION_PATH,
+    DECLARATION_SCHEMA_VERSION,
+    OUTCOMES,
     PROOF_CLOSURE_BASELINE,
     PYTHON_PATHS,
     SOURCE_BASELINE,
+    VALIDATOR_PATH,
     WORKFLOW_TRANSITION_BASELINE,
     WORKFLOW_TRANSITION_BUNDLES,
     BaseAuthority,
@@ -226,6 +230,63 @@ class AdmissionRootV1Tests(unittest.TestCase):
 
         self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
         self.assertEqual(report.base_authority, self.authority)
+
+    def test_declared_behavior_cannot_launder_a_tampered_validator(self) -> None:
+        """RED CANARY (issue #65): moving BEHAVIOR_IDENTITY/TRUST_ROOT_LOCK_IDENTITY
+        out of the base-pinned validator and into the candidate-declared surface
+        must not let a candidate use that new declared surface to admit a
+        validator whose bytes differ from the base's.
+
+        Tampers the shipped validator AND replaces the declaration's `behavior`
+        block with a value that is internally self-consistent (its
+        trust_root_lock_identity is the real hash of the real structural
+        constants plus the new, made-up identity -- exactly what self_check's
+        internal-consistency check accepts). If the structural byte-pin in
+        validate_candidate ever came to depend on the declared behavior fields
+        instead of the base-supplied validator_blob_oid/validator_sha256, this
+        laundered pair would sail through. It must not: ADMISSION-001 has to
+        fire purely off the base-owned authority, independent of anything a
+        candidate declares.
+        """
+        entries = dict(self.entries)
+        blobs = dict(self.blobs)
+
+        tampered_validator = (
+            self.blobs[self.entries[b"tools/admission_root_v1.py"][1]]
+            + b"\n# tampered, would weaken the gate\n"
+        )
+        validator_oid = git_blob_oid(tampered_validator)
+        entries[b"tools/admission_root_v1.py"] = ("100644", validator_oid)
+        blobs[validator_oid] = tampered_validator
+
+        payload = json.loads((ROOT / DECLARATION_PATH).read_text(encoding="utf-8"))
+        laundered_identity = hashlib.sha256(b"attacker-chosen-behavior").hexdigest()
+        lock_payload = json.dumps(
+            [
+                ADMISSION_PROTOCOL,
+                "sha256:" + laundered_identity,
+                DECLARATION_PATH,
+                DECLARATION_SCHEMA_VERSION,
+                VALIDATOR_PATH,
+                ACTIVE_WORKFLOW_PATH,
+                list(OUTCOMES),
+            ],
+            separators=(",", ":"),
+        ).encode("utf-8")
+        laundered_lock = hashlib.sha256(lock_payload).hexdigest()
+        payload["behavior"] = {
+            "identity": laundered_identity,
+            "trust_root_lock_identity": laundered_lock,
+        }
+        laundered_declaration = json.dumps(payload).encode("utf-8")
+        declaration_oid = git_blob_oid(laundered_declaration)
+        entries[DECLARATION_PATH.encode()] = ("100644", declaration_oid)
+        blobs[declaration_oid] = laundered_declaration
+
+        report = self.prove(entries=entries, blobs=blobs)
+
+        self.assertFalse(report.passed, report.findings)
+        self.assertIn("ADMISSION-001 EXACT_BASELINE", report.findings)
 
     def test_workflow_transition_is_exact_and_closed(self) -> None:
         changed = dict(self.entries)
