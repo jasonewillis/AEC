@@ -116,6 +116,43 @@ Not escalation triggers, despite feeling like them: adding tests, adding red can
 filing issues, correcting a factual error in tracked documentation, or fixing a control that
 reports success while enforcing nothing.
 
+## Do Not Stall
+
+Stated by the owner on 2026-08-04, twice, after turns that ended on a ranked list.
+
+**Ranking the options is the decision.** Having enough information to recommend is having
+enough information to act. A turn that presents a ranking and waits costs a full round-trip
+and delivers nothing, so ending on one is a stall wearing a suit.
+
+- Do not end a turn on "your call", "say the word", "recommend stopping", or a bare
+  approval request. Delete the sentence and do the work.
+- If a choice genuinely changes **what gets built** — not how — put it through
+  `AskUserQuestion` with concrete options and the recommendation first. Then keep working on
+  everything that does not depend on the answer. Asking is not a reason to go idle.
+- The nine triggers above still hold. They are `AskUserQuestion` material, never a reason to
+  go quiet.
+
+### The distinction that keeps this safe
+
+This is about **decisions**, never about **gates**. `AGENTS.md` requires `Blocked`,
+`Needs review`, `Evidence needed`, and `Ready` to be exclusive, fail-closed states, and
+nothing here weakens that. Read as licence to push past a red gate, this rule would be
+actively harmful.
+
+Concretely: #123 and #118 are complete, green, reviewed, and correctly **not merged**,
+because `admit` refuses them. That is the rule working, not a stall. Do not stop *deciding*;
+do stop when the evidence is not there.
+
+### Where autonomy actually went wrong
+
+On 2026-08-03/04 the two real mistakes — an accidental initial commit sweeping in another
+session's staged work, and a normalizer printing `NORMALIZED` while fixing nothing — both
+happened in `~/.claude`. Neither happened here. Every mistake in this repository was caught
+by CI, a red canary, or a mutation check.
+
+The difference was not care, it was **guardrails**. So "no net" is the signal to slow down
+and verify harder. It is never the signal to stop.
+
 ## Never Do
 
 - Execute a recommended procedure on a consumer's behalf, or mutate lifecycle, project,
