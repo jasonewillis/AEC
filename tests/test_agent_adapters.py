@@ -120,7 +120,7 @@ class AgentAdapterTests(unittest.TestCase):
             claude_receipt.skill_manifest_hash,
         )
         self.assertEqual(
-            "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
+            "sha256:7c314d7be445623ae91e6d3a59a32cb1c182fcadf082725e99ae8943579d1d5c",
             codex_receipt.decision_hash,
         )
 

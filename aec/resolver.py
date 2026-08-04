@@ -45,12 +45,26 @@ PROCEDURE_FIELDS = {
     "good",
     "identity",
     "mentoring",
+    "mentoring_variants",
     "phase",
     "rationale",
     "reason_code",
     "required_evidence",
     "revision",
 }
+# Evidence-satisfaction levels a procedure may teach differently.
+#
+# `mentoring` is the canonical block and always serves `unmet`. A procedure may
+# additionally author `partial` and `met` variants; an absent key falls back to
+# `mentoring`, so a procedure with no variants renders exactly as it did before
+# this field existed.
+#
+# Deliberately NOT keyed on turn count or anything else the resolver would have
+# to remember. AEC is a pure function of its request: the same request must
+# produce the same card and the same hash forever. Repetition across turns where
+# the evidence itself did not change is therefore not solvable here, and belongs
+# to the consumer's prompt hook, which legitimately owns session state.
+MENTORING_VARIANT_LEVELS = ("met", "partial")
 PHASES = {
     "Build",
     "Deploy",
@@ -530,6 +544,11 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
                 )
             )
             errors.extend(validate_mentoring(procedure.get("mentoring"), f"{field}.mentoring"))
+            errors.extend(
+                _validate_mentoring_variants(
+                    procedure.get("mentoring_variants"), f"{field}.mentoring_variants"
+                )
+            )
             phase = procedure.get("phase")
             if not isinstance(phase, str) or phase not in PHASES:
                 errors.append(f"{field}.phase is unsupported")
@@ -589,6 +608,48 @@ def validate_procedure_catalog(catalog: object) -> list[str]:
         if len(references) != len(set(references)):
             errors.append("procedure catalog references must be unique")
     return errors
+
+
+def _validate_mentoring_variants(value: object, field: str) -> list[str]:
+    """Validate the closed set of evidence-conditional teaching blocks.
+
+    Every level a procedure declares must be a complete mentoring record. A
+    partial variant is rejected rather than merged over the canonical block:
+    silently inheriting two of three fields would let a card teach a lesson
+    whose stated gate reason belongs to a different evidence state, which is
+    worse than repeating the canonical block.
+    """
+    if type(value) is not dict:
+        return [f"{field} must be an object"]
+    unsupported = sorted(set(value) - set(MENTORING_VARIANT_LEVELS))
+    errors = [f"{field}.{name} is an unsupported level" for name in unsupported]
+    errors.extend(
+        error
+        for name in sorted(set(value) & set(MENTORING_VARIANT_LEVELS))
+        for error in validate_mentoring(value[name], f"{field}.{name}")
+    )
+    return errors
+
+
+def _evidence_level(required: list[str], accepted: set[str]) -> str:
+    """Classify how much of a procedure's required evidence is accepted.
+
+    `unmet` is the state a task spends most of its time in, which is why it
+    keeps the canonical `mentoring` block: the common card must stay the one
+    with the most stable hash and the most reviewed copy.
+    """
+    outstanding = set(required)
+    if not outstanding:
+        return "met"
+    satisfied = outstanding & accepted
+    if not satisfied:
+        return "unmet"
+    return "met" if satisfied == outstanding else "partial"
+
+
+def _selected_mentoring(procedure: dict[str, Any], level: str) -> dict[str, Any]:
+    """Return the teaching block for one evidence level, canonical by default."""
+    return procedure["mentoring_variants"].get(level) or procedure["mentoring"]
 
 
 def _accepted_evidence(request: dict[str, Any]) -> set[str]:
@@ -702,6 +763,17 @@ def resolve(
         if required_evidence
         else outcomes["evidence_complete"]
     )
+    # A blocked or unavailable card already replaces anti_example, finished, good
+    # and the rationale with the outcome's own text; teaching the evidence-state
+    # lesson there would describe a gate the reader is not actually standing at.
+    mentoring = (
+        procedure["mentoring"]
+        if caller_blocker is not None or skill_unavailable
+        else _selected_mentoring(
+            procedure,
+            _evidence_level(procedure["required_evidence"], accepted_evidence),
+        )
+    )
     allowed = False if caller_blocker is not None else outcome["allowed"]
     anti_example = procedure["anti_example"]
     finished = procedure["finished"]
@@ -748,7 +820,7 @@ def resolve(
         "good": good,
         "input_bindings": input_bindings,
         "lane": request["lane"],
-        "mentoring": procedure["mentoring"],
+        "mentoring": mentoring,
         "mutates": False,
         "phase": request["phase"],
         "policy_version": policy["revision"],

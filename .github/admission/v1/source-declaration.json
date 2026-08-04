@@ -6,7 +6,7 @@
     ],
     "config/procedures/ticket-to-pr.json": [
       "configuration",
-      "5725ee4a2f905770602950059e9afa2835cf4da648225eff487117555ea8a777"
+      "eb43c27628f1e7e9b65c22e45f4092d6fdd012647cd9c5d25b02751d4c05bd1e"
     ],
     "config/release/aec-release.json": [
       "configuration",
@@ -54,7 +54,7 @@
     ],
     "schemas/procedure-catalog.schema.json": [
       "schema",
-      "e8652016c71607f68f3b6db09a9994d994a13b568f1a09721c4c2b3b8dcdf027"
+      "8d655f4bdf6ad561bff617d91e32ea2efbd3b365ce0ce3276aa6cbc44f745a3b"
     ],
     "schemas/release-manifest.schema.json": [
       "schema",
@@ -114,7 +114,7 @@
     ],
     "tests/fixtures/outcomes/golden.json": [
       "test-fixture",
-      "055dfbc4b8d903069c556ff6fc3f04724ec060ed6af3b909bb8e57a7d33c1690"
+      "71a0c7962f9342b05e6773351b90faf73029af293dca7e1dd461f0ff8e1af1a3"
     ],
     "tests/fixtures/outcomes/proposal.json": [
       "test-fixture",
@@ -228,7 +228,7 @@
     ],
     "tools/prove_foundation_behavior.py": [
       "100644",
-      "a53aab66774a61e1982229c04c954be36f7cc705a9ee76783b22bfe6148a9291"
+      "31000b35727b721fbcff78ef524bf61f2527dc5d0cf265fb6ad8590f3b25b857"
     ],
     "tools/validate_blueprint_skills.py": [
       "100644",
@@ -312,16 +312,16 @@
     "aec/mentoring.py": "0ddccbdce636e0f567f6e2594b2844f61fa804d4edb7cfeb32ad08b7f927121e",
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
     "aec/release_manifest.py": "4c329331d0df1b342763ad2d429436794f6a676185651bb94466c202282261d7",
-    "aec/resolver.py": "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39",
+    "aec/resolver.py": "258f6b9496c1ca589ac8aa03bdb90fd2cd8beba5e9201545256ec8c226e45ec0",
     "aec/review_attestation.py": "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db",
     "aec/state_builder.py": "0a99bbbac68a0d97dacbf0a44b893c0b98e29f221a93634086a16f9e704acf00",
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
-    "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
+    "tests/test_admission_root_v1.py": "09de967ac0c73944843dfa30789d7cdb707338ee9dd9137fc3a47dddd2ce5b82",
     "tests/test_aec_coach.py": "73970ae3cb28ec16aefa291e02a2d6adf37c5108025b78ac3134dafa48a4ae47",
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
     "tests/test_aec_prompt_hook.py": "43c3297a620b85337101d84447097e6e94b0b52a559624a98e8a06ac768fc68a",
-    "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
+    "tests/test_agent_adapters.py": "5aefa1ae11b43c69350003cb79be7c5546bffa5ee9d66f1ac50d0e7f68cf3ba2",
     "tests/test_authority_v2_hostile_corpus.py": "21ae1cdc90df733589e5311d7dc9db3da042279e1d4ee72ac64447e5e003ce71",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "50d4ab647da0022b7a60b3a918661da18950ffdc3ed11f77859d67aff137043f",
@@ -337,11 +337,11 @@
     "tests/test_public_card.py": "336595b31124e3c40dfb100ef038c987550fabde39c7c964c981788f3878c391",
     "tests/test_release_api_evidence.py": "dd52db457de6c83224745f71c856ee1a053575d9da00e56c3b32c95474e623cd",
     "tests/test_release_manifest.py": "4fe8c230fd3d67a654afec7f5051769a69e314b1f4ade1e038b00b9768b9f14a",
-    "tests/test_resolver.py": "fdbec25d7071efaf2af22006cbb456205747502629bee2fe0ce6e0105682c5c1",
+    "tests/test_resolver.py": "f654b3e9b895a9d13466b7b8d53779245371274a453c32c21cadfab5374447ad",
     "tests/test_resolver_blocker_precedence.py": "cc022dee5fd7ce287c2877eddfe506fe3126bc2bf61ccb3ff1e6c66cc2b4ed74",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_builder.py": "3ca30bd3594eed617d67ad2472f81cafd9f7c3ae77284595e0e6978756d19182",
-    "tools/admission_root_v1.py": "f12017bf1f6dba4c3333dd5049788de5efb812b929f38a6927cad520777e843e",
+    "tools/admission_root_v1.py": "a6a8498a55336a2c3f4aa762152c468e0189f37dd06149354a5855ee7f43852e",
     "tools/aec_coach.py": "67db47bd0c6d8861270fb70b0e35c4d012f7dcb83fd840e6bc3cd6e85ed5e818",
     "tools/aec_prompt_hook.py": "8eb9024883be1814661a9e85c380729ce03f3424becebe415addb81addbd42a0",
     "tools/generate_source_declaration.py": "ed74448dd8661264e446c6807b711f11fad44f85b3445d2dc042ef0d4f477f8c",
