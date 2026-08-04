@@ -60,6 +60,14 @@ These rules apply to every agent working in this repository.
 - Prefer standard-library, deterministic validation for the portable core.
 - Schema, validator, fixtures, and documentation must agree.
 - A green-only check is not a proof harness. Every critical gate needs a red canary.
+- A canary must be falsifiable by the control it claims to prove. Mutate that control and
+  record which tests red. A test that passes identically with and without the control pins
+  the environment, not the change, and must be deleted or renamed to say what it actually
+  covers.
+- Every pull request needs an adversarial review pass, including documentation-only
+  changes. The `.codex-belt-required` marker applies universally; risk class exempts
+  nothing. Treat implementation and validation as separate responsibilities: re-run the
+  builder's verification command yourself before accepting its result.
 - Do not declare work finished from an open branch, stale check, skipped check, or
   evidence from a different revision.
 - Never include agent names as commit co-authors.

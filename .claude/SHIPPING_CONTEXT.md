@@ -1,8 +1,11 @@
 # Shipping Context — AEC
 
 Binds the portable Keep Shipping guidance (`~/.claude/CLAUDE.md`) to this repository.
-Distilled rationale in `docs/delivery/keep-shipping.md`. Repository contract in `AGENTS.md`,
-which wins on any conflict.
+Repository contract in `AGENTS.md`, which wins on any conflict.
+
+This file holds the AEC-specific bindings only. The portable rules live in the global
+copy and are not restated here — an earlier in-repo restatement was deleted because it
+had already drifted into a second, contradictory definition of "done".
 
 ## Shipping Toward
 
@@ -27,19 +30,19 @@ Secondary, and **treat as a hint rather than truth**:
 Those documents have drifted before, so re-verify against the code before planning a session
 from either.
 
-But do not overcorrect, as an earlier draft of this file did: `aec/state_builder.py` and
-`tools/validate_consumer_connection.py` **exist**, and that is not the same as the gaps being
-closed. `state_builder` provides bounded AEC-self construction and leaves consumer state
-production outside AEC; `validate_consumer_connection` runs two fixed built-in probes, not a
-consumer's own contract. **File existence is not completed capability.** Check what a module
-actually does for a consumer before claiming a Gap map row overstates its gap.
+Do not overcorrect either. `aec/state_builder.py` and `tools/validate_consumer_connection.py`
+**exist**, and that is not the same as the gaps being closed. `state_builder` provides bounded
+AEC-self construction and leaves consumer state production outside AEC;
+`validate_consumer_connection` runs two fixed built-in probes, not a consumer's own contract.
+**File existence is not completed capability.** Check what a module actually does for a
+consumer before claiming a Gap map row overstates its gap.
 
 ## Escalate Only For
 
 This section **is** AEC's escalation list, in the sense the global contract intends: it is
-what `~/.claude/CLAUDE.md` means by a project supplying its own gates. What it does not do is
-*drop* any of the portable four — an earlier draft replaced them and silently lost real
-gates. All four are restated here so the list is self-contained and can be read alone:
+what `~/.claude/CLAUDE.md` means by a project supplying its own gates. It **adds to** the
+portable four rather than replacing them. All four are restated here so the list is
+self-contained and can be read alone:
 
 1. Changes **user-visible product scope** — what ships, not how it is built.
 2. Involves **pricing, legal, or compliance**.
@@ -87,7 +90,9 @@ reports success while enforcing nothing.
 A pull request, merged, with every gate satisfied on the exact head:
 
 - `python3 tools/validate_foundation.py` exits 0, red canaries included.
-- `python3 -m unittest discover -s tests` green — 353 at `a9a9d00`; the count only rises.
+- `python3 -m unittest discover -s tests` green. The count is not a target and does not
+  only rise: deleting a test that pinned nothing is progress. State the count and the
+  reason for any delta.
 - `python3 tools/generate_source_declaration.py --check` passes, or the declaration is
   regenerated in the same change.
 - Required checks `foundation-validate` and `admit` both SUCCESS. **`admit` became required
