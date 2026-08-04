@@ -32,8 +32,9 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # The tuple holds duplicates by construction, because the literal tail repeats 17
 # paths that SOURCE_BASELINE already supplies. Pin the DISTINCT count, not len():
 # it is the real coverage number, and it cannot be inflated back to green by
-# adding a repeat. Of the 52 distinct paths, 44 arrive via SOURCE_BASELINE and
-# only 8 are pinned independently of the declaration.
+# adding a repeat. Of the 55 distinct paths, 47 arrive via SOURCE_BASELINE and
+# only 8 are pinned independently of the declaration. Keep these three numbers in
+# step with the two constants below whenever either is bumped.
 #
 # Bump these deliberately when adding or removing tracked source.
 #
@@ -59,8 +60,10 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # (tests/test_generate_source_declaration.py) for #74.
 # Bumped 2026-07-29: +1 in-tree adversarial replay corpus
 # (tests/test_admission_attack_corpus.py) for #67.
-EXPECTED_DISTINCT_FROZEN_PATHS = 54
-EXPECTED_SOURCE_BASELINE_PATHS = 46
+# Bumped 2026-08-03: +1 interpreter-startup isolation canary
+# (tests/test_admission_startup_isolation.py) for #113.
+EXPECTED_DISTINCT_FROZEN_PATHS = 55
+EXPECTED_SOURCE_BASELINE_PATHS = 47
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

@@ -31,7 +31,12 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python3 -m tools.admission_root_v1 --self-check --root .
+          # -S disables the `site` module, so no `sitecustomize.py`,
+          # `usercustomize.py`, or `.pth` file executes inside the admission
+          # interpreter, whatever directory it would have come from. The
+          # validator is standard-library only, so it needs nothing `site`
+          # would have added. Proven by tests/test_admission_startup_isolation.py.
+          python3 -S -m tools.admission_root_v1 --self-check --root .
           git fetch --no-tags --depth=1 origin "${HEAD_SHA}"
           git ls-tree -rz --full-tree "${HEAD_SHA}" > "${RUNNER_TEMP}/candidate-tree.bin"
           mkdir "${RUNNER_TEMP}/candidate-blobs"
@@ -49,7 +54,7 @@ jobs:
           validator_blob="$(git rev-parse "${BASE_SHA}:tools/admission_root_v1.py")"
           workflow_blob="$(git rev-parse \
             "${BASE_SHA}:.github/workflows/candidate-admission.yml")"
-          python3 -m tools.admission_root_v1 \
+          python3 -S -m tools.admission_root_v1 \
             --candidate \
             --records "${RUNNER_TEMP}/candidate-tree.bin" \
             --record-format tree-v1 \
