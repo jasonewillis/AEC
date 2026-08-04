@@ -278,6 +278,15 @@ class AdmissionRootV1Tests(unittest.TestCase):
             "identity": laundered_identity,
             "trust_root_lock_identity": laundered_lock,
         }
+        # Also make the candidate's own declared source digest for the
+        # tampered validator self-consistent (matching the tampered bytes).
+        # Without this, the generic per-path declared-digest check in
+        # _verify_local would already catch the mismatch on its own, and the
+        # test would not isolate the base-owned validator_blob_oid/
+        # validator_sha256 authority check this canary exists to protect.
+        payload["sources"]["tools/admission_root_v1.py"] = hashlib.sha256(
+            tampered_validator
+        ).hexdigest()
         laundered_declaration = json.dumps(payload).encode("utf-8")
         declaration_oid = git_blob_oid(laundered_declaration)
         entries[DECLARATION_PATH.encode()] = ("100644", declaration_oid)
