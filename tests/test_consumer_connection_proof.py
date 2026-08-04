@@ -348,16 +348,16 @@ class ActionableFailureMessageTests(unittest.TestCase):
         diagnosis = diagnose_decision_context(self.state["decision_context"])
 
         self.assertTrue(
-            {"confidence", "expected_result", "principal_uncertainty"}
+            {"confidence", "expected_result", "falsifier", "principal_uncertainty"}
             <= diagnosis.missing_fields
         )
         self.assertTrue(
             "decision_context.recommendation is missing required fields: "
-            "confidence, expected_result, principal_uncertainty"
+            "confidence, expected_result, falsifier, principal_uncertainty"
             in diagnosis.messages
         )
 
-    def test_diagnosis_missing_fields_is_exactly_the_five_pre_48_gaps(self) -> None:
+    def test_diagnosis_missing_fields_is_exactly_the_pre_48_gaps(self) -> None:
         """G4/structural: missing_fields is exact field names, not prose."""
         diagnosis = diagnose_decision_context(self.state["decision_context"])
 

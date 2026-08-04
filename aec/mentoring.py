@@ -35,6 +35,20 @@ CONTEXT_FIELDS = {"evidence_quality", "revision"}
 RECOMMENDATION_FIELDS = {
     "choice",
     "confidence",
+    # What observation would show the recommendation was wrong.
+    #
+    # `principal_uncertainty` states doubt, `revisit_when` states timing, and
+    # `expected_result` states what success looks like. None of the three says
+    # what would REFUTE the claim, so a recommendation could be marked
+    # supported because the measure moved for an unrelated reason -- right
+    # answer, wrong reason, and nothing in the contract able to catch it (#59).
+    #
+    # Required on every material decision, not above some stakes threshold.
+    # `decision_context` is already optional: a routine step declares null and
+    # renders no decision block at all. So if a fork is material enough to
+    # declare, it is material enough to say what would refute it, and no
+    # separate notion of stakes has to be invented to decide.
+    "falsifier",
     "expected_result",
     "principal_uncertainty",
     "revisit_when",
@@ -214,6 +228,10 @@ def validate_decision_context(
             )
         if not _non_empty_string(recommendation.get("why")):
             errors.append(f"{field}.recommendation.why must be a non-empty string")
+        if not _non_empty_string(recommendation.get("falsifier")):
+            errors.append(
+                f"{field}.recommendation.falsifier must be a non-empty string"
+            )
         if not _non_empty_string(recommendation.get("principal_uncertainty")):
             errors.append(
                 f"{field}.recommendation.principal_uncertainty must be a non-empty string"

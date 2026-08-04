@@ -217,6 +217,11 @@
               ],
               "type": "object"
             },
+            "falsifier": {
+              "description": "The observation that would show this recommendation was wrong. Not doubt (principal_uncertainty), not timing (revisit_when), and not the target (expected_result) -- the thing that, if seen, refutes it.",
+              "minLength": 1,
+              "type": "string"
+            },
             "principal_uncertainty": {
               "minLength": 1,
               "pattern": ".*\\S.*",
@@ -242,6 +247,7 @@
             "choice",
             "confidence",
             "expected_result",
+            "falsifier",
             "principal_uncertainty",
             "revisit_when",
             "why"

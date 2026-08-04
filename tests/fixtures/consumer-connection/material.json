@@ -1,13 +1,17 @@
 {
   "blockers": [],
   "capabilities": {
-    "capabilities": ["normalized-resolution"],
+    "capabilities": [
+      "normalized-resolution"
+    ],
     "identity": "portable-python",
     "version": "portable-python:1.0.0"
   },
   "consumer_profile": {
     "aec_mode": "read-only-mentor",
-    "agent_adapters": ["example-adapter"],
+    "agent_adapters": [
+      "example-adapter"
+    ],
     "lifecycle_authority": "consumer-owned",
     "profile_version": "example:1.0.0",
     "project": "example-owner/example-repo",
@@ -59,6 +63,7 @@
         "threshold": "Zero unrelated import failures in the focused UI proof run.",
         "unit": "failures"
       },
+      "falsifier": "The chosen boundary is in place and an unrelated import still reaches the isolated module, showing the boundary was not what contained it.",
       "principal_uncertainty": "Whether any production entry point still imports the ML stack eagerly.",
       "revisit_when": [
         "The ML stack becomes a required dependency for every application entry point."
