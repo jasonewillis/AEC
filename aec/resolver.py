@@ -13,8 +13,10 @@ from aec._generated.resolver_program import RESOLVER_PROGRAM
 from aec.contracts import normalize_exact_json, validate_project_profile
 from aec.mentoring import (
     normalized_decision_context,
+    normalized_observation_context,
     validate_decision_context,
     validate_mentoring,
+    validate_observation_context,
 )
 
 
@@ -34,7 +36,7 @@ REQUIRED_REQUEST_FIELDS = {
     "task_id",
     "workflow",
 }
-OPTIONAL_REQUEST_FIELDS = {"decision_context"}
+OPTIONAL_REQUEST_FIELDS = {"decision_context", "observation_context"}
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 PROCEDURE_REVISION = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -481,6 +483,12 @@ def validate_resolution_request(request: object) -> list[str]:
             revision=request.get("revision"),
         )
     )
+    errors.extend(
+        validate_observation_context(
+            request.get("observation_context"),
+            revision=request.get("revision"),
+        )
+    )
     errors.extend(_validate_policy(request.get("policy")))
     errors.extend(
         _validate_procedure_reference(
@@ -758,6 +766,9 @@ def resolve(
         "lane": request["lane"],
         "mentoring": procedure["mentoring"],
         "mutates": False,
+        "observation_support": normalized_observation_context(
+            request.get("observation_context")
+        ),
         "phase": request["phase"],
         "policy_version": policy["revision"],
         "primary_blocker": (

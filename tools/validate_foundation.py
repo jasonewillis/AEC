@@ -198,6 +198,7 @@ REQUIRED_RESOLUTION_FIELDS = {
     "lane",
     "mentoring",
     "mutates",
+    "observation_support",
     "phase",
     "policy_version",
     "primary_blocker",
@@ -263,6 +264,18 @@ RECOMMENDATION_FIELDS = {
     "revisit_when",
     "why",
 }
+OBSERVATION_CONTEXT_FIELDS = {
+    "action",
+    "authority",
+    "confidence",
+    "context",
+    "instances",
+    "recognition_heuristic",
+    "refuted_if",
+    "schema_version",
+    "statement",
+}
+MINIMUM_OBSERVATION_INSTANCES = 2
 SUPPORTING_EVIDENCE_QUALITY = {
     "high": {"direct-verified"},
     "medium": {"direct-verified", "indirect"},
@@ -285,6 +298,7 @@ PUBLIC_CARD_FIELDS = {
     "good",
     "lane",
     "mentoring",
+    "observation_support",
     "phase",
     "rail_position",
     "rationale",
@@ -445,6 +459,59 @@ def _validate_decision_support(value: object) -> list[str]:
     return errors
 
 
+def _validate_observation_support(value: object) -> list[str]:
+    """Independently validate the closed optional observation record."""
+    if value is None:
+        return []
+    if type(value) is not dict or set(value) != OBSERVATION_CONTEXT_FIELDS:
+        return ["observation_support fields do not match the contract"]
+    errors: list[str] = []
+    if value.get("schema_version") != "1.0.0":
+        errors.append("observation_support.schema_version must equal 1.0.0")
+    for name in ("statement", "recognition_heuristic", "refuted_if"):
+        if not _non_empty_string(value.get(name)):
+            errors.append(f"observation_support.{name} must be a non-empty string")
+    action = value.get("action")
+    if action is not None and not _non_empty_string(action):
+        errors.append("observation_support.action must be a non-empty string or null")
+    instances = value.get("instances")
+    if type(instances) is not list or not all(
+        _non_empty_string(item) for item in instances
+    ):
+        errors.append("observation_support.instances must be a list of non-empty strings")
+    elif len(instances) < MINIMUM_OBSERVATION_INSTANCES:
+        errors.append(
+            f"observation_support.instances needs at least "
+            f"{MINIMUM_OBSERVATION_INSTANCES} concrete identities"
+        )
+    elif len(instances) != len(set(instances)):
+        errors.append("observation_support.instances must name distinct occurrences")
+    context = value.get("context")
+    if type(context) is not dict or set(context) != {"evidence_quality", "revision"}:
+        errors.append("observation_support.context fields do not match the contract")
+        context = {}
+    else:
+        revision = context.get("revision")
+        if not isinstance(revision, str) or not HEX_REVISION.fullmatch(revision):
+            errors.append("observation_support.context.revision is invalid")
+        if context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY["low"]:
+            errors.append("observation_support.context.evidence_quality is unsupported")
+    authority = value.get("authority")
+    if type(authority) is not dict or set(authority) != {"owner", "reason"}:
+        errors.append("observation_support.authority fields do not match the contract")
+    elif (
+        authority.get("owner") not in {"agent", "consumer-owner", "external"}
+        or not _non_empty_string(authority.get("reason"))
+    ):
+        errors.append("observation_support.authority is invalid")
+    confidence = value.get("confidence")
+    if confidence not in SUPPORTING_EVIDENCE_QUALITY:
+        errors.append("observation_support.confidence is unsupported")
+    elif context.get("evidence_quality") not in SUPPORTING_EVIDENCE_QUALITY[confidence]:
+        errors.append("observation_support.confidence exceeds its evidence quality")
+    return errors
+
+
 def independent_card_hash(card: dict[str, Any]) -> str:
     """Recompute the card hash over the complete card except card_hash."""
     covered = {name: value for name, value in card.items() if name != "card_hash"}
@@ -555,6 +622,16 @@ def validate_public_card(card: object) -> list[str]:
         if isinstance(context, dict) and context.get("revision") != revision:
             errors.append("public card decision context binds a foreign revision")
 
+    observation = card.get("observation_support")
+    errors.extend(_validate_observation_support(observation))
+    if isinstance(observation, dict):
+        observation_context = observation.get("context")
+        if (
+            isinstance(observation_context, dict)
+            and observation_context.get("revision") != revision
+        ):
+            errors.append("public card observation context binds a foreign revision")
+
     card_hash = card.get("card_hash")
     if not isinstance(card_hash, str) or not HASH_VALUE.fullmatch(card_hash):
         errors.append("public card card_hash must be a SHA-256 binding")
@@ -593,6 +670,7 @@ def validate_resolution(resolution: object) -> list[str]:
         errors.append("AEC decisions must set mutates=false")
     errors.extend(_validate_mentoring(resolution.get("mentoring")))
     errors.extend(_validate_decision_support(resolution.get("decision_support")))
+    errors.extend(_validate_observation_support(resolution.get("observation_support")))
 
     input_bindings = resolution.get("input_bindings")
     if not isinstance(input_bindings, dict) or set(input_bindings) != {

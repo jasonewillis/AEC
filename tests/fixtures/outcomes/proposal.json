@@ -82,6 +82,27 @@
   },
   "evidence": [],
   "expires_at": "2026-01-01T01:00:00Z",
+  "observation_context": {
+    "action": "Re-derive any status artifact on read rather than citing it.",
+    "authority": {
+      "owner": "consumer-owner",
+      "reason": "Changing how status artifacts are consumed is the owner's call."
+    },
+    "confidence": "medium",
+    "context": {
+      "evidence_quality": "indirect",
+      "revision": "0123456789abcdef0123456789abcdef01234567"
+    },
+    "instances": [
+      "codex-review-blocking label on #9760",
+      "a02b0721 failure notices",
+      "a scheduled check-in asking to verify settled conditions"
+    ],
+    "recognition_heuristic": "A status artifact is cited as current without anything re-checking it.",
+    "refuted_if": "Each artifact is re-derived at read time, so none can outlive its subject.",
+    "schema_version": "1.0.0",
+    "statement": "Recorded state outlives the thing it described."
+  },
   "observed_at": "2026-01-01T00:00:00Z",
   "policy": {
     "facts": {

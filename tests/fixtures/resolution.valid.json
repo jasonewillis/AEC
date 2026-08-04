@@ -29,13 +29,16 @@
     "why_gate_exists": "Evidence from another revision or environment can create a false green."
   },
   "mutates": false,
+  "observation_support": null,
   "phase": "Verify",
   "policy_version": "0.1.0",
   "primary_blocker": null,
   "primary_procedure": "aec-verify",
   "project_profile_version": "reference-profile:0.1.0",
   "rationale": {
-    "principle_ids": ["aec-evidence-input-binding"],
+    "principle_ids": [
+      "aec-evidence-input-binding"
+    ],
     "summary": "Verification evidence is incomplete for the exact revision and environment."
   },
   "reason_code": "ACCEPTANCE_EVIDENCE_INCOMPLETE",
@@ -48,7 +51,7 @@
     "identity": "aec-verify",
     "revision": "aec-verify:0.1.0"
   },
-  "resolution_hash": "sha256:5e43bd42638001c871801bad6c93240869d5b57c51c9b3477cf4b5eabc624a04",
+  "resolution_hash": "sha256:7d8d85b9f0d60fcead24a5181d26deffd7770e099640bf3e02d654a130ca4eb4",
   "revision": "0123456789abcdef0123456789abcdef01234567",
   "schema_version": "4.0.0",
   "source_identities": {

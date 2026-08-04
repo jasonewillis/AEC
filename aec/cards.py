@@ -15,7 +15,11 @@ import re
 from typing import Any
 
 from aec.contracts import normalize_exact_json
-from aec.mentoring import validate_decision_context, validate_mentoring
+from aec.mentoring import (
+    validate_decision_context,
+    validate_mentoring,
+    validate_observation_context,
+)
 
 
 PUBLIC_CARD_SCHEMA_VERSION = "3.0.0"
@@ -29,6 +33,7 @@ PUBLIC_CARD_FIELDS = {
     "good",
     "lane",
     "mentoring",
+    "observation_support",
     "phase",
     "rail_position",
     "rationale",
@@ -92,6 +97,7 @@ def project_card(decision: object) -> dict[str, Any]:
         "good": resolved["good"],
         "lane": resolved["lane"],
         "mentoring": resolved["mentoring"],
+        "observation_support": resolved["observation_support"],
         "phase": phase,
         "rail_position": {
             "phase": stage_phases.index(phase) + 1,
@@ -247,6 +253,13 @@ def validate_public_card(card: object, field: str = "card") -> list[str]:
         validate_decision_context(
             value.get("decision_support"),
             f"{field}.decision_support",
+            revision=revision,
+        )
+    )
+    errors.extend(
+        validate_observation_context(
+            value.get("observation_support"),
+            f"{field}.observation_support",
             revision=revision,
         )
     )

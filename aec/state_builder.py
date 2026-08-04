@@ -146,6 +146,7 @@ def build_state(
     workflow: dict[str, Any],
     profile: dict[str, Any] | None = None,
     decision_context: dict[str, Any] | None = None,
+    observation_context: dict[str, Any] | None = None,
     observed_at: datetime | None = None,
 ) -> dict[str, Any]:
     """Construct one schema-shaped consumer state, proving every derivable fact.
@@ -238,20 +239,26 @@ def build_state(
     }
 
     if decision_context is not None:
-        state["decision_context"] = _bind_decision_context_revision(
-            decision_context, revision
+        state["decision_context"] = _bind_context_revision(
+            "decision context", decision_context, revision
+        )
+
+    if observation_context is not None:
+        state["observation_context"] = _bind_context_revision(
+            "observation context", observation_context, revision
         )
 
     return state
 
 
-def _bind_decision_context_revision(
-    decision_context: dict[str, Any], revision: str
+def _bind_context_revision(
+    label: str, record: dict[str, Any], revision: str
 ) -> dict[str, Any]:
-    """Bind decision_context.context.revision to the resolved revision, or reject.
+    """Bind record.context.revision to the resolved revision, or reject.
 
-    Two different inputs need two different responses, not one blanket
-    overwrite:
+    Shared by `decision_context` and `observation_context`, whose `context`
+    sub-object has the identical {evidence_quality, revision} shape. Two
+    different inputs need two different responses, not one blanket overwrite:
 
     - A template placeholder (anything that is not a well-formed 40-character
       lowercase hex commit, e.g. the fixture's literal "__REVISION__") cannot
@@ -261,22 +268,22 @@ def _bind_decision_context_revision(
     - A well-formed SHA that disagrees with the resolved revision IS a real
       claim, about a different tree. That disagreement is exactly what
       `context.revision must equal the resolved revision`
-      (aec/mentoring.py _validate_context) exists to catch: a decision
-      reasoned about one commit, now being rendered against another. Silently
-      relabeling it as current would destroy that signal, so this rejects it
-      instead, naming both revisions.
+      (aec/mentoring.py _validate_context) exists to catch: a decision or
+      observation reasoned about one commit, now being rendered against
+      another. Silently relabeling it as current would destroy that signal,
+      so this rejects it instead, naming both revisions.
 
     A SHA that already equals the resolved revision passes through unchanged.
     """
-    context = decision_context.get("context")
+    context = record.get("context")
     if not isinstance(context, dict):
-        raise BuildStateFailure("decision context has no context object")
+        raise BuildStateFailure(f"{label} has no context object")
     supplied = context.get("revision")
     if type(supplied) is str and HEX_REVISION.fullmatch(supplied) and supplied != revision:
         raise BuildStateFailure(
-            "decision context is stale: context.revision "
+            f"{label} is stale: context.revision "
             f"{supplied!r} does not equal the resolved revision {revision!r}"
         )
-    bound = dict(decision_context)
+    bound = dict(record)
     bound["context"] = {**context, "revision": revision}
     return bound

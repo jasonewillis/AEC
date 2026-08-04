@@ -28,15 +28,15 @@ GOLDEN_PHASES = {
     "Deploy": ("Assure & Release", "prove-live-revision"),
 }
 GOLDEN_HASHES = {
-    "Intake": "sha256:26c8a4cba539657d74cb32a847dc275b42e6bdd66a3b5eb8f89a33b8c77276ac",
-    "Framing": "sha256:da1817d1c51b2a3d8edf8949703f6acbca356fcbb5c90e4c9feb636d8f3089d5",
-    "Spec": "sha256:ea7fda42dcb03fe0040e1ba6dcab584a65d21a3eaaaa9e481720966d11e0c045",
-    "Plan": "sha256:fed2bf404aa1b6c340490c09b3ae98d4becce6db57ec4b73b6d95687b9284b91",
-    "Build": "sha256:178f1acfc74e2105040adbd5b8a2895d060d3b298b01197ee456ef1c6e6b6870",
-    "Verify": "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
-    "Review": "sha256:9bfa2df8d5718b80a06dac9996b63f4872f729d2fb2df14c3aecdfdfbdd31152",
-    "PR": "sha256:ca2b967370e1a1795b215d9da2b61dbe4b756f609e53d3ae9752314d2e9e2a30",
-    "Deploy": "sha256:246b06e43f2d575246543f4984cc3459706972add6875fe0085e18b5c9954f01",
+    "Intake": "sha256:92467b8464f59c133c778b2d344cb0cbf3a31529366fc5ba606bb4aa4b375df0",
+    "Framing": "sha256:8c86b4bb9791c0e3717009e113e40ff86dbe1d9906bb4eba1af1c302aa58cf7c",
+    "Spec": "sha256:7bac24046a982e7c0b043188e9f3c9865c9cd8abf30152f1ab4c4b4ac4204319",
+    "Plan": "sha256:394a7b239df73bbd2efdaa134798a015b6c780325580fa5da346ecac500a6916",
+    "Build": "sha256:49e37b301f96ddedc7764d8003a83f8577b1e600d6cf7611616e4a13517d9a88",
+    "Verify": "sha256:7ae98c2df0b6a872f804eabf725f8d52f34bc35759c422174d6f0396cf751b64",
+    "Review": "sha256:73ce3f4017b290b78ec798e337ade0dc4861e7ddf7fd92a304f37a32e8ad5acb",
+    "PR": "sha256:a63872c885eb9075d65e7c4170170ea297e10fcff3b30512d078ff33b52c5aba",
+    "Deploy": "sha256:384aeda53db622c5d64b30a07e2713f5d78b11c9c39eaa78ce70e069be85ac0d",
 }
 
 MATERIAL_DECISION_CONTEXT = {
@@ -97,6 +97,36 @@ MATERIAL_DECISION_CONTEXT = {
         "why": "It removes the unrelated import failure at the narrowest durable seam.",
     },
     "schema_version": "2.0.0",
+}
+
+
+MATERIAL_OBSERVATION_CONTEXT = {
+    "action": (
+        "Re-derive any status artifact on read rather than citing it, starting "
+        "with the codex-review-blocking label."
+    ),
+    "authority": {
+        "owner": "consumer-owner",
+        "reason": "Changing how status artifacts are consumed is the owner's call.",
+    },
+    "confidence": "medium",
+    "context": {
+        "evidence_quality": "indirect",
+        "revision": "0123456789abcdef0123456789abcdef01234567",
+    },
+    "instances": [
+        "codex-review-blocking label on #9760",
+        "a02b0721 failure notices",
+        "a scheduled check-in asking to verify settled conditions",
+    ],
+    "recognition_heuristic": (
+        "A status artifact is cited as current without anything re-checking it."
+    ),
+    "refuted_if": (
+        "Each artifact is re-derived at read time, so none can outlive its subject."
+    ),
+    "schema_version": "1.0.0",
+    "statement": "Recorded state outlives the thing it described.",
 }
 
 
@@ -371,6 +401,54 @@ class ResolverTracerTests(unittest.TestCase):
                     resolve(invalid, procedures),
                     ResolutionRejection,
                 )
+
+    def test_material_observation_context_is_validated_bound_and_rendered(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+        request["observation_context"] = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+
+        first = resolve(request, procedures)
+        second = resolve(copy.deepcopy(request), procedures)
+
+        self.assertNotIsInstance(first, ResolutionRejection)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            MATERIAL_OBSERVATION_CONTEXT,
+            first.to_dict()["observation_support"],
+        )
+
+        changed = copy.deepcopy(request)
+        changed["observation_context"]["statement"] = (
+            "A changed statement must change the bound resolution."
+        )
+        changed_result = resolve(changed, procedures)
+        self.assertNotIsInstance(changed_result, ResolutionRejection)
+        self.assertNotEqual(first.resolution_hash, changed_result.resolution_hash)
+
+    def test_malformed_observation_context_fails_closed(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+
+        # RED CANARY for #131. One instance is a hunch, not a pattern.
+        single_instance = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        single_instance["instances"] = single_instance["instances"][:1]
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = single_instance
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
+
+        stale_context = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        stale_context["context"]["revision"] = "f" * 40
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = stale_context
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
+
+        unknown_field = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        unknown_field["notes"] = "an unstructured aside"
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = unknown_field
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
 
     def test_unapproved_golden_request_drift_is_not_normalized_away(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
@@ -1145,7 +1223,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
+            "sha256:7ae98c2df0b6a872f804eabf725f8d52f34bc35759c422174d6f0396cf751b64",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -1236,7 +1314,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:2dcd3f4b60449f41a0f2a4e19d4e63be02f4beaa1608bc86520a7bfb27718c88",
+            "sha256:944086019294fb2e089045b979db36da1b8d06f75ebea73302c9ef5e1cff9600",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))

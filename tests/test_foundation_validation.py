@@ -77,6 +77,27 @@ class ResolutionValidationTests(unittest.TestCase):
             compute_resolution_hash(changed),
         )
 
+    def test_malformed_observation_support_fails_closed(self) -> None:
+        """Independent restatement, exercised directly on a decision dict.
+
+        `resolve()` catches a malformed observation_context earlier, at the
+        request boundary, so a request-level canary alone would never reach
+        this restated check. This proves tools/validate_foundation.py's own
+        _validate_observation_support fires even when a decision arrives
+        already assembled -- the same defense-in-depth decision_support
+        already has via test_valid_resolution_has_stable_hash_and_no_errors.
+        """
+        resolution = load_json(FIXTURES / "resolution.valid.json")
+        assert isinstance(resolution, dict)
+        malformed = copy.deepcopy(resolution)
+        malformed["observation_support"] = {"schema_version": "1.0.0"}
+
+        errors = validate_resolution(malformed)
+
+        self.assertTrue(
+            any("observation_support" in error for error in errors), errors
+        )
+
 
 class SourceContractTests(unittest.TestCase):
     def test_request_schema_and_validator_reject_stage_phase_mismatch(self) -> None:

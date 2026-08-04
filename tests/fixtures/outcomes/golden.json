@@ -4,7 +4,7 @@
       "card": {
         "anti_example": "A task list omits ownership, proof, or a stop condition.",
         "authoritative": false,
-        "card_hash": "sha256:023b40112407deddf3520b3dd60f9032450c93b3746bd7f3f6f61885bedd196e",
+        "card_hash": "sha256:dc96b83e3b97d5678eeda33ba40aa192c6fc3e9868036e90cc00ad7040b395a2",
         "decision_support": {
           "authority": {
             "owner": "consumer-owner",
@@ -73,6 +73,27 @@
           "recognition_heuristic": "Use this procedure when work spans dependencies, owners, or proof surfaces that cannot safely change as one slice.",
           "why_gate_exists": "A task list without dependencies, ownership, and proof hides the critical path and encourages unfinished parallel work."
         },
+        "observation_support": {
+          "action": "Re-derive any status artifact on read rather than citing it.",
+          "authority": {
+            "owner": "consumer-owner",
+            "reason": "Changing how status artifacts are consumed is the owner's call."
+          },
+          "confidence": "medium",
+          "context": {
+            "evidence_quality": "indirect",
+            "revision": "0123456789abcdef0123456789abcdef01234567"
+          },
+          "instances": [
+            "codex-review-blocking label on #9760",
+            "a02b0721 failure notices",
+            "a scheduled check-in asking to verify settled conditions"
+          ],
+          "recognition_heuristic": "A status artifact is cited as current without anything re-checking it.",
+          "refuted_if": "Each artifact is re-derived at read time, so none can outlive its subject.",
+          "schema_version": "1.0.0",
+          "statement": "Recorded state outlives the thing it described."
+        },
         "phase": "Plan",
         "rail_position": {
           "phase": 2,
@@ -92,7 +113,7 @@
           "proof-and-stop-rules",
           "vertical-slice-plan"
         ],
-        "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
+        "resolution_hash": "sha256:88c65697ad322e37266279814b04c80c4575d1401f0e74cf9e20ca71f4cec0c6",
         "schema_version": "3.0.0",
         "transition_request": {
           "authoritative": false,
@@ -179,7 +200,7 @@
         ],
         "input_bindings": {
           "procedure_catalog": "sha256:982cbc933842683edee7c95bb9fc19e8c86a4d50721c11a4e6ca28cb6595d996",
-          "resolution_request": "sha256:d32d339da459e12e2a0d92465a02ba56d530ea95e2c8f51caba2b3c37660c050"
+          "resolution_request": "sha256:03922e09f5c6d1b71f8163670dcefd193b30d8c2a5b68e997af9e0ae55b9bf1c"
         },
         "lane": "GENERAL",
         "mentoring": {
@@ -188,6 +209,27 @@
           "why_gate_exists": "A task list without dependencies, ownership, and proof hides the critical path and encourages unfinished parallel work."
         },
         "mutates": false,
+        "observation_support": {
+          "action": "Re-derive any status artifact on read rather than citing it.",
+          "authority": {
+            "owner": "consumer-owner",
+            "reason": "Changing how status artifacts are consumed is the owner's call."
+          },
+          "confidence": "medium",
+          "context": {
+            "evidence_quality": "indirect",
+            "revision": "0123456789abcdef0123456789abcdef01234567"
+          },
+          "instances": [
+            "codex-review-blocking label on #9760",
+            "a02b0721 failure notices",
+            "a scheduled check-in asking to verify settled conditions"
+          ],
+          "recognition_heuristic": "A status artifact is cited as current without anything re-checking it.",
+          "refuted_if": "Each artifact is re-derived at read time, so none can outlive its subject.",
+          "schema_version": "1.0.0",
+          "statement": "Recorded state outlives the thing it described."
+        },
         "phase": "Plan",
         "policy_version": "default-delivery:1.0.0",
         "primary_blocker": null,
@@ -209,7 +251,7 @@
           "identity": "plan-vertical-delivery",
           "revision": "plan-vertical-delivery:1.0.0"
         },
-        "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
+        "resolution_hash": "sha256:88c65697ad322e37266279814b04c80c4575d1401f0e74cf9e20ca71f4cec0c6",
         "revision": "0123456789abcdef0123456789abcdef01234567",
         "schema_version": "4.0.0",
         "source_identities": {
@@ -236,7 +278,7 @@
           "transfer": "full"
         },
         "decision": {
-          "resolution_hash": "sha256:435d7fe660896517c856c49490e68738b8bb955432de5dd617730f9e90c212ec",
+          "resolution_hash": "sha256:88c65697ad322e37266279814b04c80c4575d1401f0e74cf9e20ca71f4cec0c6",
           "revision": "0123456789abcdef0123456789abcdef01234567",
           "selected_choice": "isolate-import-boundary"
         },
