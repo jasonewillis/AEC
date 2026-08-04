@@ -426,6 +426,45 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertNotIsInstance(changed_result, ResolutionRejection)
         self.assertNotEqual(first.resolution_hash, changed_result.resolution_hash)
 
+    def test_observation_content_alone_does_not_change_the_rest_of_the_decision(
+        self,
+    ) -> None:
+        """Two decisions differing only in observation content must agree on
+        every field the resolver actually decided -- gate, reason_code,
+        required_evidence, and everything else -- and differ only in the new
+        field and the hash it feeds. Otherwise a caller-supplied observation
+        could quietly influence what AEC recommends, which the resolver's own
+        read-only mentoring boundary forbids.
+        """
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+
+        without_observation = resolve(request, procedures)
+        self.assertNotIsInstance(without_observation, ResolutionRejection)
+
+        with_observation_request = copy.deepcopy(request)
+        with_observation_request["observation_context"] = copy.deepcopy(
+            MATERIAL_OBSERVATION_CONTEXT
+        )
+        with_observation = resolve(with_observation_request, procedures)
+        self.assertNotIsInstance(with_observation, ResolutionRejection)
+
+        payload_without = without_observation.to_dict()
+        payload_with = with_observation.to_dict()
+        self.assertNotEqual(
+            without_observation.resolution_hash, with_observation.resolution_hash
+        )
+        only_different = {
+            name
+            for name in payload_with
+            if payload_with[name] != payload_without.get(name)
+        }
+        self.assertEqual(
+            {"observation_support", "resolution_hash", "input_bindings"},
+            only_different,
+        )
+
     def test_malformed_observation_context_fails_closed(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
         procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")

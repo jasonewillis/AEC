@@ -352,7 +352,7 @@
     "tests/test_read_only_authority_boundary.py": "1fe4f994eb73a5324e97e15888ea976830a475f983c7f73d962100fefc305a67",
     "tests/test_release_api_evidence.py": "dd52db457de6c83224745f71c856ee1a053575d9da00e56c3b32c95474e623cd",
     "tests/test_release_manifest.py": "4fe8c230fd3d67a654afec7f5051769a69e314b1f4ade1e038b00b9768b9f14a",
-    "tests/test_resolver.py": "a0b585e3ce512a78af89a2b25e75e5bc3c84bd978f64b6d51a31d56872355078",
+    "tests/test_resolver.py": "5aaf42aed24e09049645fddf2c733569144a35dee0728debe9cb8b895fc3f681",
     "tests/test_resolver_blocker_precedence.py": "6520eeb583c52041f7f727060c17afb0e5b1e231ffa37e7bfc19baec3242432e",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_binds_consumer_repo.py": "1a8ef425d76243d9f114432e69f16ea68a657e93673e6fb408eba5dcfb11a696",
