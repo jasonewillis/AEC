@@ -143,6 +143,44 @@ Concretely: #123 and #118 are complete, green, reviewed, and correctly **not mer
 because `admit` refuses them. That is the rule working, not a stall. Do not stop *deciding*;
 do stop when the evidence is not there.
 
+### Never hand back a command you can run
+
+Stated by the owner on 2026-08-04. Handing over a command you could have executed is the
+same stall as handing over a decision you could have made.
+
+Three cases, and they are not the same thing:
+
+| Situation | What to do |
+| --- | --- |
+| Not blocked | **Run it.** Do not narrate it, do not offer it, do not ask. |
+| Blocked by a gate the owner can unlock | Ask for the **approval key**, then run it yourself. |
+| Only the owner can run it | Give the command, formatted to paste once. |
+
+The middle case is the one that looks like the rule and is not.
+`~/.claude/hooks/pre-bash-destructive-confirm.py` requires an explicit
+`Approved: <key>` before `rm`, `git checkout --`, `chmod` and similar. That is asking to
+be *unblocked*, not asking the owner to do the work, and this rule does not license
+bypassing it. Same for `~/.claude/scripts/grant-exec.sh`.
+
+The third case is genuinely rare — a permission classifier denial, a credential not held,
+or host-shell state unreachable from the sandbox. On 2026-08-04 `git update-ref -d HEAD`
+in `~/.claude` was denied by the classifier, so it was correct to hand it over rather than
+route around the denial.
+
+When it is genuinely the third case, format for a single paste:
+
+- One line. No line continuations, no wrapped heredocs, nothing the terminal will
+  re-fragment.
+- Quote anything containing a space, `$`, or `!`.
+- Absolute paths or `-C <repo>`, never "cd there first".
+- State what proves it worked, so the result is checkable without a second round-trip.
+
+Good: `git -C ~/.claude update-ref -d HEAD` — then `git -C ~/.claude log --oneline | wc -l`
+should print `0`.
+
+Bad: a fenced block that assumes a working directory, spans lines, and leaves the owner to
+work out whether it succeeded.
+
 ### Where autonomy actually went wrong
 
 On 2026-08-03/04 the two real mistakes — an accidental initial commit sweeping in another
