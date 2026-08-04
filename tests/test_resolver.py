@@ -28,15 +28,15 @@ GOLDEN_PHASES = {
     "Deploy": ("Assure & Release", "prove-live-revision"),
 }
 GOLDEN_HASHES = {
-    "Intake": "sha256:26c8a4cba539657d74cb32a847dc275b42e6bdd66a3b5eb8f89a33b8c77276ac",
-    "Framing": "sha256:da1817d1c51b2a3d8edf8949703f6acbca356fcbb5c90e4c9feb636d8f3089d5",
-    "Spec": "sha256:ea7fda42dcb03fe0040e1ba6dcab584a65d21a3eaaaa9e481720966d11e0c045",
-    "Plan": "sha256:fed2bf404aa1b6c340490c09b3ae98d4becce6db57ec4b73b6d95687b9284b91",
-    "Build": "sha256:178f1acfc74e2105040adbd5b8a2895d060d3b298b01197ee456ef1c6e6b6870",
-    "Verify": "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
-    "Review": "sha256:9bfa2df8d5718b80a06dac9996b63f4872f729d2fb2df14c3aecdfdfbdd31152",
-    "PR": "sha256:ca2b967370e1a1795b215d9da2b61dbe4b756f609e53d3ae9752314d2e9e2a30",
-    "Deploy": "sha256:246b06e43f2d575246543f4984cc3459706972add6875fe0085e18b5c9954f01",
+    "Intake": "sha256:82daaa7425503f119bbf0a879e20ded670d115a0c2367f085fdfe6113d57c94b",
+    "Framing": "sha256:f10d7cc22312a2647e10f2aa23c769871e9fc67b9fd167172b78c1e11bdefd01",
+    "Spec": "sha256:c00de5889908c49f1ae437365b1cac1e978aeef26aedfd92194c3be9c64c6fcd",
+    "Plan": "sha256:0179b25c5be192876849d61f27e3a4f079012cda1b59e4962ade0630382b28d1",
+    "Build": "sha256:80db546023de77f406bd4bfd110c841376017561a4bac4a81e70621ab94f8e1d",
+    "Verify": "sha256:7c314d7be445623ae91e6d3a59a32cb1c182fcadf082725e99ae8943579d1d5c",
+    "Review": "sha256:af961badf59d8081644093b2f9e575ae9e5ad0f9c8f570dac5f84ffd90d366ff",
+    "PR": "sha256:9113fbb2a15a9fd93b6fd1d6cd631ebb50840b7c1cf910e2bf93534d44337f87",
+    "Deploy": "sha256:f97a819181297d102c73cd0726d539fc3038efd52ae428a7075c71d2598a16a5",
 }
 
 MATERIAL_DECISION_CONTEXT = {
@@ -1126,7 +1126,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:8489f951e3b1cb41b63d7673aeb18a56bd5b16b2d45fa976275f8c16205526ee",
+            "sha256:7c314d7be445623ae91e6d3a59a32cb1c182fcadf082725e99ae8943579d1d5c",
             first.resolution_hash,
         )
         self.assertEqual(request_before, request)
@@ -1217,7 +1217,7 @@ class ResolverTracerTests(unittest.TestCase):
         self.assertEqual(first.canonical_bytes, second.canonical_bytes)
         self.assertEqual(first.resolution_hash, second.resolution_hash)
         self.assertEqual(
-            "sha256:2dcd3f4b60449f41a0f2a4e19d4e63be02f4beaa1608bc86520a7bfb27718c88",
+            "sha256:34d5aaef77c5a321f99afc1776d975cfbb4de247b4366600ef0beade01e686e9",
             first.resolution_hash,
         )
         self.assertEqual([], validate_resolution(payload))

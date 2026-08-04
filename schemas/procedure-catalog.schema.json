@@ -29,6 +29,33 @@
             "required": ["lesson", "recognition_heuristic", "why_gate_exists"],
             "type": "object"
           },
+          "mentoring_variants": {
+            "additionalProperties": false,
+            "description": "Optional evidence-conditional teaching. A declared level must be a complete mentoring record; an absent level falls back to `mentoring`, which always serves the unmet state.",
+            "properties": {
+              "met": {
+                "additionalProperties": false,
+                "properties": {
+                  "lesson": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "recognition_heuristic": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "why_gate_exists": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+                },
+                "required": ["lesson", "recognition_heuristic", "why_gate_exists"],
+                "type": "object"
+              },
+              "partial": {
+                "additionalProperties": false,
+                "properties": {
+                  "lesson": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "recognition_heuristic": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"},
+                  "why_gate_exists": {"minLength": 1, "pattern": ".*\\S.*", "type": "string"}
+                },
+                "required": ["lesson", "recognition_heuristic", "why_gate_exists"],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
           "phase": {
             "enum": [
               "Intake",
@@ -73,6 +100,7 @@
           "good",
           "identity",
           "mentoring",
+          "mentoring_variants",
           "phase",
           "rationale",
           "reason_code",

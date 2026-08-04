@@ -14,6 +14,7 @@
         "recognition_heuristic": "Use this procedure when the request names activity but not the externally visible result.",
         "why_gate_exists": "Without an owned outcome, agents can produce substantial work that does not complete the user's goal."
       },
+      "mentoring_variants": {},
       "phase": "Intake",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-intake"],
@@ -40,6 +41,7 @@
         "recognition_heuristic": "Use this procedure when different answers to an unresolved question would change the solution or its owner.",
         "why_gate_exists": "Implicit constraints and authority create rework, collisions, and decisions made by the wrong actor."
       },
+      "mentoring_variants": {},
       "phase": "Framing",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-framing"],
@@ -67,6 +69,7 @@
         "recognition_heuristic": "Use this procedure when two capable engineers could implement different behaviors from the same request.",
         "why_gate_exists": "Implementation cannot be judged objectively while the expected behavior remains ambiguous."
       },
+      "mentoring_variants": {},
       "phase": "Spec",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-spec"],
@@ -94,6 +97,7 @@
         "recognition_heuristic": "Use this procedure when work spans dependencies, owners, or proof surfaces that cannot safely change as one slice.",
         "why_gate_exists": "A task list without dependencies, ownership, and proof hides the critical path and encourages unfinished parallel work."
       },
+      "mentoring_variants": {},
       "phase": "Plan",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-plan"],
@@ -121,6 +125,18 @@
         "recognition_heuristic": "Use this procedure after the expected behavior can fail observably and the change boundary is understood.",
         "why_gate_exists": "Building before a trustworthy red case invites speculative code and makes success hard to distinguish from test weakness."
       },
+      "mentoring_variants": {
+        "met": {
+          "lesson": "Both cases now bind this revision, so the remaining risk is scope: a change that passes its own two cases can still have moved behavior nobody asked it to move.",
+          "recognition_heuristic": "Recognize this when the proof is green and the honest next question is what else the diff touched, not whether it works.",
+          "why_gate_exists": "The gate opens on evidence, not on completeness. It cannot see work your change did outside the boundary the red case described."
+        },
+        "partial": {
+          "lesson": "One half of a change's proof is not the change. A red case with no green one shows the behavior can fail; a green one with no red one shows a test that may never have been able to fail.",
+          "recognition_heuristic": "Recognize this when you can name the evidence you already have and have stopped naming the evidence you still owe.",
+          "why_gate_exists": "Partial proof is where a change feels finished and is not. The gate holds here because the missing half is the half that would have contradicted you."
+        }
+      },
       "phase": "Build",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-build"],
@@ -146,6 +162,18 @@
         "lesson": "Verification is evidence bound to the exact revision and environment, not a claim that testing happened.",
         "recognition_heuristic": "Use this procedure when implementation is complete but its behavior has not been proven at all required boundaries.",
         "why_gate_exists": "Passing evidence from another revision or environment can create a false green release decision."
+      },
+      "mentoring_variants": {
+        "met": {
+          "lesson": "Every required report is accepted for this exact revision and environment. That is a real result, and it is a claim about this revision only; it expires the moment the head moves.",
+          "recognition_heuristic": "Recognize this when you are about to cite a passing run from before your last push as though it still applied.",
+          "why_gate_exists": "Evidence is bound to a revision so a later commit cannot inherit an earlier commit's green. Rebasing does not carry proof with it."
+        },
+        "partial": {
+          "lesson": "Focused and integration evidence answer different questions. One says the unit behaves; the other says it still behaves once something else is holding it. Neither substitutes for the other.",
+          "recognition_heuristic": "Recognize this when the report you have is the one that was easy to run, and the one you owe is the one that needs real dependencies.",
+          "why_gate_exists": "The boundary you did not test is the boundary that fails in production, because it is the one nobody was watching."
+        }
       },
       "phase": "Verify",
       "rationale": {
@@ -173,6 +201,7 @@
         "recognition_heuristic": "Use this procedure when a candidate is green locally and needs a fresh perspective before publication.",
         "why_gate_exists": "Author confidence and passing tests do not expose every contract gap, regression, or hidden assumption."
       },
+      "mentoring_variants": {},
       "phase": "Review",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-review"],
@@ -199,6 +228,7 @@
         "recognition_heuristic": "Use this procedure when code is published but review or check evidence may be stale relative to the current head.",
         "why_gate_exists": "A later push can invalidate earlier approval while leaving misleading green signals visible."
       },
+      "mentoring_variants": {},
       "phase": "PR",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-pr"],
@@ -225,6 +255,7 @@
         "recognition_heuristic": "Use this procedure after release automation succeeds but before treating the user-facing outcome as delivered.",
         "why_gate_exists": "A successful build or deploy command does not prove that users received the intended behavior."
       },
+      "mentoring_variants": {},
       "phase": "Deploy",
       "rationale": {
         "principle_ids": ["aec-ticket-to-pr-deploy"],
