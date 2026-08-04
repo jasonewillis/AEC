@@ -341,7 +341,12 @@ def run_checkpoint(arguments: argparse.Namespace) -> int:
     except (CoachFailure, RenderFailure, OSError, ValueError) as error:
         print(f"AEC coach checkpoint: FAIL: {error}", file=sys.stderr)
         return 1
-    print(rendered)
+    # `rendered` already ends in a newline. `print` would add a second, emitting a
+    # trailing blank line that only the CLI sees — the density tests call
+    # `render_human` directly and cannot observe it. That blank line counts as
+    # invariant chrome under issue #115's own metric, and it was enough to push the
+    # shipped output past the 25% gate the in-process tests reported as passing.
+    sys.stdout.write(rendered if rendered.endswith("\n") else rendered + "\n")
     return 0
 
 

@@ -188,6 +188,59 @@ class StateThenCheckpointTests(unittest.TestCase):
             self.assertIn(head_revision, result.stderr)
 
 
+class ShippedOutputDensityTests(unittest.TestCase):
+    """Density measured at the CLI boundary, which is what a user actually sees.
+
+    Issue #115's density tests call `render_human` directly. That cannot observe
+    anything the command-line wrapper adds, and the wrapper was adding a trailing
+    blank line: `rendered` already ends in a newline and `print` appended a second.
+    Under #115's own metric a blank line is invariant chrome, so the shipped output
+    exceeded the 25% gate while every in-process test reported it passing.
+
+    This measures stdout, so it reds for any wrapper-level regression the pure-function
+    tests are structurally blind to.
+    """
+
+    def test_shipped_stdout_has_no_padding_the_render_tests_cannot_see(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = build_state_file(Path(directory))
+            for label, extra in (("dense", ["--dense"]), ("oriented", [])):
+                with self.subTest(mode=label):
+                    result = run_coach("checkpoint", *extra, str(state))
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    stdout = result.stdout
+
+                    self.assertFalse(
+                        stdout.endswith("\n\n"),
+                        f"{label}: stdout ends in a blank line the render tests cannot see",
+                    )
+                    self.assertTrue(stdout.endswith("\n"), f"{label}: no trailing newline")
+
+                    body = stdout.rstrip("\n").split("\n")
+                    self.assertEqual(
+                        [line for line in body if not line.strip()],
+                        [],
+                        f"{label}: shipped output carries blank filler lines",
+                    )
+
+    def test_shipped_stdout_matches_the_pure_render_exactly(self) -> None:
+        """No wrapper may add or drop a line; otherwise the density gate lies again."""
+        with tempfile.TemporaryDirectory() as directory:
+            state = build_state_file(Path(directory))
+            result = run_coach("checkpoint", "--dense", str(state))
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            card = json.loads(run_coach("checkpoint", "--format", "json", str(state)).stdout)
+            rendered = aec_coach.render_human(
+                card, aec_coach.default_rail_definition(), orientation=False
+            )
+            self.assertEqual(
+                result.stdout.rstrip("\n").split("\n"),
+                rendered.rstrip("\n").split("\n"),
+                "the CLI emitted different lines than render_human produced",
+            )
+
+
 class OutputFormatTests(unittest.TestCase):
     def test_default_format_is_human_and_json_is_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
