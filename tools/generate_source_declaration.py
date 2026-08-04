@@ -3,11 +3,23 @@
 
 Recomputes `python_paths` and `sources` from the git-tracked .py files admission
 actually treats as source (see the `tracked_python` predicate in
-tools/admission_root_v1.py). Every other section (`artifacts`, `proof_closure`,
-`workflows`, `workflow_bundles`, `schema_version`) carries human-assigned
-metadata that cannot be derived from tree structure alone (artifact
-`closed_class` labels, symlink targets, which workflow bundles which), so
-those are carried forward from the currently committed declaration unchanged.
+tools/admission_root_v1.py). Every other section (`artifacts`, `behavior`,
+`proof_closure`, `workflows`, `workflow_bundles`, `schema_version`) carries
+human-assigned metadata that cannot be derived from tree structure alone
+(artifact `closed_class` labels, symlink targets, which workflow bundles
+which, the resolver behavior aggregate), so those are carried forward from
+the currently committed declaration unchanged.
+
+`behavior.identity` and `behavior.trust_root_lock_identity` (issue #65) are
+hand-maintained like `artifacts`/`proof_closure`, but unlike those two this
+tool does not detect their drift: they are not a digest of one file's bytes,
+so `declared_digest_drift` below has nothing to re-hash them against. Their
+correctness is instead pinned by
+`tests/test_resolver_blocker_precedence.py::test_blocker_decisions_extend_the_frozen_behavior_identity`,
+which recomputes `behavior.identity` from live resolver output, and by
+`self_check`'s trust-root-lock check, which recomputes
+`behavior.trust_root_lock_identity` from the declaration's own declared
+`behavior.identity` plus the validator's structural constants.
 
 Digests are computed exactly the way tools/admission_root_v1.py verifies a
 `sources` entry: `hashlib.sha256(content).hexdigest()` over the raw file

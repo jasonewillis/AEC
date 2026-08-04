@@ -197,6 +197,10 @@
       "8931bd287eb29dd439a1e657a586c3d0b395bd778d765fbf3ab1a41a00b00c33"
     ]
   },
+  "behavior": {
+    "identity": "7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3",
+    "trust_root_lock_identity": "33588f0e16ad9894b0e9808d584774211bbf789a2791e29e75886681cf403659"
+  },
   "proof_closure": {
     ".claude/skills/milestone": [
       "120000",
@@ -327,7 +331,7 @@
     "aec/state_builder.py": "c591c253a58ce92251d80c9912ce2d94b004e634c23878c15aee80420ca3e53d",
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
-    "tests/test_admission_root_v1.py": "7fc40824bf4011d6130fc3d168e3da1c5b07a72273aad53f3c05d5ffc1c86d48",
+    "tests/test_admission_root_v1.py": "5bf4ff6ff2184ccc5f4d34303f21405f8e465244c03f1d0df015737bea181e35",
     "tests/test_aec_coach.py": "73970ae3cb28ec16aefa291e02a2d6adf37c5108025b78ac3134dafa48a4ae47",
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
     "tests/test_aec_opts_into_its_own_coaching.py": "9dc7d99209f3a997ded030f389b555161b9b617951fa5abfc8ef2c91ab463b39",
@@ -357,10 +361,10 @@
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_binds_consumer_repo.py": "1a8ef425d76243d9f114432e69f16ea68a657e93673e6fb408eba5dcfb11a696",
     "tests/test_state_builder.py": "b22467c13ad3197857f08ca52769d5b225e85d8a2c0ad80df95e66b2ff6d588f",
-    "tools/admission_root_v1.py": "f12017bf1f6dba4c3333dd5049788de5efb812b929f38a6927cad520777e843e",
+    "tools/admission_root_v1.py": "73f56efd8e8d19570f89ab78993190ae7d563d6f519413989858589b75746056",
     "tools/aec_coach.py": "f2f06ad9edef6877c6cc9d76dd45356098b25e6b957f3468267bb5ff5c860e45",
     "tools/aec_prompt_hook.py": "8eb9024883be1814661a9e85c380729ce03f3424becebe415addb81addbd42a0",
-    "tools/generate_source_declaration.py": "368402fe5c6c3aecd5ced5b9b4972ef56e7a78a0b3a2ce3889f238bab6c114b5",
+    "tools/generate_source_declaration.py": "4a3c66ba084b269ec2fda89b2510ae2042c9fa2ca8718c12a5d25b391623f7eb",
     "tools/prove_agent_adapter_parity.py": "1f55e0d378068bff6b265e5fa15d032b9287a768d03cb580ebafe758cf448000",
     "tools/prove_private_mentor_lens.py": "169948c6fe9c6ff8d517f877cc621a017f6abb6ba6984a3df24569bae7ca5520",
     "tools/release_api_evidence.py": "48b09a50db593e513b47e82d869181266966218fb12b10d827089565047a4b22",

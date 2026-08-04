@@ -12,12 +12,6 @@ from typing import Mapping, NamedTuple, Protocol
 
 
 ADMISSION_PROTOCOL = "aec-admission-v1"
-BEHAVIOR_IDENTITY = (
-    "sha256:7f6e614afb78df29d2b1eceb1040b9b0c924ece261de90572dbda03bc8620fa3"
-)
-TRUST_ROOT_LOCK_IDENTITY = (
-    "sha256:33588f0e16ad9894b0e9808d584774211bbf789a2791e29e75886681cf403659"
-)
 REGULAR_MODE = "100644"
 OUTCOMES = (
     "BOOTSTRAP-001 BASE_AUTHORITY",
@@ -47,6 +41,7 @@ DECLARATION_PATH = ".github/admission/v1/source-declaration.json"
 DECLARATION_SCHEMA_VERSION = "1.0.0"
 DECLARATION_FIELDS = {
     "artifacts",
+    "behavior",
     "proof_closure",
     "python_paths",
     "schema_version",
@@ -54,6 +49,7 @@ DECLARATION_FIELDS = {
     "workflow_bundles",
     "workflows",
 }
+BEHAVIOR_FIELDS = {"identity", "trust_root_lock_identity"}
 
 
 @dataclass(frozen=True)
@@ -72,6 +68,8 @@ class SourceDeclaration:
     python_paths: frozenset[str]
     workflows: dict[str, str]
     workflow_bundles: dict[str, str]
+    behavior_identity: str
+    trust_root_lock_identity: str
 
 
 def _digest(value: object) -> bool:
@@ -174,6 +172,21 @@ def parse_declaration(raw: bytes) -> SourceDeclaration:
     # validate_candidate needs no special case for it either.
     if VALIDATOR_PATH not in python_paths:
         raise ValueError("Declaration must track the admission validator")
+
+    # Derived, not structural: an aggregate digest over the candidate's own
+    # golden behavior, and a lock digest over the structural constants plus
+    # that aggregate. Neither can be restated to change what admission *is*
+    # (the structural constants stay pinned in the validator itself), but a
+    # digest of the candidate's own behavior is exactly the kind of fact a
+    # candidate declares, same as every other digest in this file.
+    behavior = payload["behavior"]
+    if type(behavior) is not dict or set(behavior) != BEHAVIOR_FIELDS:
+        raise ValueError("Declaration behavior fields do not match the contract")
+    if not _digest(behavior["identity"]) or not _digest(
+        behavior["trust_root_lock_identity"]
+    ):
+        raise ValueError("Declaration behavior digests are invalid")
+
     return SourceDeclaration(
         sources=dict(sources),
         artifacts=artifacts,
@@ -181,6 +194,8 @@ def parse_declaration(raw: bytes) -> SourceDeclaration:
         python_paths=frozenset(python_paths),
         workflows=dict(workflows),
         workflow_bundles=dict(bundles),
+        behavior_identity=behavior["identity"],
+        trust_root_lock_identity=behavior["trust_root_lock_identity"],
     )
 
 
@@ -199,6 +214,12 @@ PROOF_CLOSURE_BASELINE: dict[str, FileBaseline] = BASE_DECLARATION.proof_closure
 PYTHON_PATHS = BASE_DECLARATION.python_paths
 WORKFLOW_TRANSITION_BASELINE: dict[str, str] = BASE_DECLARATION.workflows
 WORKFLOW_TRANSITION_BUNDLES: dict[str, str] = BASE_DECLARATION.workflow_bundles
+# Derived aggregates, declared by the base like any other candidate fact
+# rather than pinned as a base-owned structural constant (issue #65). Kept as
+# module constants, in this exact "sha256:"-prefixed shape, so existing
+# callers and tests that import them are unaffected by where the value lives.
+BEHAVIOR_IDENTITY: str = "sha256:" + BASE_DECLARATION.behavior_identity
+TRUST_ROOT_LOCK_IDENTITY: str = "sha256:" + BASE_DECLARATION.trust_root_lock_identity
 
 
 
@@ -526,7 +547,7 @@ def validate_candidate(
     # Nothing here imports or executes candidate code, so ADMISSION-002 holds.
     # The base still owns the validator and workflow identities checked below,
     # so a candidate cannot restate the gate that judges it.
-    local_findings, _declared = _verify_local(GitRecordTreeView(by_path, blobs))
+    local_findings, declared = _verify_local(GitRecordTreeView(by_path, blobs))
     if local_findings:
         findings.add("ADMISSION-001 EXACT_BASELINE")
     validator_record = by_path.get(VALIDATOR_PATH.encode())
@@ -554,7 +575,7 @@ def validate_candidate(
     ordered = tuple(outcome for outcome in OUTCOMES if outcome in findings)
     return AdmissionReport(
         base_authority=authority,
-        behavior_identity=BEHAVIOR_IDENTITY,
+        behavior_identity="sha256:" + declared.behavior_identity,
         findings=ordered,
         passed=not ordered,
     )
@@ -584,10 +605,20 @@ def self_check(root: Path) -> tuple[str, ...]:
     # the declaration, so pinning content here would force this validator to
     # change on every content change, and a changed validator can never pass the
     # base-owned blob identity above. That circularity is what issue #49 fixed.
+    #
+    # BEHAVIOR_IDENTITY and TRUST_ROOT_LOCK_IDENTITY are no longer base-pinned
+    # constants (issue #65): they are read from `declared`, the same
+    # declaration _verify_local already parsed for this tree. This check now
+    # proves the declaration is internally self-consistent -- its declared
+    # lock digest actually is the hash of the structural constants plus its
+    # own declared behavior digest -- not that any particular value was used.
+    # A candidate can still declare any behavior_identity it wants (that is
+    # the point: it is the candidate's own fact to declare), but it cannot
+    # pair it with a trust_root_lock_identity that does not match.
     lock_payload = json.dumps(
         [
             ADMISSION_PROTOCOL,
-            BEHAVIOR_IDENTITY,
+            "sha256:" + declared.behavior_identity,
             DECLARATION_PATH,
             DECLARATION_SCHEMA_VERSION,
             VALIDATOR_PATH,
@@ -596,7 +627,10 @@ def self_check(root: Path) -> tuple[str, ...]:
         ],
         separators=(",", ":"),
     ).encode("utf-8")
-    if "sha256:" + hashlib.sha256(lock_payload).hexdigest() != TRUST_ROOT_LOCK_IDENTITY:
+    if (
+        "sha256:" + hashlib.sha256(lock_payload).hexdigest()
+        != "sha256:" + declared.trust_root_lock_identity
+    ):
         findings.append("trust-root-lock")
     return tuple(findings)
 
