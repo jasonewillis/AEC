@@ -63,8 +63,16 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # (tests/test_aec_doctor_fails_closed.py) for #109. The `doctor` subcommand
 # itself added no new tracked path: it landed inside the already-declared
 # tools/aec_coach.py.
-EXPECTED_DISTINCT_FROZEN_PATHS = 55
-EXPECTED_SOURCE_BASELINE_PATHS = 47
+# Bumped 2026-08-03: +1 executable proof for the consumer install kit
+# (tests/test_consumer_install_kit.py) for #109. It walks the documented
+# install steps in a throwaway consumer repository, which is what
+# docs/consumer-kit/state_producer_template.py needed: that template is a
+# tracked, copy-and-run .py outside the coverage clause, so it can never be a
+# frozen path itself and had nothing executing it.
+EXPECTED_DISTINCT_FROZEN_PATHS = 56
+# Bumped 2026-08-03 alongside the count above: tests/test_consumer_install_kit.py
+# is a new tracked source path, so it enters the declaration as well as the tree.
+EXPECTED_SOURCE_BASELINE_PATHS = 48
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",
