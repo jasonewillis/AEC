@@ -5,14 +5,14 @@ no populated consumer profile; a consumer produces its own, shaped to the contra
 validated by `tools/validate_foundation.py`.
 
 The public state-provider boundary is the closed, versioned
-[`consumer-state.schema.json`](../schemas/consumer-state.schema.json) contract. A caller
+[`consumer-state.schema.json`](../../schemas/consumer-state.schema.json) contract. A caller
 supplies one in-memory record plus the expected revision, expected environment, current
 time, and AEC-owned procedure catalog. AEC performs no discovery or I/O at this seam.
 
 This contract governs the runtime boundary between AEC and a consumer project. It is out
 of scope for, and does not change, the separate repository-admission trust boundary that
 gates source-changing pull requests into AEC itself: see
-[handoff-reconciliation.md](handoff-reconciliation.md#what-exact_baseline-proves) for
+[handoff reconciliation](../history/handoff-reconciliation.md#what-exact_baseline-proves) for
 what that boundary does and does not guarantee.
 
 ## AEC provides
@@ -155,7 +155,7 @@ snapshot to what was observed. Verification validates the snapshot, recomputes i
 resolution hash, and reproduces the card from it before reading any receipt fact. This
 proves internal consistency, not trusted authorship or origin. Receipts are never
 uploaded, aggregated remotely, or fed back into policy. See
-[decision outcomes](architecture/decision-outcomes.md) for the receipt contract, the
+[decision outcomes](decision-outcomes.md) for the receipt contract, the
 derived verdict rules, and the local evaluator.
 
 ### Versioned transition
@@ -210,7 +210,7 @@ The consumer integration is ready for a bounded pilot only when:
 
 The consumer integration and ownership disposition for the first FedJobAdvisor
 consumer is recorded in the
-[FedJobAdvisor migration map](history/fedjobadvisor-migration-map.md). That map is evidence and
+[FedJobAdvisor migration map](../history/fedjobadvisor-migration-map.md). That map is evidence and
 does not import its transport, Project, label, writer, or deployment implementation
 into AEC. The migration it records is finished — all eleven source issues are closed —
 so the map is retained as a historical audit artifact, not a live work list.

@@ -1,5 +1,21 @@
 # Handoff Reconciliation
 
+> **MOSTLY HISTORICAL — read the section labels before citing anything here.**
+> Moved from `docs/` on 2026-08-03. This reconciles a handoff that closed long ago, so
+> Q1, Q3, and Q4 are snapshots and should not be read as current status. Two sections
+> are still live and are linked from elsewhere in the tree:
+> [What EXACT_BASELINE proves](#what-exact_baseline-proves), cited by
+> [the consumer contract](../architecture/consumer-contract.md), and the
+> [handoff canary routing table](#handoff-canary-routing-after-6), whose canaries 5 and
+> 8 remain open.
+>
+> The Q1 evidence column originally carried `file:line` anchors. Every
+> `tools/validate_foundation.py` line number in it had drifted by 2026-08-03, and the
+> canonical-hash row named the wrong file entirely — those functions live in
+> `aec/resolver.py`. The anchors are now symbol names, which grep still finds after a
+> refactor. **A line number in prose is not a maintainable reference**; nothing
+> re-verifies one, so it decays silently and lends false precision to a stale claim.
+
 This document reconciles the original AEC handoff against the merged Slice 1
 foundation (post de-projectize). It adopts **Reading C** (abstraction): AEC is
 a project-agnostic mentoring foundation. Slice 1 ships no populated consumer
@@ -9,22 +25,22 @@ here.
 
 ## Q1: Handoff sections satisfied by Slice 1
 
-| Section | Status | Evidence (file:line) |
+| Section | Status | Evidence (path and symbol) |
 | --- | --- | --- |
-| Lifecycle (nine-phase rail) | Satisfied | `README.md:17-20`, `config/workflows/ticket-to-pr.json:10-15` |
-| Gate precedence (fail-closed) | Satisfied | `README.md:22-26`, `config/workflows/ticket-to-pr.json:2-7`, `tools/validate_foundation.py:20,309-315` |
-| Resolver schema | Satisfied | `schemas/resolution-decision.schema.json:1-49` |
-| Canonical hash contract | Satisfied | `tools/validate_foundation.py:69-86` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
-| executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json:9,12` (`const false`), `tools/validate_foundation.py:107-110` |
-| Workflows MIT pin | Satisfied | `provenance/upstream-lock.json:4-10`, `docs/provenance.md:9,16-18` |
+| Lifecycle (nine-phase rail) | Satisfied | `README.md` "Lifecycle", `config/workflows/ticket-to-pr.json` `stages` |
+| Gate precedence (fail-closed) | Satisfied | `README.md` "Gate precedence", `config/workflows/ticket-to-pr.json` `gate_precedence`, `tools/validate_foundation.py` (`workflow gate precedence must remain fail-closed`) |
+| Resolver schema | Satisfied | `schemas/resolution-decision.schema.json` |
+| Canonical hash contract | Satisfied | `aec/resolver.py` (`canonical_resolution_bytes`, `compute_resolution_hash`) |
+| executes/mutates invariant | Satisfied | `schemas/resolution-decision.schema.json` (`executes`/`mutates` are `const false`), `tools/validate_foundation.py` `EFFECT_FIELDS` |
+| Workflows MIT pin | Satisfied | `provenance/upstream-lock.json`, `docs/provenance.md` |
 | Blueprint authorized skill pin and real Claude/Codex parity | Satisfied; exact canonical skill bytes, discovery paths, loader evidence, normalized request, manifest, and decision hash agree | `provenance/upstream-lock.json`, `provenance/blueprint-skills.json`, `.agents/skills/`, `.claude/skills/`, `tests/test_agent_adapters.py`, closed parity issue [#32](https://github.com/jasonewillis/AEC/issues/32); complementary consumer-interface issue [#5](https://github.com/jasonewillis/AEC/issues/5) is also closed |
 | Factual course provenance (13 + 8 lessons) | Satisfied | `provenance/course-inventory.json`, `docs/course-traceability/README.md` |
-| Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml:16-38` |
+| Foundation-gate CI | Satisfied | `.github/workflows/foundation-gate.yml` |
 
 Note: Slice 1 now ships **no consumer profile**. The single bundled profile
 previously checked into `config/projects/` is removed from the tree,
 `tools/validate_foundation.py` no longer runs a `project.*` check against a
-bundled profile, and `docs/consumer-contract.md` describes the profile shape
+bundled profile, and `docs/architecture/consumer-contract.md` describes the profile shape
 as a reference example rather than a shipped artifact.
 
 ## Q2: Sections requiring amendment (14 gaps)
@@ -46,7 +62,7 @@ as a reference example rather than a shipped artifact.
 | 13 | End-to-end closure of all nine routed canaries | AEC plus consumer adoption |
 | 14 | Adaptive advice model | Slice 7 |
 
-Slice numbers match `docs/delivery/roadmap.md`.
+Slice numbers match [the delivery roadmap](../delivery/roadmap.md).
 
 ## Q3: Direct conflicts
 

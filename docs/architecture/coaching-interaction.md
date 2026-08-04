@@ -285,7 +285,7 @@ options, tradeoff dimensions, confidence, principal uncertainty, expected measur
 result, and decision owner shown in the block above are the consumer's own submitted
 content, checked for completeness and republished bound to the card hash — AEC does not
 select, score, or rank among the choices. See
-[consumer-contract.md](../consumer-contract.md#the-consumer-provides) for the full
+[consumer-contract.md](consumer-contract.md#the-consumer-provides) for the full
 validated-pass-through contract.
 
 ## Card language
@@ -508,7 +508,7 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 
 | Gap | Current evidence | Required exit gate |
 | --- | --- | --- |
-| Framework admission | Source-changing PRs cannot currently satisfy the base-owned admission job. | A legitimate source transition passes its own admission and a tampered transition still fails. |
+| Framework admission | Ordinary source-changing PRs now pass `admit`, which became a required check on 2026-08-03; #117, #119, #120, and #121 all merged green. The remaining trap is narrower than this row once claimed: `tools/admission_root_v1.py` and `.github/workflows/candidate-admission.yml` are base-pinned, so a PR that fixes either of them can never satisfy the job that judges it. That is [#65](https://github.com/jasonewillis/AEC/issues/65), and it is what currently blocks [#118](https://github.com/jasonewillis/AEC/pull/118). | A PR that legitimately changes **either** pinned path passes through a recorded exception, and a tampered transition still fails. Exempting only the validator leaves the workflow permanently unfixable. |
 | Consumer compatibility | `tools/validate_consumer_connection.py` already resolves a ROUTINE and a MATERIAL probe through the same pure adapter every consumer uses, and `--self-check` proves a pre-`d35f535` fixture is rejected with field-level guidance. `python3 -m tools.aec_coach doctor` now surfaces that proof plus the pin and the released contract versions as one preflight command. Both probes are AEC's own fixed fixtures, not a consumer's own contract, so a consumer-specific incompatibility can still pass them. | Pin validation proves routine and material cards, rejection paths, and the human renderer against a consumer's own contract, not only AEC's built-in probes. |
 | State construction | `aec/state_builder.py` already holds general construction logic and takes `profile` as a parameter, defaulting to `AEC_SELF_PROFILE` only when a caller omits it; `docs/consumer-kit/state_producer_template.py` is a copyable producer that supplies a consumer profile and the consumer's own HEAD. The producer is still copied and owned per consumer rather than invoked as a shipped command. | One command builds ignored local state from proven facts and rejects missing facts, without each consumer maintaining its own copied producer. |
 | Human coaching | The renderer exists, and `docs/consumer-kit/register-hook.md` now supplies copyable hook registration, trigger selection, and verification steps. The verification step is proven end to end by `tests/test_consumer_install_kit.py`, which walks the documented steps in a throwaway consumer repository rather than asserting the doc reads correctly. A consumer can still discover AEC without invoking it at the prompt boundary, because registration remains consumer-owned by design. | A configured consumer prompt hook renders one complete `[AEC: Project Guidance]` and `[AEC: Mentoring]` card at meaningful triggers, compact state otherwise, and explicit failure without a fabricated rail. |
@@ -520,9 +520,8 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 ## Delivery sequence
 
 ```text
-[ Fix source admission ]
-            |
-            v
+[ Fix pinned-path admission (#65) ]   <-- no longer gates the column below
+
 [ One-command state + coaching renderer ]
             |
             v
@@ -548,11 +547,26 @@ Outcome cannot be measured         -> inconclusive, never invent a result
 Each box is one bounded delivery slice. Do not create downstream implementation issues
 until the preceding exit gate is merged or the slices are genuinely independent.
 
+**The admission box was detached from the column on 2026-08-03.** It used to sit at the
+head of the chain, and while that was true nothing downstream could ship. It is no longer
+true: `admit` passes ordinary source PRs, so every box below now depends only on the one
+above it. Admission still blocks exactly one thing — a PR that changes
+`tools/admission_root_v1.py` or `.github/workflows/candidate-admission.yml`. Treat it as a
+release blocker for the beta gate, not as a predecessor edge.
+
+The correction matters more than the fact. A stale blocker at the head of a dependency
+graph is the most expensive kind of stale documentation: it is indistinguishable from a
+real blocker, so it silently converts every downstream slice into "waiting" and nobody
+re-tests the premise, because the graph says not to. Re-verify the head of a chain before
+planning from it.
+
 ## Trustworthy-beta release gate
 
 AEC is ready to call a trustworthy beta only when:
 
-1. source-changing framework PRs can pass an honest exact-head gate;
+1. source-changing framework PRs can pass an honest exact-head gate — satisfied for
+   ordinary PRs since 2026-08-03, still open for the two base-pinned admission paths
+   ([#65](https://github.com/jasonewillis/AEC/issues/65));
 2. a consumer detects an incompatible pin before using AEC;
 3. one command produces project guidance and student mentoring without hand-written
    state JSON;
