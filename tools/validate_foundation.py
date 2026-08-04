@@ -198,7 +198,6 @@ REQUIRED_RESOLUTION_FIELDS = {
     "lane",
     "mentoring",
     "mutates",
-    "observation_support",
     "phase",
     "policy_version",
     "primary_blocker",
@@ -288,6 +287,8 @@ RESULT_DIRECTIONS = {"decrease", "hold", "increase"}
 # signed decimal string instead of a JSON number.
 CANONICAL_DECIMAL = re.compile(r"(?:0|-?[1-9][0-9]*)")
 PUBLIC_CARD_SCHEMA_VERSION = "3.0.0"
+OPTIONAL_RESOLUTION_FIELDS = {"observation_support"}
+PUBLIC_CARD_OPTIONAL_FIELDS = {"observation_support"}
 PUBLIC_CARD_FIELDS = {
     "anti_example",
     "authoritative",
@@ -298,7 +299,6 @@ PUBLIC_CARD_FIELDS = {
     "good",
     "lane",
     "mentoring",
-    "observation_support",
     "phase",
     "rail_position",
     "rationale",
@@ -527,7 +527,9 @@ def independent_card_hash(card: dict[str, Any]) -> str:
 
 def validate_public_card(card: object) -> list[str]:
     """Independently validate one closed public card and its own hash."""
-    if not isinstance(card, dict) or set(card) != PUBLIC_CARD_FIELDS:
+    if not isinstance(card, dict):
+        return ["public card fields do not match the contract"]
+    if set(card) - PUBLIC_CARD_OPTIONAL_FIELDS != PUBLIC_CARD_FIELDS:
         return ["public card fields do not match the contract"]
 
     errors: list[str] = []
@@ -654,7 +656,7 @@ def validate_resolution(resolution: object) -> list[str]:
     errors: list[str] = []
     keys = set(resolution)
     missing = sorted(REQUIRED_RESOLUTION_FIELDS - keys)
-    unknown = sorted(keys - REQUIRED_RESOLUTION_FIELDS)
+    unknown = sorted(keys - REQUIRED_RESOLUTION_FIELDS - OPTIONAL_RESOLUTION_FIELDS)
     if missing:
         errors.append(f"missing resolution fields: {', '.join(missing)}")
     if unknown:

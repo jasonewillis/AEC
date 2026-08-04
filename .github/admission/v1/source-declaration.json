@@ -66,7 +66,7 @@
     ],
     "schemas/resolution-decision.schema.json": [
       "schema",
-      "d3a644a459364a3aaabd35e80fa8844856b745df65987eecaf39173008e56556"
+      "75d101e9b42749def51afa72001546d9f70c76984392c497b1e66079ea276ce8"
     ],
     "schemas/resolution-rejection.schema.json": [
       "schema",
@@ -138,15 +138,15 @@
     ],
     "tests/fixtures/resolution.mutating-aec.json": [
       "test-fixture",
-      "71e9ad869fbc1ae9438f769b96c8cdcb17c9102518bda711ec298927d288031b"
+      "cbb97de814da1f70da025fa08860c5f7cc021033de8734c6c4617d41c35953f7"
     ],
     "tests/fixtures/resolution.valid.json": [
       "test-fixture",
-      "adb1c0b6c3877d0c12490f6bd9b3382366b24b364978e534f0fd0c8f00fe7c56"
+      "96789f3fd42b90f943845a0f0c36b7fa4d2815e3da371d89e7b86d57ab95600b"
     ],
     "tests/fixtures/resolution.wrong-hash.json": [
       "test-fixture",
-      "507ad731dc174a980b0e3ed985f915489684fb7dc397923dce1bdb66418a4399"
+      "e4513e12685b394b6130c4610b054b3d84e056fa843e97a557f516b310bfc84b"
     ],
     "tests/fixtures/resolver/golden/build.json": [
       "test-fixture",
@@ -232,7 +232,7 @@
     ],
     "tools/prove_foundation_behavior.py": [
       "100644",
-      "8b39ca23846a8f45b7770da73409422d5a1cd8cb726266f17fe7f91ca65f056d"
+      "a53aab66774a61e1982229c04c954be36f7cc705a9ee76783b22bfe6148a9291"
     ],
     "tools/validate_blueprint_skills.py": [
       "100644",
@@ -240,7 +240,7 @@
     ],
     "tools/validate_foundation.py": [
       "100644",
-      "3c67ad9230372adc37a2380488e03139799f6be9e55d035d512032326a10abf1"
+      "8cea1030a14a170ed8d960a1c88b76795af8a6a93fa50b564c31e7ac61efd3b0"
     ]
   },
   "python_paths": [
@@ -315,24 +315,24 @@
     "aec/_generated/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "aec/_generated/resolver_program.py": "4cf7aa4c831abe910d88bb23bf344beaa6dcfa11d0317e63048bb4a05508c270",
     "aec/adapters.py": "62b9712b0e21d66383a51605236e97289abcaf963bfa5218c210c29d05e15a73",
-    "aec/cards.py": "d2b57655a51145d7d7e2eecfb260d98aedd703ec1d20ca2213d57741b09e017b",
+    "aec/cards.py": "ae34731e415f261cfe828b109379b5fb9c29c16a88c9241fd042e2aefd3fb515",
     "aec/contracts.py": "becbc8a60685f96474ac01d4821612357e237e64b3ae0259267abbdce3d5b87b",
     "aec/human_render.py": "7b85ee553233c8d348485401156140a824dd5de4650ad297528e1ad7476a302b",
     "aec/mentor.py": "1784bd63fa295b3588280efc585fce74f2d00dfb4ad65cebc3aea5e64d088ec9",
     "aec/mentoring.py": "e1c7ca7e64c1addbf6065ff99635394ec684b7862082c8fd05a3186d1c492a5b",
     "aec/outcomes.py": "e068d62fe44581841df3e49611e4f6ffd179b9a2768904e76a68734785d220f9",
     "aec/release_manifest.py": "4c329331d0df1b342763ad2d429436794f6a676185651bb94466c202282261d7",
-    "aec/resolver.py": "489fa955cb3fe53bd1bfecdb7583d6c7ed5f52aac2a8ac8ae47e6141c1fee593",
+    "aec/resolver.py": "66dac54f6b4cb986d05a5c7507fc0d9a7c89a92ef50efa5c43a2268a5868076c",
     "aec/review_attestation.py": "6e30442e278f855dc3d267e7e4e0412b6abef2805d8b91691b626e96878828db",
     "aec/state_builder.py": "c591c253a58ce92251d80c9912ce2d94b004e634c23878c15aee80420ca3e53d",
     "tests/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "tests/test_admission_attack_corpus.py": "885cae90fa62af72d5fab7a7f22ff0e27a9d121114591cb5212d30c0381ed3d4",
-    "tests/test_admission_root_v1.py": "4b886de527bef010caedcc7b270fa7c590cdbc2e148a3d93e86c2af1ded303d1",
+    "tests/test_admission_root_v1.py": "7fc40824bf4011d6130fc3d168e3da1c5b07a72273aad53f3c05d5ffc1c86d48",
     "tests/test_aec_coach.py": "73970ae3cb28ec16aefa291e02a2d6adf37c5108025b78ac3134dafa48a4ae47",
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
     "tests/test_aec_opts_into_its_own_coaching.py": "9dc7d99209f3a997ded030f389b555161b9b617951fa5abfc8ef2c91ab463b39",
     "tests/test_aec_prompt_hook.py": "43c3297a620b85337101d84447097e6e94b0b52a559624a98e8a06ac768fc68a",
-    "tests/test_agent_adapters.py": "8bfe206259aa75a28d38cf9f58016834bf85b90fc4f7c889bc81272e7a5daab1",
+    "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
     "tests/test_authority_v2_hostile_corpus.py": "22678a5fd07b81c32821a3bb5b6c425a42e064dd24a458b1dada6ab8cc3759a9",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "ebd34a93bd9b25ff975e183241194bdf5f1659aa10716c8ccacbc72c5509bb7b",
@@ -348,11 +348,11 @@
     "tests/test_observation_context.py": "8784f74e3ad40190aec3dc1015e83af0c462edb52011d38b470d40b293467df9",
     "tests/test_outcome_receipts.py": "c07e8096b888c963222f3ac0c3b408d226fc275695ac04e9c40aef485def5087",
     "tests/test_private_mentor_lens.py": "7576c6d3fe2f89bee1be214953af39efd392aa2c8e7307f78506a8d13b794123",
-    "tests/test_public_card.py": "925ed475c59eb68ca359487d618008f569bb0ce2f4258abf627bc30feec52079",
+    "tests/test_public_card.py": "7ca094cd51cf5ad522973678f844045012514868dae635fe8511405902fa33f1",
     "tests/test_read_only_authority_boundary.py": "1fe4f994eb73a5324e97e15888ea976830a475f983c7f73d962100fefc305a67",
     "tests/test_release_api_evidence.py": "dd52db457de6c83224745f71c856ee1a053575d9da00e56c3b32c95474e623cd",
     "tests/test_release_manifest.py": "4fe8c230fd3d67a654afec7f5051769a69e314b1f4ade1e038b00b9768b9f14a",
-    "tests/test_resolver.py": "5aaf42aed24e09049645fddf2c733569144a35dee0728debe9cb8b895fc3f681",
+    "tests/test_resolver.py": "60510abe6d90bbf9f5305e86b13b52e43c8324f2af2598f975e1c64c27bcd4e7",
     "tests/test_resolver_blocker_precedence.py": "6520eeb583c52041f7f727060c17afb0e5b1e231ffa37e7bfc19baec3242432e",
     "tests/test_resolver_program.py": "9a5218a34e65aecee9709f772ff44c6239285d70578dafc5f7f3facd32950408",
     "tests/test_state_binds_consumer_repo.py": "1a8ef425d76243d9f114432e69f16ea68a657e93673e6fb408eba5dcfb11a696",

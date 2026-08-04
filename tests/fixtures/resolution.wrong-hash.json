@@ -29,7 +29,6 @@
     "why_gate_exists": "Evidence from another revision or environment can create a false green."
   },
   "mutates": false,
-  "observation_support": null,
   "phase": "Verify",
   "policy_version": "0.1.0",
   "primary_blocker": null,

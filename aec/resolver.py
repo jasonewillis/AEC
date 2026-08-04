@@ -766,9 +766,6 @@ def resolve(
         "lane": request["lane"],
         "mentoring": procedure["mentoring"],
         "mutates": False,
-        "observation_support": normalized_observation_context(
-            request.get("observation_context")
-        ),
         "phase": request["phase"],
         "policy_version": policy["revision"],
         "primary_blocker": (
@@ -817,6 +814,19 @@ def resolve(
         "workflow": workflow["identity"],
         "workflow_stage": workflow["stage"],
     }
+    # Emitted only when the caller actually noticed something. Absence is the
+    # ordinary case, and omitting it keeps a decision byte-identical to one made
+    # before observations existed -- which is what the frozen behavior identity
+    # in the base-owned admission root asserts. An always-present null would
+    # change every resolution hash in every consumer for a field that is null
+    # in nearly every card. Asymmetric with decision_support, which predates
+    # that constraint and is always present.
+    observation_support = normalized_observation_context(
+        request.get("observation_context")
+    )
+    if observation_support is not None:
+        payload["observation_support"] = observation_support
+
     resolution_hash = compute_resolution_hash(payload)
     payload["resolution_hash"] = resolution_hash
     canonical_bytes = _canonical_json_bytes(payload)

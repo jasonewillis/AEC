@@ -348,10 +348,10 @@ class AdmissionRootV1Tests(unittest.TestCase):
     ) -> None:
         expected = {
             "aec/resolver.py": (
-                "489fa955cb3fe53bd1bfecdb7583d6c7ed5f52aac2a8ac8ae47e6141c1fee593"
+                "66dac54f6b4cb986d05a5c7507fc0d9a7c89a92ef50efa5c43a2268a5868076c"
             ),
             "schemas/resolution-decision.schema.json": (
-                "d3a644a459364a3aaabd35e80fa8844856b745df65987eecaf39173008e56556"
+                "75d101e9b42749def51afa72001546d9f70c76984392c497b1e66079ea276ce8"
             ),
             "schemas/resolution-request.schema.json": (
                 "1fac8ce181d5beb6c6d76310bc3d9e2d2921280fb10c7ec493a7a74e701061b5"

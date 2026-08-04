@@ -42,7 +42,10 @@ class PublicCardIntegrityTests(unittest.TestCase):
 
     def test_rendering_computes_the_card_hash_validation_recomputes_it(self) -> None:
         self.assertEqual(PUBLIC_CARD_SCHEMA_VERSION, self.card["schema_version"])
-        self.assertEqual(set(PUBLIC_CARD_FIELDS), set(self.card))
+        # This fixture carries an observation, so the optional field is present.
+        self.assertEqual(
+            set(PUBLIC_CARD_FIELDS) | {"observation_support"}, set(self.card)
+        )
         self.assertEqual(self.card["card_hash"], compute_card_hash(self.card))
         self.assertRegex(str(self.card["card_hash"]), r"^sha256:[0-9a-f]{64}$")
         self.assertEqual([], validate_public_card(self.card))
