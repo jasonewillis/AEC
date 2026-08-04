@@ -198,13 +198,12 @@ class ReachesARenderedCardTests(unittest.TestCase):
             self.assertEqual(0, produced.returncode, produced.stderr)
             checkpoint = run(
                 sys.executable,
-                "-m",
-                "tools.aec_coach",
+                str(ROOT / "tools" / "aec_coach.py"),
                 "checkpoint",
                 "--project-root",
                 str(repository),
                 str(repository / "tmp" / "aec-state.json"),
-                cwd=ROOT,
+                cwd=repository,
             )
             self.assertEqual(0, checkpoint.returncode, checkpoint.stderr)
             self.assertIn("[AEC: Project Guidance]", checkpoint.stdout)
@@ -237,11 +236,10 @@ class RejectsAMisboundRevisionTests(unittest.TestCase):
             )
             checkpoint = run(
                 sys.executable,
-                "-m",
-                "tools.aec_coach",
+                str(ROOT / "tools" / "aec_coach.py"),
                 "checkpoint",
                 str(repository / "tmp" / "aec-state.json"),
-                cwd=ROOT,
+                cwd=repository,
             )
             self.assertNotEqual(0, checkpoint.returncode)
             self.assertEqual("", checkpoint.stdout)
@@ -268,13 +266,12 @@ class RejectsAMisboundRevisionTests(unittest.TestCase):
             git("commit", "--quiet", "--message", "consumer moves on", cwd=repository)
             checkpoint = run(
                 sys.executable,
-                "-m",
-                "tools.aec_coach",
+                str(ROOT / "tools" / "aec_coach.py"),
                 "checkpoint",
                 "--project-root",
                 str(repository),
                 str(repository / "tmp" / "aec-state.json"),
-                cwd=ROOT,
+                cwd=repository,
             )
             self.assertNotEqual(0, checkpoint.returncode)
             self.assertEqual("", checkpoint.stdout)

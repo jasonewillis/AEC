@@ -45,17 +45,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from aec.consumer import ConsumerStateRejection, resolve_consumer_state
-from aec.human_render import RenderFailure, default_rail_definition, render_human
-from aec.release_manifest import validate_release_descriptor
-from aec.state_builder import (
+# A consumer with AEC vendored under `.local/aec` runs this as a file path
+# (`python3 .local/aec/tools/aec_coach.py ...`), not with `-m` from inside the
+# checkout, because the state file and `--project-root` are both in their own
+# repository. Run that way there is no package context and the checkout root
+# is not on `sys.path`, so the imports below fail with a bare
+# `ModuleNotFoundError: No module named 'aec'`. Same bootstrap, same reason,
+# as tools/aec_prompt_hook.py.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from aec.consumer import ConsumerStateRejection, resolve_consumer_state  # noqa: E402
+from aec.human_render import RenderFailure, default_rail_definition, render_human  # noqa: E402
+from aec.release_manifest import validate_release_descriptor  # noqa: E402
+from aec.state_builder import (  # noqa: E402
     AEC_SELF_PROFILE,
     BuildStateFailure,
     build_state,
     parse_blocker,
     parse_evidence,
 )
-from tools.validate_consumer_connection import (
+from tools.validate_consumer_connection import (  # noqa: E402
     ConnectionFailure,
     DEFAULT_MATERIAL_PROBE,
     DEFAULT_ROUTINE_PROBE,
