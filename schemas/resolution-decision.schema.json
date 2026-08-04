@@ -65,6 +65,12 @@
       "type": "object"
     },
     "mutates": {"const": false},
+    "observation_support": {
+      "oneOf": [
+        {"$ref": "resolution-request.schema.json#/$defs/observation_context"},
+        {"type": "null"}
+      ]
+    },
     "phase": {"enum": ["Intake", "Framing", "Spec", "Plan", "Build", "Verify", "Review", "PR", "Deploy"]},
     "policy_version": {"minLength": 1, "type": "string"},
     "primary_blocker": {

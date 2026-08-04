@@ -11,7 +11,7 @@ from aec.consumer import (
     resolve_consumer_state,
     validate_consumer_state,
 )
-from tests.test_resolver import MATERIAL_DECISION_CONTEXT
+from tests.test_resolver import MATERIAL_DECISION_CONTEXT, MATERIAL_OBSERVATION_CONTEXT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,6 +123,7 @@ class ConsumerStateContractTests(unittest.TestCase):
                 "canonical_integer",
                 "consumer_profile",
                 "decision_context",
+                "observation_context",
                 "procedure_reference",
             },
             set(schema["$defs"]),
@@ -223,6 +224,47 @@ class ConsumerStateContractTests(unittest.TestCase):
     def test_malformed_decision_context_is_rejected_before_resolution(self) -> None:
         self.state["decision_context"] = copy.deepcopy(MATERIAL_DECISION_CONTEXT)
         self.state["decision_context"]["recommendation"]["choice"] = "missing-choice"
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=self.state["revision"]["identity"],
+        )
+
+        self.assertIsInstance(result, ConsumerStateRejection)
+        self.assertEqual("CONSUMER_STATE_INVALID", result.code)
+
+    def test_material_observation_context_renders_a_non_authoritative_note(
+        self,
+    ) -> None:
+        self.state["observation_context"] = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+
+        result = resolve_consumer_state(
+            self.state,
+            self.catalog,
+            current_time="2026-01-01T00:30:00Z",
+            expected_environment="test",
+            expected_revision=self.state["revision"]["identity"],
+        )
+
+        self.assertIsInstance(result, ConsumerCard)
+        card = result.to_dict()
+        observation = card["observation_support"]
+        self.assertEqual(MATERIAL_OBSERVATION_CONTEXT, observation)
+        self.assertGreaterEqual(len(observation["instances"]), 2)
+        self.assertEqual("consumer-owner", observation["authority"]["owner"])
+        self.assertFalse(card["authoritative"])
+        self.assertFalse(card["transition_request"]["executes"])
+        self.assertFalse(card["transition_request"]["mutates"])
+
+    def test_underpopulated_observation_context_is_rejected_before_resolution(
+        self,
+    ) -> None:
+        thin = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        thin["instances"] = thin["instances"][:1]
+        self.state["observation_context"] = thin
 
         result = resolve_consumer_state(
             self.state,

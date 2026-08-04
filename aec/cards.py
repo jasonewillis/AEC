@@ -15,7 +15,11 @@ import re
 from typing import Any
 
 from aec.contracts import normalize_exact_json
-from aec.mentoring import validate_decision_context, validate_mentoring
+from aec.mentoring import (
+    validate_decision_context,
+    validate_mentoring,
+    validate_observation_context,
+)
 
 
 PUBLIC_CARD_SCHEMA_VERSION = "3.0.0"
@@ -37,6 +41,7 @@ PUBLIC_CARD_FIELDS = {
     "schema_version",
     "transition_request",
 }
+PUBLIC_CARD_OPTIONAL_FIELDS = {"observation_support"}
 RAIL_POSITION_FIELDS = {"phase", "phase_total", "rail", "rail_total", "stage"}
 RATIONALE_FIELDS = {"principle_ids", "summary"}
 TRANSITION_REQUEST_FIELDS = {
@@ -113,6 +118,11 @@ def project_card(decision: object) -> dict[str, Any]:
             "revision": resolved["revision"],
         },
     }
+    # Carried only when the resolution carried one. See the note in
+    # aec/resolver.py: absence keeps the card byte-identical to one produced
+    # before observations existed.
+    if "observation_support" in resolved:
+        card["observation_support"] = resolved["observation_support"]
     card["card_hash"] = compute_card_hash(card)
     return card
 
@@ -191,7 +201,13 @@ def validate_public_card(card: object, field: str = "card") -> list[str]:
         value = normalize_exact_json(card)
     except (TypeError, ValueError):
         return [f"{field} must contain only exact JSON values"]
-    if type(value) is not dict or set(value) != PUBLIC_CARD_FIELDS:
+    if type(value) is not dict:
+        return [f"{field} fields do not match the contract"]
+    present = set(value)
+    # Still closed: an unknown key is refused and a required key may not be
+    # dropped. Only the optional set may be absent, and absence there is
+    # unambiguous -- a card with no observation_support noticed nothing.
+    if present - PUBLIC_CARD_OPTIONAL_FIELDS != PUBLIC_CARD_FIELDS:
         return [f"{field} fields do not match the contract"]
 
     errors: list[str] = []
@@ -247,6 +263,13 @@ def validate_public_card(card: object, field: str = "card") -> list[str]:
         validate_decision_context(
             value.get("decision_support"),
             f"{field}.decision_support",
+            revision=revision,
+        )
+    )
+    errors.extend(
+        validate_observation_context(
+            value.get("observation_support"),
+            f"{field}.observation_support",
             revision=revision,
         )
     )

@@ -223,6 +223,113 @@
         "schema_version"
       ],
       "type": "object"
+    },
+    "observation_context": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "oneOf": [
+            {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authority": {
+          "additionalProperties": false,
+          "properties": {
+            "owner": {
+              "enum": [
+                "agent",
+                "consumer-owner",
+                "external"
+              ]
+            },
+            "reason": {
+              "minLength": 1,
+              "pattern": ".*\\S.*",
+              "type": "string"
+            }
+          },
+          "required": [
+            "owner",
+            "reason"
+          ],
+          "type": "object"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "context": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_quality": {
+              "enum": [
+                "direct-verified",
+                "indirect",
+                "assumed"
+              ]
+            },
+            "revision": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "evidence_quality",
+            "revision"
+          ],
+          "type": "object"
+        },
+        "instances": {
+          "items": {
+            "minLength": 1,
+            "pattern": ".*\\S.*",
+            "type": "string"
+          },
+          "minItems": 2,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "recognition_heuristic": {
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "type": "string"
+        },
+        "refuted_if": {
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "statement": {
+          "minLength": 1,
+          "pattern": ".*\\S.*",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "authority",
+        "confidence",
+        "context",
+        "instances",
+        "recognition_heuristic",
+        "refuted_if",
+        "schema_version",
+        "statement"
+      ],
+      "type": "object"
     }
   },
   "$id": "https://github.com/jasonewillis/AEC/schemas/resolution-request.schema.json",
@@ -507,6 +614,16 @@
     "lane": {
       "minLength": 1,
       "type": "string"
+    },
+    "observation_context": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/observation_context"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "phase": {
       "enum": [

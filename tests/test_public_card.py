@@ -42,7 +42,10 @@ class PublicCardIntegrityTests(unittest.TestCase):
 
     def test_rendering_computes_the_card_hash_validation_recomputes_it(self) -> None:
         self.assertEqual(PUBLIC_CARD_SCHEMA_VERSION, self.card["schema_version"])
-        self.assertEqual(set(PUBLIC_CARD_FIELDS), set(self.card))
+        # This fixture carries an observation, so the optional field is present.
+        self.assertEqual(
+            set(PUBLIC_CARD_FIELDS) | {"observation_support"}, set(self.card)
+        )
         self.assertEqual(self.card["card_hash"], compute_card_hash(self.card))
         self.assertRegex(str(self.card["card_hash"]), r"^sha256:[0-9a-f]{64}$")
         self.assertEqual([], validate_public_card(self.card))
@@ -92,6 +95,7 @@ class PublicCardIntegrityTests(unittest.TestCase):
             ("rail_position", {"stage": "Design"}),
             ("transition_request", {"revision": "HEAD"}),
             ("decision_support", {"schema_version": "2.0.0"}),
+            ("observation_support", {"schema_version": "1.0.0"}),
         )
         for name, value in cases:
             with self.subTest(field=name):
@@ -121,6 +125,15 @@ class PublicCardIntegrityTests(unittest.TestCase):
         foreign_revision["card_hash"] = compute_card_hash(foreign_revision)
         self.assertTrue(validate_public_card(foreign_revision))
 
+        foreign_observation_revision = copy.deepcopy(self.card)
+        foreign_observation_revision["observation_support"]["context"]["revision"] = (
+            "f" * 40
+        )
+        foreign_observation_revision["card_hash"] = compute_card_hash(
+            foreign_observation_revision
+        )
+        self.assertTrue(validate_public_card(foreign_observation_revision))
+
     def test_tampered_cards_fail_closed_on_the_recomputed_hash(self) -> None:
         tampered = copy.deepcopy(self.card)
         tampered["gate"] = "Ready"
@@ -134,6 +147,12 @@ class PublicCardIntegrityTests(unittest.TestCase):
     def test_a_routine_card_without_a_material_decision_stays_valid(self) -> None:
         routine = copy.deepcopy(self.card)
         routine["decision_support"] = None
+        routine["card_hash"] = compute_card_hash(routine)
+        self.assertEqual([], validate_public_card(routine))
+
+    def test_a_routine_card_without_an_observation_stays_valid(self) -> None:
+        routine = copy.deepcopy(self.card)
+        routine["observation_support"] = None
         routine["card_hash"] = compute_card_hash(routine)
         self.assertEqual([], validate_public_card(routine))
 

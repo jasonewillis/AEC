@@ -583,6 +583,46 @@ def render_decision(card: dict[str, Any], *, orientation: bool = True) -> str | 
     return "\n".join(lines)
 
 
+def render_observation(card: dict[str, Any], *, orientation: bool = True) -> str | None:
+    """Render the [AEC: Observation] block, or return None if nothing was noticed.
+
+    Returns None when `observation_support` is null. Most turns notice
+    nothing; a card only carries `observation_support` when the agent
+    surfaced a closed, actionable pattern (#131).
+    """
+    observation = card.get("observation_support")
+    if not observation:
+        return None
+
+    lines = [
+        section_heading("[AEC: Observation]", rule=orientation),
+        *labeled_lines("STATEMENT", observation["statement"]),
+    ]
+    for instance in observation.get("instances", []):
+        lines.extend(labeled_lines("INSTANCE", instance))
+    lines.extend(
+        labeled_lines("RECOGNIZE", concise_recognition(observation["recognition_heuristic"]))
+    )
+    lines.extend(labeled_lines("REFUTED IF", observation["refuted_if"]))
+    action = observation.get("action")
+    lines.extend(
+        labeled_lines("ACTION", action if action else "None yet -- watching.")
+    )
+    lines.extend(labeled_lines("CONFIDENCE", observation.get("confidence")))
+
+    authority = observation.get("authority") or {}
+    owner = authority.get("owner")
+    reason = authority.get("reason")
+    if owner and reason:
+        lines.extend(labeled_lines("OWNER", f"{owner} · {reason}"))
+    elif owner:
+        lines.extend(labeled_lines("OWNER", owner))
+
+    while lines and lines[-1] == "":
+        lines.pop()
+    return "\n".join(lines)
+
+
 def render_human(
     card: dict[str, Any],
     rail_definition: RailDefinition,
@@ -620,6 +660,9 @@ def render_human(
     decision = render_decision(card, orientation=orientation)
     if decision is not None:
         sections.append(decision)
+    observation = render_observation(card, orientation=orientation)
+    if observation is not None:
+        sections.append(observation)
     separator = f"\n{LIGHT_RULE}\n" if orientation else "\n"
     return separator.join(sections) + "\n"
 

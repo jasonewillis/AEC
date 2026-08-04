@@ -184,6 +184,9 @@ class BuildStateTests(unittest.TestCase):
     def test_decision_context_absent_when_omitted(self) -> None:
         self.assertNotIn("decision_context", build(phase="Build"))
 
+    def test_observation_context_absent_when_omitted(self) -> None:
+        self.assertNotIn("observation_context", build(phase="Build"))
+
     def test_default_profile_is_aec_coaching_itself(self) -> None:
         self.assertEqual(AEC_SELF_PROFILE, build()["consumer_profile"])
 
@@ -226,6 +229,39 @@ class BuildStateTests(unittest.TestCase):
         state = build(decision_context=supplied)
 
         self.assertEqual(REVISION, state["decision_context"]["context"]["revision"])
+
+    def observation_context(self, supplied_revision: str) -> dict[str, object]:
+        return {
+            "action": None,
+            "authority": {"owner": "agent", "reason": "x"},
+            "confidence": "low",
+            "context": {"evidence_quality": "assumed", "revision": supplied_revision},
+            "instances": ["one", "two"],
+            "recognition_heuristic": "x",
+            "refuted_if": "x",
+            "schema_version": "1.0.0",
+            "statement": "x",
+        }
+
+    def test_placeholder_observation_context_revision_is_bound(self) -> None:
+        supplied = self.observation_context("__REVISION__")
+        state = build(observation_context=supplied)
+
+        self.assertEqual(REVISION, state["observation_context"]["context"]["revision"])
+        self.assertEqual("__REVISION__", supplied["context"]["revision"], "input untouched")
+
+    def test_stale_observation_context_revision_is_rejected(self) -> None:
+        stale = "0" * 40
+        supplied = self.observation_context(stale)
+
+        with self.assertRaisesRegex(BuildStateFailure, f"{stale}.*{REVISION}"):
+            build(observation_context=supplied)
+
+    def test_matching_observation_context_revision_passes_through(self) -> None:
+        supplied = self.observation_context(REVISION)
+        state = build(observation_context=supplied)
+
+        self.assertEqual(REVISION, state["observation_context"]["context"]["revision"])
 
 
 if __name__ == "__main__":

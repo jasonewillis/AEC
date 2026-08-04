@@ -13,8 +13,10 @@ from aec._generated.resolver_program import RESOLVER_PROGRAM
 from aec.contracts import normalize_exact_json, validate_project_profile
 from aec.mentoring import (
     normalized_decision_context,
+    normalized_observation_context,
     validate_decision_context,
     validate_mentoring,
+    validate_observation_context,
 )
 
 
@@ -34,7 +36,7 @@ REQUIRED_REQUEST_FIELDS = {
     "task_id",
     "workflow",
 }
-OPTIONAL_REQUEST_FIELDS = {"decision_context"}
+OPTIONAL_REQUEST_FIELDS = {"decision_context", "observation_context"}
 REQUIRED_CATALOG_FIELDS = {"procedures", "schema_version"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 PROCEDURE_REVISION = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -481,6 +483,12 @@ def validate_resolution_request(request: object) -> list[str]:
             revision=request.get("revision"),
         )
     )
+    errors.extend(
+        validate_observation_context(
+            request.get("observation_context"),
+            revision=request.get("revision"),
+        )
+    )
     errors.extend(_validate_policy(request.get("policy")))
     errors.extend(
         _validate_procedure_reference(
@@ -806,6 +814,19 @@ def resolve(
         "workflow": workflow["identity"],
         "workflow_stage": workflow["stage"],
     }
+    # Emitted only when the caller actually noticed something. Absence is the
+    # ordinary case, and omitting it keeps a decision byte-identical to one made
+    # before observations existed -- which is what the frozen behavior identity
+    # in the base-owned admission root asserts. An always-present null would
+    # change every resolution hash in every consumer for a field that is null
+    # in nearly every card. Asymmetric with decision_support, which predates
+    # that constraint and is always present.
+    observation_support = normalized_observation_context(
+        request.get("observation_context")
+    )
+    if observation_support is not None:
+        payload["observation_support"] = observation_support
+
     resolution_hash = compute_resolution_hash(payload)
     payload["resolution_hash"] = resolution_hash
     canonical_bytes = _canonical_json_bytes(payload)

@@ -35,6 +35,7 @@ from aec.human_render import (
     render_human,
     render_interaction,
     render_mentoring,
+    render_observation,
     render_project_guidance,
     render_rail,
 )
@@ -65,6 +66,7 @@ def minimal_card(
     phase_name: str = "Framing",
     required_proof: list[str] = (),
     decision_support: dict[str, object] | None = None,
+    observation_support: dict[str, object] | None = None,
     revision: str = "a" * 40,
 ) -> dict[str, object]:
     """Build a validated-shaped card for testing render functions directly.
@@ -85,6 +87,7 @@ def minimal_card(
             "recognition_heuristic": "An example recognition heuristic.",
             "why_gate_exists": "An example reason the gate exists.",
         },
+        "observation_support": observation_support,
         "phase": phase_name,
         "rail_position": {
             "phase": phase_index,
@@ -446,6 +449,60 @@ class RenderDecisionTests(unittest.TestCase):
         self.assertIn("An example revisit condition.", text)
         self.assertIn("OWNER    agent", text)
         self.assertIn("[AEC: Decision]", render_human(card, RAIL_DEFINITION))
+
+
+OBSERVATION_SUPPORT = {
+    "action": "Re-derive any status artifact on read rather than citing it.",
+    "authority": {
+        "owner": "consumer-owner",
+        "reason": "Changing how status artifacts are consumed is the owner's call.",
+    },
+    "confidence": "medium",
+    "context": {"evidence_quality": "indirect", "revision": "a" * 40},
+    "instances": [
+        "codex-review-blocking label on #9760",
+        "a02b0721 failure notices",
+    ],
+    "recognition_heuristic": (
+        "A status artifact is cited as current without anything re-checking it."
+    ),
+    "refuted_if": (
+        "Each artifact is re-derived at read time, so none can outlive its subject."
+    ),
+    "schema_version": "1.0.0",
+    "statement": "Recorded state outlives the thing it described.",
+}
+
+
+class RenderObservationTests(unittest.TestCase):
+    def test_returns_none_when_observation_support_is_null(self) -> None:
+        card = minimal_card(observation_support=None)
+
+        self.assertIsNone(render_observation(card))
+        self.assertNotIn("[AEC: Observation]", render_human(card, RAIL_DEFINITION))
+
+    def test_renders_a_complete_observation(self) -> None:
+        card = minimal_card(observation_support=OBSERVATION_SUPPORT)
+
+        text = render_observation(card)
+        self.assertIsNotNone(text)
+        assert text is not None
+        self.assertIn("[AEC: Observation]", text)
+        self.assertIn("Recorded state outlives the thing it described.", text)
+        self.assertIn("codex-review-blocking label on #9760", text)
+        self.assertIn("a02b0721 failure notices", text)
+        self.assertIn("CONFIDENCE medium", text)
+        self.assertIn("OWNER    consumer-owner", text)
+        self.assertIn("[AEC: Observation]", render_human(card, RAIL_DEFINITION))
+
+    def test_null_action_renders_an_explicit_watch_only_note(self) -> None:
+        watching = dict(OBSERVATION_SUPPORT, action=None)
+        card = minimal_card(observation_support=watching)
+
+        text = render_observation(card)
+        self.assertIsNotNone(text)
+        assert text is not None
+        self.assertIn("None yet", text)
 
 
 class RenderHumanTests(unittest.TestCase):

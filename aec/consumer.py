@@ -10,7 +10,7 @@ from typing import Any
 
 from aec.cards import STAGE_PHASES, project_card
 from aec.contracts import normalize_exact_json, validate_project_profile
-from aec.mentoring import validate_decision_context
+from aec.mentoring import validate_decision_context, validate_observation_context
 from aec.resolver import (
     ResolutionDecision,
     resolve,
@@ -35,7 +35,7 @@ CONSUMER_STATE_FIELDS = {
     "task",
     "workflow_position",
 }
-OPTIONAL_CONSUMER_STATE_FIELDS = {"decision_context"}
+OPTIONAL_CONSUMER_STATE_FIELDS = {"decision_context", "observation_context"}
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 PINNED_IDENTITY = re.compile(r"^[A-Za-z0-9_.-]+:[A-Za-z0-9][A-Za-z0-9_.-]*$")
 PRIVATE_PATH_PATTERNS = (
@@ -289,6 +289,14 @@ def validate_consumer_state(state: object) -> list[str]:
             else None,
         )
     )
+    errors.extend(
+        validate_observation_context(
+            state.get("observation_context"),
+            revision=revision_record.get("identity")
+            if type(revision_record) is dict
+            else None,
+        )
+    )
 
     procedures, procedure_errors = _exact_object(
         state.get("procedures"), "procedures", {"available", "required"}
@@ -411,6 +419,8 @@ def _normalized_request(state: dict[str, Any]) -> dict[str, Any]:
     }
     if "decision_context" in state:
         request["decision_context"] = state["decision_context"]
+    if "observation_context" in state:
+        request["observation_context"] = state["observation_context"]
     return request
 
 

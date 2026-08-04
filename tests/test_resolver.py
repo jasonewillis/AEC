@@ -100,6 +100,36 @@ MATERIAL_DECISION_CONTEXT = {
 }
 
 
+MATERIAL_OBSERVATION_CONTEXT = {
+    "action": (
+        "Re-derive any status artifact on read rather than citing it, starting "
+        "with the codex-review-blocking label."
+    ),
+    "authority": {
+        "owner": "consumer-owner",
+        "reason": "Changing how status artifacts are consumed is the owner's call.",
+    },
+    "confidence": "medium",
+    "context": {
+        "evidence_quality": "indirect",
+        "revision": "0123456789abcdef0123456789abcdef01234567",
+    },
+    "instances": [
+        "codex-review-blocking label on #9760",
+        "a02b0721 failure notices",
+        "a scheduled check-in asking to verify settled conditions",
+    ],
+    "recognition_heuristic": (
+        "A status artifact is cited as current without anything re-checking it."
+    ),
+    "refuted_if": (
+        "Each artifact is re-derived at read time, so none can outlive its subject."
+    ),
+    "schema_version": "1.0.0",
+    "statement": "Recorded state outlives the thing it described.",
+}
+
+
 def load_json(path: Path) -> object:
     with path.open(encoding="utf-8") as stream:
         return json.load(stream)
@@ -371,6 +401,93 @@ class ResolverTracerTests(unittest.TestCase):
                     resolve(invalid, procedures),
                     ResolutionRejection,
                 )
+
+    def test_material_observation_context_is_validated_bound_and_rendered(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+        request["observation_context"] = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+
+        first = resolve(request, procedures)
+        second = resolve(copy.deepcopy(request), procedures)
+
+        self.assertNotIsInstance(first, ResolutionRejection)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            MATERIAL_OBSERVATION_CONTEXT,
+            first.to_dict()["observation_support"],
+        )
+
+        changed = copy.deepcopy(request)
+        changed["observation_context"]["statement"] = (
+            "A changed statement must change the bound resolution."
+        )
+        changed_result = resolve(changed, procedures)
+        self.assertNotIsInstance(changed_result, ResolutionRejection)
+        self.assertNotEqual(first.resolution_hash, changed_result.resolution_hash)
+
+    def test_observation_content_alone_does_not_change_the_rest_of_the_decision(
+        self,
+    ) -> None:
+        """Two decisions differing only in observation content must agree on
+        every field the resolver actually decided -- gate, reason_code,
+        required_evidence, and everything else -- and differ only in the new
+        field and the hash it feeds. Otherwise a caller-supplied observation
+        could quietly influence what AEC recommends, which the resolver's own
+        read-only mentoring boundary forbids.
+        """
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+
+        without_observation = resolve(request, procedures)
+        self.assertNotIsInstance(without_observation, ResolutionRejection)
+
+        with_observation_request = copy.deepcopy(request)
+        with_observation_request["observation_context"] = copy.deepcopy(
+            MATERIAL_OBSERVATION_CONTEXT
+        )
+        with_observation = resolve(with_observation_request, procedures)
+        self.assertNotIsInstance(with_observation, ResolutionRejection)
+
+        payload_without = without_observation.to_dict()
+        payload_with = with_observation.to_dict()
+        self.assertNotEqual(
+            without_observation.resolution_hash, with_observation.resolution_hash
+        )
+        only_different = {
+            name
+            for name in payload_with
+            if payload_with[name] != payload_without.get(name)
+        }
+        self.assertEqual(
+            {"observation_support", "resolution_hash", "input_bindings"},
+            only_different,
+        )
+
+    def test_malformed_observation_context_fails_closed(self) -> None:
+        request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
+        procedures = load_json(ROOT / "config/procedures/ticket-to-pr.json")
+        assert isinstance(request, dict)
+
+        # RED CANARY for #131. One instance is a hunch, not a pattern.
+        single_instance = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        single_instance["instances"] = single_instance["instances"][:1]
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = single_instance
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
+
+        stale_context = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        stale_context["context"]["revision"] = "f" * 40
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = stale_context
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
+
+        unknown_field = copy.deepcopy(MATERIAL_OBSERVATION_CONTEXT)
+        unknown_field["notes"] = "an unstructured aside"
+        invalid = copy.deepcopy(request)
+        invalid["observation_context"] = unknown_field
+        self.assertIsInstance(resolve(invalid, procedures), ResolutionRejection)
 
     def test_unapproved_golden_request_drift_is_not_normalized_away(self) -> None:
         request = load_json(ROOT / "tests/fixtures/resolver/golden/intake.json")
