@@ -38,12 +38,14 @@ coaching interaction. It writes an ignored local file, by convention
 `tmp/aec-state.json`. That file is yours; AEC never writes it.
 
 ```bash
+mkdir -p scripts
 cp .local/aec/docs/consumer-kit/state_producer_template.py scripts/aec_state.py
 ```
 
-Now edit the three constants under `CONFIGURE` in your copy. All three are
-required — the template refuses to run until at least `CONSUMER_PROJECT` is
-yours:
+Now edit the three constants under `CONFIGURE` in your copy. Only
+`CONSUMER_PROJECT` is enforced — the template exits `1` while it still holds the
+placeholder — but the other two are wrong for your repository until you set
+them:
 
 | Constant | Set it to |
 | --- | --- |
