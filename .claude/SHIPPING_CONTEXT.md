@@ -3,9 +3,35 @@
 Binds the portable Keep Shipping guidance (`~/.claude/CLAUDE.md`) to this repository.
 Repository contract in `AGENTS.md`, which wins on any conflict.
 
-This file holds the AEC-specific bindings only. The portable rules live in the global
-copy and are not restated here — an earlier in-repo restatement was deleted because it
-had already drifted into a second, contradictory definition of "done".
+This file holds the AEC-specific bindings. An earlier in-repo restatement of the portable
+rules (`docs/delivery/keep-shipping.md`) was deleted because its own done-list was
+satisfiable on an unmerged branch while its prose said "committed and pushed is not done".
+
+**If you do not have the global file, this repository still binds you.** `AGENTS.md` is the
+contract and is self-sufficient; the sections below add AEC's gates on top of it. The
+portable guidance is a convenience for the maintainer, never a prerequisite for
+contributing. Its upstream source, pinned per `AGENTS.md`:
+
+| Source | Pin |
+| --- | --- |
+| `JLWAI/fedJobAdvisor`, `.claude/prompts/keep-shipping.md` | `4e07132fca75db4a1b83c02a09168212e65d4d02` (6991 bytes, 157 lines, read 2026-08-03) |
+
+## Controls that reported success while enforcing nothing
+
+Measured 2026-08-03. Kept because it is the evidence base for the falsifiability rule in
+`AGENTS.md`, and because each was invisible until someone ran the control rather than
+reading it:
+
+| Control | Reported | Actually enforced |
+| --- | --- | --- |
+| `admit` check | required | not in `required_status_checks.contexts` — advisory only |
+| Belt Gate 2B | blocking on findings | matched `severity=='critical'` exact-case; no AEC finding ever used it |
+| `CODEOWNERS` | ownership enforced | inert without required reviews |
+| `status=disputed` | blocks merge | string absent from the merge hook entirely |
+| Findings normalizer | SHA bound | canonicalized to `head`; the gate reads `reviewed_head_sha` |
+
+The last row was committed by the tool written to fix the other four. Assume this list is
+incomplete.
 
 ## Shipping Toward
 
@@ -99,10 +125,13 @@ A pull request, merged, with every gate satisfied on the exact head:
   on 2026-08-03**; before that it reported without gating.
 - PR body carries a populated **Expected Outcomes** section with binary checkboxes, a
   `## Review Evidence` section, and a risk class line (`class: security|structural|additive|content`).
-- An adversarial review pass is recorded at
+- The adversarial review pass `AGENTS.md` requires is recorded at
   `~/.claude/codex-findings/jasonewillis-AEC/<pr>.json`, normalized by
-  `~/.claude/scripts/codex-findings-normalize.py`. **Required for every PR including
-  docs-only** — `.codex-belt-required` applies universally.
+  `~/.claude/scripts/codex-findings-normalize.py`. This line states only *where* the
+  record goes; `AGENTS.md` states when it is required and when it is satisfied. The record
+  must carry `reviewed_head_sha` as a full 40-character object id — the merge gate reads
+  that exact field and fails closed without it, and an abbreviated hash cannot be compared
+  to the PR head.
 - Merge verified by `gh pr view "$PR" --json state,mergedAt` returning `MERGED` with a
   non-null `mergedAt`. Use a quoted variable or a literal number: an unquoted `<N>` is shell
   input redirection, not a placeholder. A green label is not a merge.

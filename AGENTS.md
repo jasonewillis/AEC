@@ -60,14 +60,20 @@ These rules apply to every agent working in this repository.
 - Prefer standard-library, deterministic validation for the portable core.
 - Schema, validator, fixtures, and documentation must agree.
 - A green-only check is not a proof harness. Every critical gate needs a red canary.
-- A canary must be falsifiable by the control it claims to prove. Mutate that control and
-  record which tests red. A test that passes identically with and without the control pins
-  the environment, not the change, and must be deleted or renamed to say what it actually
-  covers.
+- A canary offered as evidence for a control must be falsifiable by that control. Mutate
+  the control and record which tests red. A test that passes identically with and without
+  it proves nothing about it and must be deleted, not renamed — a rename keeps a vacuous
+  test alive under better branding. This does not condemn tests that deliberately pin a
+  standing invariant, a characterization, or third-party behaviour and name no control;
+  those are honest when their name and docstring say what they pin.
 - Every pull request needs an adversarial review pass, including documentation-only
-  changes. The `.codex-belt-required` marker applies universally; risk class exempts
-  nothing. Treat implementation and validation as separate responsibilities: re-run the
-  builder's verification command yourself before accepting its result.
+  changes. `.codex-belt-required` applies universally; risk class exempts nothing.
+  Findings must be resolved, or recorded as unresolved with the reason. A findings file
+  that merely exists is not a review; `severity` is a closed enum and an open `high` is
+  not cleared by the absence of a `critical`.
+- For any non-trivial change, implementation and validation are separate responsibilities.
+  Whoever accepts a result re-runs the producer's verification command against the exact
+  head and reads the output, rather than accepting the producer's report of it.
 - Do not declare work finished from an open branch, stale check, skipped check, or
   evidence from a different revision.
 - Never include agent names as commit co-authors.
