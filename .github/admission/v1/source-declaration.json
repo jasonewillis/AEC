@@ -1,5 +1,9 @@
 {
   "artifacts": {
+    ".claude/aec-profile.json": [
+      "configuration",
+      "fbd44960eb9076c2d271720da1f41f3a5f222d7c55ec4687ab2c712b8f855ae3"
+    ],
     "config/principles/aec-engineering.json": [
       "configuration",
       "730cf21a28ece2ec7389ac7ada1188358d9a02544cc360bb752f7f9c65a11e5f"
@@ -260,6 +264,7 @@
     "tests/test_admission_root_v1.py",
     "tests/test_aec_coach.py",
     "tests/test_aec_doctor_fails_closed.py",
+    "tests/test_aec_opts_into_its_own_coaching.py",
     "tests/test_aec_prompt_hook.py",
     "tests/test_agent_adapters.py",
     "tests/test_authority_v2_hostile_corpus.py",
@@ -323,9 +328,10 @@
     "tests/test_admission_root_v1.py": "917b05a0068f6b1272cba932a45d7e2fcb24b7fb722974bd7912df1e0557f100",
     "tests/test_aec_coach.py": "73970ae3cb28ec16aefa291e02a2d6adf37c5108025b78ac3134dafa48a4ae47",
     "tests/test_aec_doctor_fails_closed.py": "3ea9a3308def4f5c6e2d842e181289bd520ca1cc8a61595b09e51fec026d3b45",
+    "tests/test_aec_opts_into_its_own_coaching.py": "9dc7d99209f3a997ded030f389b555161b9b617951fa5abfc8ef2c91ab463b39",
     "tests/test_aec_prompt_hook.py": "43c3297a620b85337101d84447097e6e94b0b52a559624a98e8a06ac768fc68a",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "9b2ffaad13a6971ce425171df882b1eb8c78f62bd598198f152913966f386575",
+    "tests/test_authority_v2_hostile_corpus.py": "d18ed65ce71d23b3a1c02194df6dabdaffd3c5572695e0e6693477ca66f41aa8",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "50d4ab647da0022b7a60b3a918661da18950ffdc3ed11f77859d67aff137043f",
     "tests/test_consumer_install_kit.py": "31774b8dcab972da60c2e93b8a17935e31aff2a6e06d7b6fb5f020efe3966e58",

@@ -1,0 +1,12 @@
+{
+  "aec_mode": "read-only-mentor",
+  "agent_adapters": [
+    "claude-code",
+    "codex"
+  ],
+  "lifecycle_authority": "consumer-owned",
+  "profile_version": "aec-self:1.0.0",
+  "project": "jasonewillis/AEC",
+  "schema_version": "1.0.0",
+  "workflow": "ticket-to-pr"
+}
