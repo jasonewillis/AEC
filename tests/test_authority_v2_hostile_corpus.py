@@ -80,14 +80,17 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # prompt hook rendered AEC's revision and project on every consumer's card.
 # Bumped 2026-08-03: +1 for tests/test_aec_opts_into_its_own_coaching.py, which
 # pins that AEC travels the same opt-in path it asks consumers to travel.
-EXPECTED_DISTINCT_FROZEN_PATHS = 61
+# Bumped 2026-08-04: +1 for tests/test_declaration_reports_digest_drift.py,
+# which pins that --check names a drifted declared path AND that the generator
+# still refuses to write those hand-maintained sections.
+EXPECTED_DISTINCT_FROZEN_PATHS = 62
 # Bumped 2026-08-03 alongside the count above: tests/test_consumer_install_kit.py
 # is a new tracked source path, so it enters the declaration as well as the tree.
 #
 # Bumped again 2026-08-03: +1 for tests/test_docs_links.py, which resolves every
 # documentation path this repository names. This canary fired on it correctly and
 # is the reason the addition is recorded here rather than absorbed silently.
-EXPECTED_SOURCE_BASELINE_PATHS = 53
+EXPECTED_SOURCE_BASELINE_PATHS = 54
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

@@ -117,6 +117,46 @@ def undeclared_untracked_python() -> list[str]:
     )
 
 
+def declared_digest_drift(declaration: dict) -> list[str]:
+    """Report declared paths whose bytes no longer match their digest.
+
+    `artifacts` and `proof_closure` carry human-assigned metadata, so this tool
+    deliberately does not regenerate them -- that manual step IS the control.
+    A candidate declares digests for files it must not be able to change
+    silently, and auto-rewriting them would make tampering and a legitimate
+    edit indistinguishable at the tool level.
+
+    But not regenerating them is not the same as not *reporting* them. Before
+    this check, editing a declared file surfaced later and elsewhere as
+
+        AssertionError: Tuples differ: () != ('artifacts',)
+
+    from `self_check`, which names the section and not the path. Four times on
+    2026-08-03/04 that cost a diagnosis detour, and once it did real damage: an
+    invariant-sweep mutation left a stale artifact digest, `setUpClass` errored,
+    the error was read as noise rather than as the run being invalid, and a
+    guarded invariant was reported as UNGUARDED. A false finding nearly became
+    a pull request.
+
+    So this names the path and the digest to paste, and still refuses to write
+    it. `self_check` remains the enforcing control; this is the diagnosis that
+    reaches you first, because `--check` is in the documented done-list.
+    """
+    problems: list[str] = []
+    for section in ("artifacts", "proof_closure"):
+        for path, record in sorted(declaration.get(section, {}).items()):
+            target = ROOT / path
+            # Symlinks are declared by their target text, not their bytes, and
+            # a directory has none; both are the owning section's business.
+            if target.is_symlink() or not target.is_file():
+                continue
+            declared = record[1] if isinstance(record, list) else record.get("sha256")
+            actual = hashlib.sha256(target.read_bytes()).hexdigest()
+            if declared != actual:
+                problems.append(f"  {section}.{path}\n    declared {declared}\n    actual   {actual}")
+    return problems
+
+
 def build_declaration() -> dict:
     """Recompute sources and python_paths; keep every other section pinned."""
     current = json.loads(DECLARATION_PATH.read_text(encoding="utf-8"))
@@ -170,6 +210,14 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         # A green here is a claim about the tree at merge, not about the working
         # directory. Untracked .py files make those two trees differ.
+        drift = declared_digest_drift(json.loads(committed))
+        if drift:
+            print(
+                "FAIL declared digests are stale. These are hand-maintained on "
+                "purpose, so update them yourself rather than regenerating:\n"
+                + "\n".join(drift)
+            )
+            return 1
         pending = undeclared_untracked_python()
         if pending:
             print(
