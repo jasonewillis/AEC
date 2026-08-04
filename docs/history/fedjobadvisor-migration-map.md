@@ -1,5 +1,12 @@
 # FedJobAdvisor Migration Map
 
+> **CLOSED — historical audit artifact, not a live work list.**
+> Verified 2026-08-03: all eleven source issues (`#8804 #8805 #8807 #8808 #8809 #8810
+> #8815 #8816 #8837 #8841 #8879`) are CLOSED in `JLWAI/fedJobAdvisor`. The snapshot
+> below states they "were open and labeled `deferred-to-v2`", which was true at the
+> `2026-07-22T01:24:39Z` snapshot and is no longer true. The disposition decisions the
+> map records remain valid; its open/closed status does not. Retained for provenance.
+
 This map reconciles the eleven framework-related records exported from
 `JLWAI/fedJobAdvisor` into the reusable AEC boundary. It is a read-only audit artifact,
 not a second issue tree and not permission for AEC to mutate the consumer repository.

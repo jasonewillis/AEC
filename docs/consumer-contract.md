@@ -210,6 +210,7 @@ The consumer integration is ready for a bounded pilot only when:
 
 The consumer integration and ownership disposition for the first FedJobAdvisor
 consumer is recorded in the
-[FedJobAdvisor migration map](fedjobadvisor-migration-map.md). That map is evidence and
+[FedJobAdvisor migration map](history/fedjobadvisor-migration-map.md). That map is evidence and
 does not import its transport, Project, label, writer, or deployment implementation
-into AEC.
+into AEC. The migration it records is finished — all eleven source issues are closed —
+so the map is retained as a historical audit artifact, not a live work list.
