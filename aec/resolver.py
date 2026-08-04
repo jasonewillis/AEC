@@ -303,7 +303,15 @@ def _validate_blockers(value: object) -> list[str]:
             and reason_code
             and reason_code not in BLOCKER_REASON_REGISTRY
         ):
-            errors.append(f"blockers[{index}].reason_code is unsupported")
+            # Name the accepted set. A consumer that hits this had no way to
+            # discover it short of reading this file, which pushes consumers
+            # toward hardcoding the enum downstream where it drifts on every
+            # pin bump -- the failure that broke HealthRAG's fixtures at
+            # d35f535. Derived from the registry, never a second literal list.
+            errors.append(
+                f"blockers[{index}].reason_code is unsupported; accepted: "
+                + ", ".join(sorted(BLOCKER_REASON_REGISTRY))
+            )
     return errors
 
 

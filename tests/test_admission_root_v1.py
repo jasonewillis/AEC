@@ -348,7 +348,7 @@ class AdmissionRootV1Tests(unittest.TestCase):
     ) -> None:
         expected = {
             "aec/resolver.py": (
-                "4f601a49b402d71f730aaf2852f25420c0852dd4b21343b5fc92607089b92e39"
+                "ddb7830078e0597a74ead3c70ca1d98001066a21f30c042ec258032724266127"
             ),
             "schemas/resolution-decision.schema.json": (
                 "2a81aeaab10e3722c005895f95573f69b7b07c01f0a58931e3e372d5dc46f679"
