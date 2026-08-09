@@ -1,14 +1,17 @@
-"""Pin that AEC's decision contracts gate structure, not content quality.
+"""Pin that `validate_decision_context` gates structure, not content quality.
 
-These tests claim no control. They characterize a standing property of
-`validate_decision_context` and `verify_outcome_receipt`: both accept a
-semantically hollow material decision as readily as a well-formed one,
-because neither can read meaning. Nothing in this file argues that is a
-defect. It exists so that a later reader cannot mistake a clean validator
-pass for evidence that a decision was thought through, and so that a change
-which does add a content check has an honest before-picture to red against.
+These tests claim no control. They characterize one standing property of one
+function: it accepts a semantically hollow material decision as readily as a
+well-formed one, because it cannot read meaning. Nothing here argues that is
+a defect. The file exists so a later reader cannot mistake a clean validator
+pass for evidence that a decision was thought through, and so a change that
+does add a content check has an honest before-picture to red against.
 
-The finding is recorded in `docs/experiments/grill-elicitation.md`.
+Scope note: `docs/experiments/grill-elicitation.md` also reports that the
+same hollowness survives `verify_outcome_receipt` to a `supported` verdict.
+That half was established by READING the receipt contract, not by executing a
+bound receipt, and nothing in this module exercises it. An earlier docstring
+claimed both functions were characterized here; only this one is.
 """
 
 from __future__ import annotations
@@ -55,11 +58,17 @@ class ElicitationQualityIsUncontracted(unittest.TestCase):
         exactly why no rule can reach the prose.
         """
         payload = load("hollow")
+        # Broken from BELOW: hollow.json already declares high/direct-verified,
+        # and direct-verified is the only quality supporting high, so there is
+        # nothing to raise confidence above.
         payload["context"]["evidence_quality"] = "assumed"
         payload["recommendation"]["expected_result"]["direction"] = "decrease"
 
         errors = validate_decision_context(payload, revision=REVISION)
 
+        # Pinned exactly: the experiment record publishes this count, so a third
+        # error appearing must red here rather than leave the record silently wrong.
+        self.assertEqual(2, len(errors), errors)
         self.assertIn(
             "decision_context.recommendation.confidence exceeds the declared evidence quality",
             errors,

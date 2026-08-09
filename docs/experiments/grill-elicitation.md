@@ -8,20 +8,22 @@ written. The proposal it tested was rejected in the form proposed. Nothing in
 
 ## Why this was run
 
-Eight of AEC's required evidence items are elicited rather than measured:
+Eleven of AEC's required evidence items are elicited rather than measured:
 
 | Phase | Required evidence |
 | --- | --- |
 | Intake | `outcome-statement`, `owner-and-boundary` |
 | Framing | `context-and-constraints`, `authority-and-risks`, `open-questions` |
 | Spec | `behavior-and-interface-contract`, `non-goals`, `binary-acceptance-criteria` |
+| Plan | `vertical-slice-plan`, `dependency-and-ownership-map`, `proof-and-stop-rules` |
 
-From `Build` onward, evidence is produced by running something. At these three
-phases it exists only in an engineer's head. AEC can name which item is missing
-and cannot help produce any of it.
+From `Build` onward, evidence is produced by running something — `Build` itself
+requires `red-case-result` and `green-case-result`, which are outputs of a test
+run. At these four phases it exists only in an engineer's head. AEC can name
+which item is missing and cannot help produce any of it.
 
 An interview technique — sustained questioning that refuses vague answers —
-was proposed as the producer, scoped to those three phases plus
+was proposed as the producer, scoped to those four phases plus
 `decision_context`. The open question was where such a procedure could live,
 and what would tell it to stop.
 
@@ -51,8 +53,12 @@ bound to the same revision.
 - **B, hollow** — `tests/fixtures/decision-context/hollow.json`. Every field
   populated, every field restating its own name. Its falsifier is "Option A
   turns out to be the wrong choice." Its measure is `goodness`, in `points`.
-- **C, contradictory** — B with `confidence` raised above its declared
-  `evidence_quality` and a `direction` that disagrees with its own numbers.
+- **C, contradictory** — B with `evidence_quality` *lowered* to `assumed`
+  (`confidence` stays `high`) and a `direction` that disagrees with its own
+  numbers. The ladder has to be broken from below: B already declares
+  `high`/`direct-verified`, and `direct-verified` is the only quality that
+  supports `high` (`aec/mentoring.py:68-72`), so there is nothing to raise
+  `confidence` above. Flipping `direction` alone yields one error, not two.
 
 ## Result
 
@@ -109,8 +115,8 @@ this record exists so nobody re-derives it.
 ## Revised position
 
 The finding inverts the argument for the interview rather than defeating it.
-Content quality at Intake, Framing, and Spec is the one thing no contract in
-this repository checks end to end. That makes interrogation more valuable, not
+Content quality at Intake, Framing, Spec, and Plan is the one thing no contract
+in this repository checks end to end. That makes interrogation more valuable, not
 less — it is the only proposed mechanism aimed at the uncontracted half — and
 it means the mechanism cannot be self-certifying.
 
@@ -125,8 +131,24 @@ Three constraints follow:
    evidence it grades has no independent failure mode. The experiment sharpens
    it: since no contract can detect hollow evidence, AEC would have no way to
    catch itself producing it.
-3. **Nothing generated enters a hash.** `compute_card_hash()` covers every
-   public-card field. Interview output is evidence input, never card content.
+3. **Human acceptance is what makes the output submittable — not its origin.**
+   An earlier draft of this constraint read "nothing generated enters a hash."
+   That is false for half the proposed scope, and the review that caught it was
+   right. Evidence for the four elicited phases is indeed input only. But
+   `decision_context` is republished as `card.decision_support`
+   (`aec/cards.py:93`) and `compute_card_hash()` covers every public-card field
+   except `card_hash` itself (`aec/cards.py:130-142`). So a grill applied to a
+   material decision puts its prose inside the card hash by construction, and no
+   placement rule avoids that.
+
+   The honest constraint is therefore about authorship, not routing. AEC already
+   hashes `decision_context` prose today; what makes that prose the consumer's
+   rather than the machine's is that a person submitted it. An interview changes
+   who *drafts*, so acceptance is the only thing left standing between a
+   generated sentence and a hashed one. That is the same requirement as
+   constraint 1, arrived at from the opposite direction: without a human
+   accepting, a grill on `decision_context` silently converts model output into
+   hashed card content.
 
 ## Not done
 
