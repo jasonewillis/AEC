@@ -224,7 +224,7 @@ class PromptHookTests(unittest.TestCase):
             "Pros:",
             "Cons:",
             "maintainability, quality, reversibility, risk, and scope",
-            "confidence no higher than evidence quality",
+            "evidence quality and confidence no higher than it",
             "principal uncertainty, falsifier",
             "expected measurable result, revisit evidence, and decision owner",
             "mark missing consumer facts unverified",

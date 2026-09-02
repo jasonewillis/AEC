@@ -49,7 +49,7 @@ Material fork: present 2-3 bounded choices in this form:
    Pros: <advantages>
    Cons: <costs>
 For every choice, cover maintainability, quality, reversibility, risk, and scope.
-State confidence no higher than evidence quality, plus principal uncertainty, falsifier,
+State evidence quality and confidence no higher than it, plus principal uncertainty, falsifier,
 expected measurable result, revisit evidence, and decision owner.
 Use only consumer-supplied phase and milestone facts; mark missing consumer facts unverified.
 AEC advises only. The consumer owns the decision and every project mutation.
