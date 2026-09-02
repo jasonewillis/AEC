@@ -116,6 +116,14 @@
       "test-fixture",
       "3fe431171dfb124d340c103c82ea9794dfd000fbf682b08ff92f26bdeadd34a0"
     ],
+    "tests/fixtures/decision-context/grilled.json": [
+      "test-fixture",
+      "6eb750ac6fe2b56be6a736e5ab60cd27b9126798dfc9fbee8e1d848e2b2a9814"
+    ],
+    "tests/fixtures/decision-context/hollow.json": [
+      "test-fixture",
+      "967e03e46e720fd33ef1aa216f1f471b1df9d05ecb59215e4c0c2c590a84bc8e"
+    ],
     "tests/fixtures/outcomes/golden.json": [
       "test-fixture",
       "9dfb6f823faf7263debea44fbbd3456f7de224e0def3ec28bb6d40d7970a2b6e"
@@ -275,6 +283,7 @@
     "tests/test_declaration_reports_digest_drift.py",
     "tests/test_declaration_sees_untracked_python.py",
     "tests/test_docs_links.py",
+    "tests/test_elicitation_quality_is_uncontracted.py",
     "tests/test_exact_json.py",
     "tests/test_foundation_behavior.py",
     "tests/test_foundation_validation.py",
@@ -333,7 +342,7 @@
     "tests/test_aec_opts_into_its_own_coaching.py": "9dc7d99209f3a997ded030f389b555161b9b617951fa5abfc8ef2c91ab463b39",
     "tests/test_aec_prompt_hook.py": "f008d2b35e7bd26259ebddfccf8cde56bd04b9fb1d4608b47a116b8f8a5f16dd",
     "tests/test_agent_adapters.py": "71f8b33b5a7c59391f85b2b7d55b040628809800368dc943bade156134cc808b",
-    "tests/test_authority_v2_hostile_corpus.py": "22678a5fd07b81c32821a3bb5b6c425a42e064dd24a458b1dada6ab8cc3759a9",
+    "tests/test_authority_v2_hostile_corpus.py": "f65e1595e5a481631f720ad96e9759696553c61df94e0002a633bd39d5b6a7f2",
     "tests/test_blueprint_skills.py": "360429991165861cb04699d8db43d610c8fb0321eef490d3e93e875900fd0a55",
     "tests/test_consumer_connection_proof.py": "ebd34a93bd9b25ff975e183241194bdf5f1659aa10716c8ccacbc72c5509bb7b",
     "tests/test_consumer_install_kit.py": "31774b8dcab972da60c2e93b8a17935e31aff2a6e06d7b6fb5f020efe3966e58",
@@ -341,6 +350,7 @@
     "tests/test_declaration_reports_digest_drift.py": "9e7501069465c65c865eb877c9460718682423c80c566c0b1f214b246cf8894a",
     "tests/test_declaration_sees_untracked_python.py": "824de553f65cccfd1800324e80d29cdd7a28ee48f3e2e28b651db7afcd89d285",
     "tests/test_docs_links.py": "c35dd3edd06c50295dca8ec6f80a12d69338805e1217a72dd0abed0541b9c8ed",
+    "tests/test_elicitation_quality_is_uncontracted.py": "5435a3a8a086945adf23790397cb2061b8d74aeace9930cef80f112de575b717",
     "tests/test_exact_json.py": "d309a3418b412f32eabf783d8b3e9d62fc201f10b40890505b66242370f96a13",
     "tests/test_foundation_validation.py": "41cec1a1cfb0b080d6c8c64615156be71cc4f392febc6640834db768d3aa29cf",
     "tests/test_generate_source_declaration.py": "8de5cfde4f38ccfb22da5b5f0620b3d788b25b74cc3792109170fabecd60b8b3",

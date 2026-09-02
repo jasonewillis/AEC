@@ -1,0 +1,54 @@
+{
+  "authority": {
+    "owner": "agent",
+    "reason": "The agent owns this decision."
+  },
+  "choices": [
+    {
+      "identity": "option-a",
+      "summary": "Do option A.",
+      "tradeoffs": {
+        "maintainability": "Option A has maintainability tradeoffs.",
+        "quality": "Option A has quality tradeoffs.",
+        "reversibility": "Option A has reversibility tradeoffs.",
+        "risk": "Option A has risk tradeoffs.",
+        "scope": "Option A has scope tradeoffs."
+      }
+    },
+    {
+      "identity": "option-b",
+      "summary": "Do option B.",
+      "tradeoffs": {
+        "maintainability": "Option B has maintainability tradeoffs.",
+        "quality": "Option B has quality tradeoffs.",
+        "reversibility": "Option B has reversibility tradeoffs.",
+        "risk": "Option B has risk tradeoffs.",
+        "scope": "Option B has scope tradeoffs."
+      }
+    }
+  ],
+  "context": {
+    "evidence_quality": "direct-verified",
+    "revision": "__REVISION__"
+  },
+  "question": "What should we do about the grilling thing?",
+  "recommendation": {
+    "choice": "option-a",
+    "confidence": "high",
+    "expected_result": {
+      "baseline": "0",
+      "direction": "increase",
+      "measure": "goodness",
+      "target": "10",
+      "threshold": "Things are better.",
+      "unit": "points"
+    },
+    "falsifier": "Option A turns out to be the wrong choice.",
+    "principal_uncertainty": "It is uncertain whether option A is right.",
+    "revisit_when": [
+      "Later."
+    ],
+    "why": "Option A is better."
+  },
+  "schema_version": "2.0.0"
+}

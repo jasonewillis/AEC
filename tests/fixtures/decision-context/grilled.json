@@ -1,0 +1,66 @@
+{
+  "authority": {
+    "owner": "consumer-owner",
+    "reason": "The choice moves the read-only trust boundary in docs/architecture/coaching-interaction.md, which the repository owner defined and only the owner can relax."
+  },
+  "choices": [
+    {
+      "identity": "consumer-side-skill",
+      "summary": "Ship grilling as a consumer-owned skill that writes a candidate evidence file; AEC sees the output only as ordinary submitted evidence.",
+      "tradeoffs": {
+        "maintainability": "One more copied artifact per consumer, alongside the existing copied state producer.",
+        "quality": "Keeps AEC's evaluator independent of the producer, so a gate pass still means something.",
+        "reversibility": "Fully reversible: deleting the skill removes no AEC behaviour and changes no hash.",
+        "risk": "Every consumer must install and maintain its own copy, repeating the State construction gap already recorded in the gap map.",
+        "scope": "No change to aec/, no change to card_hash, no change to the nine-phase catalog."
+      }
+    },
+    {
+      "identity": "aec-native-command",
+      "summary": "Ship grilling inside aec/ as a coach subcommand that interviews the engineer and emits validated evidence.",
+      "tradeoffs": {
+        "maintainability": "Introduces nondeterministic model output into a repository whose core promise is a deterministic hash.",
+        "quality": "AEC would author the outcome-statement and then judge whether the outcome-statement satisfies intake-outcome, so the gate could no longer fail for a real reason.",
+        "reversibility": "Hard to reverse once consumers depend on AEC to produce their evidence.",
+        "risk": "Breaks the read-only mentor boundary the consumer profile pins as aec_mode=read-only-mentor.",
+        "scope": "Requires new schema, new hash contract, and a second interaction model beside the prompt hook."
+      }
+    },
+    {
+      "identity": "teach-only",
+      "summary": "Add no procedure. Extend the existing recognition_heuristic text at Intake, Framing, and Spec to name interrogation as the technique, and leave production to the engineer.",
+      "tradeoffs": {
+        "maintainability": "Lowest ongoing cost; no new artifact to keep in sync.",
+        "quality": "Teaches the judgment without asserting a mechanism that has not been shown to work.",
+        "reversibility": "Reversible, but edits hashed card copy and so recomputes card_hash as an ordinary content revision.",
+        "risk": "The eight elicited evidence items still have no producer, so the Intake-to-Spec gates stay hard to pass.",
+        "scope": "Touches config/procedures/ticket-to-pr.json only, and collides with the pending rewrite in issue #89."
+      }
+    }
+  ],
+  "context": {
+    "evidence_quality": "indirect",
+    "revision": "__REVISION__"
+  },
+  "question": "Where should a grilling elicitation procedure live so that it can produce Intake, Framing, and Spec evidence without AEC becoming the producer of the evidence it evaluates?",
+  "recommendation": {
+    "choice": "consumer-side-skill",
+    "confidence": "medium",
+    "expected_result": {
+      "baseline": "0",
+      "direction": "increase",
+      "measure": "intake-to-spec-gate-passes",
+      "target": "1",
+      "threshold": "One real task passes Intake, Framing, and Spec using evidence produced by a grilling session.",
+      "unit": "count"
+    },
+    "falsifier": "A grilling session is run to a clean validate_decision_context pass and the resulting decision_context is then shown to be hollow, meaning a reader who did not attend the session cannot state what would refute the recommendation.",
+    "principal_uncertainty": "Whether interrogation actually raises the quality of elicited evidence, or only its completeness.",
+    "revisit_when": [
+      "A second consumer repository installs AEC.",
+      "The State construction gap ships one shared command."
+    ],
+    "why": "It is the only option that adds a producer without letting the producer grade its own output."
+  },
+  "schema_version": "2.0.0"
+}
