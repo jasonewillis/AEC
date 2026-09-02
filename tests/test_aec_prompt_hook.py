@@ -195,6 +195,43 @@ class PromptHookTests(unittest.TestCase):
                     self.assertIn("[AEC: Project Guidance]", result.stdout)
                     self.assertIn("[AEC: Mentoring]", result.stdout)
 
+    def test_task_intake_appends_one_agent_guidance_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            state = Path(directory) / "state.json"
+            build_state(state)
+
+            intake = run_hook(state, payload=hook_payload(trigger="task-intake"))
+            status = run_hook(state, payload=hook_payload(trigger="status-request"))
+
+        self.assertEqual(0, intake.returncode, intake.stderr)
+        self.assertEqual(0, status.returncode, status.stderr)
+        heading = "[AEC: Agent Guidance Contract]"
+        self.assertTrue(intake.stdout.startswith(status.stdout))
+        self.assertEqual(1, intake.stdout.count(heading))
+        self.assertNotIn(heading, status.stdout)
+        for required_text in (
+            "WHY NOW",
+            "CUSTOMER OUTCOME",
+            "UNCERTAINTY TYPE",
+            "SCOPE / NON-GOALS",
+            "REQUIRED PROOF",
+            "RISK",
+            "STOP RULE",
+            "TRANSFERABLE LESSON",
+            "Routine: do not manufacture choices; decision_context stays null.",
+            "Material fork: present 2-3 bounded choices",
+            "1. [Recommended]",
+            "Pros:",
+            "Cons:",
+            "maintainability, quality, reversibility, risk, and scope",
+            "confidence no higher than evidence quality",
+            "principal uncertainty, falsifier",
+            "expected measurable result, revisit evidence, and decision owner",
+            "mark missing consumer facts unverified",
+        ):
+            with self.subTest(required_text=required_text):
+                self.assertIn(required_text, intake.stdout)
+
     def test_unknown_adapter_trigger_fails_visible_without_a_rail(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             state = Path(directory) / "state.json"
@@ -342,12 +379,15 @@ class PromptHookTests(unittest.TestCase):
 
             for state in (missing, malformed):
                 with self.subTest(state=state.name):
-                    result = run_hook(state)
+                    result = run_hook(
+                        state, payload=hook_payload(trigger="task-intake")
+                    )
                     self.assertEqual(0, result.returncode, result.stderr)
                     self.assertIn("[AEC: Integration Blocked]", result.stdout)
                     self.assertNotIn("you are here", result.stdout)
                     self.assertNotIn("[AEC: Project Guidance]", result.stdout)
                     self.assertNotIn("[AEC: Mentoring]", result.stdout)
+                    self.assertNotIn("[AEC: Agent Guidance Contract]", result.stdout)
 
 
 if __name__ == "__main__":
