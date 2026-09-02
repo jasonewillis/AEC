@@ -85,14 +85,16 @@ REJECTION = "ADMISSION-001 EXACT_BASELINE"
 # still refuses to write those hand-maintained sections.
 # Bumped 2026-08-04: +1 for tests/test_observation_context.py, the closed
 # contract an agent observation must satisfy before AEC will carry it (#131).
-EXPECTED_DISTINCT_FROZEN_PATHS = 63
+# Bumped 2026-09-02: +1 for tests/test_consumer_release_update.py, which pins
+# the consumer-owned release notification boundary (#145).
+EXPECTED_DISTINCT_FROZEN_PATHS = 64
 # Bumped 2026-08-03 alongside the count above: tests/test_consumer_install_kit.py
 # is a new tracked source path, so it enters the declaration as well as the tree.
 #
 # Bumped again 2026-08-03: +1 for tests/test_docs_links.py, which resolves every
 # documentation path this repository names. This canary fired on it correctly and
 # is the reason the addition is recorded here rather than absorbed silently.
-EXPECTED_SOURCE_BASELINE_PATHS = 55
+EXPECTED_SOURCE_BASELINE_PATHS = 56
 FROZEN_PYTHON_PATHS = (
     *SOURCE_BASELINE,
     "aec/adapters.py",

@@ -102,6 +102,8 @@ not stored in a self-referential tracked file. Consumers may poll the official
 `jasonewillis/AEC` release feed and open their own update pull requests, but must validate
 the candidate at that exact SHA. The manifest sets `auto_merge_allowed=false`; AEC never
 edits, merges, deploys, or changes lifecycle state in a consumer repository.
+The copyable checker and consumer-owned scheduled workflow are documented in
+[`docs/consumer-kit/register-hook.md`](docs/consumer-kit/register-hook.md#step-6--receive-reviewed-release-notifications).
 
 Publication requires the protected `AEC_RELEASE_TOKEN` repository secret with
 Administration read access and Contents write access. The workflow fails before creating
