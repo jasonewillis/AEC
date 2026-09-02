@@ -106,6 +106,13 @@ gate-failure    review-finding   pr-created        deploy-observe
 Selecting that value is a consumer-owned decision. A static command-line
 argument cannot do it, because it would pick the same output for every prompt.
 
+`task-intake` also appends `[AEC: Agent Guidance Contract]` after the validated
+card. It directs the host agent to produce a bounded task brief and, only at a
+material fork, 2-3 choices with the recommendation first and explicit Pros and
+Cons. This text is outside the public card and does not change its hash. It does
+not inspect prompt text or fill missing project facts; the agent must mark
+missing consumer facts unverified.
+
 ## Step 5 — Verify the install
 
 Run these from your repository root:

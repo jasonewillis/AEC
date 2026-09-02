@@ -37,6 +37,23 @@ from aec.human_render import (
 ROOT = Path(__file__).resolve().parents[1]
 PROCEDURE_CATALOG_PATH = ROOT / "config" / "procedures" / "ticket-to-pr.json"
 BLOCKED_HEADING = "[AEC: Integration Blocked]"
+TASK_INTAKE_AGENT_GUIDANCE = """[AEC: Agent Guidance Contract]
+Use the validated card and consumer-supplied facts to answer with this task brief:
+WHY NOW · CUSTOMER OUTCOME · UNCERTAINTY TYPE · SCOPE / NON-GOALS
+REQUIRED PROOF · RISK · STOP RULE · TRANSFERABLE LESSON
+
+Classify the decision before offering options.
+Routine: do not manufacture choices; decision_context stays null.
+Material fork: present 2-3 bounded choices in this form:
+1. [Recommended] <choice>
+   Pros: <advantages>
+   Cons: <costs>
+For every choice, cover maintainability, quality, reversibility, risk, and scope.
+State evidence quality and confidence no higher than it, plus principal uncertainty, falsifier,
+expected measurable result, revisit evidence, and decision owner.
+Use only consumer-supplied phase and milestone facts; mark missing consumer facts unverified.
+AEC advises only. The consumer owns the decision and every project mutation.
+"""
 HEX_REVISION = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -139,7 +156,7 @@ def render_checkpoint(
     if current_revision(project_root) != revision:
         raise HookFailure("PROJECT_REVISION_CHANGED")
     try:
-        return render_interaction(
+        rendered = render_interaction(
             result.to_dict(),
             default_rail_definition(),
             trigger,
@@ -147,6 +164,9 @@ def render_checkpoint(
             blockers=state["blockers"],
             task_id=state["task"]["identity"],
         )
+        if trigger == "task-intake":
+            rendered += TASK_INTAKE_AGENT_GUIDANCE
+        return rendered
     except (KeyError, TypeError, ValueError, RenderFailure) as error:
         raise HookFailure("RENDER_REJECTED") from error
 

@@ -410,6 +410,14 @@ line. The renderer never remembers a prior phase or selects a lifecycle transiti
 consumer adapter owns per-interaction trigger selection, payload augmentation, and state
 production.
 
+At `task-intake` only, the prompt hook appends an unhashed agent-guidance contract after
+the validated human card. It requires a bounded task brief and tells the host agent not
+to manufacture options for routine work. At a material fork it requires 2-3 choices,
+the recommendation first, explicit Pros and Cons, the existing five tradeoff dimensions,
+and the existing evidence and ownership fields. This instruction does not derive facts,
+select an option, validate prose quality, or change `decision_context`; absent consumer
+phase or milestone facts remain unverified.
+
 `1.3.0` adds one purely presentational refinement to the rail: stage headers
 are bracketed across their exact phase span (`├─── UNDERSTAND ───┤`) instead of
 a bare centred label, so a stage's scope is explicit on the same header line.
