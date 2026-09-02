@@ -339,7 +339,7 @@
     "tests/test_consumer_connection_proof.py": "ebd34a93bd9b25ff975e183241194bdf5f1659aa10716c8ccacbc72c5509bb7b",
     "tests/test_consumer_install_kit.py": "31774b8dcab972da60c2e93b8a17935e31aff2a6e06d7b6fb5f020efe3966e58",
     "tests/test_consumer_interface.py": "6024cb230524e54557bce8a85b712ae77352d319eddeed1f02850bf00992f0e1",
-    "tests/test_consumer_release_update.py": "7d306fff79d1e2f00a309f75a93c48197161fe6aa82c3f3bc08477a0c4c17e12",
+    "tests/test_consumer_release_update.py": "1907d13d6d235a8295fbb61de80e00e13b60beb70c7d7ebd51efaa06a3223b34",
     "tests/test_declaration_reports_digest_drift.py": "9e7501069465c65c865eb877c9460718682423c80c566c0b1f214b246cf8894a",
     "tests/test_declaration_sees_untracked_python.py": "824de553f65cccfd1800324e80d29cdd7a28ee48f3e2e28b651db7afcd89d285",
     "tests/test_docs_links.py": "c35dd3edd06c50295dca8ec6f80a12d69338805e1217a72dd0abed0541b9c8ed",

@@ -206,8 +206,15 @@ class ConsumerNotificationTemplateTests(unittest.TestCase):
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("contents: read", workflow)
         self.assertIn("issues: write", workflow)
+        self.assertIn("group: aec-release-notification", workflow)
+        self.assertIn("cancel-in-progress: false", workflow)
         self.assertIn("persist-credentials: false", workflow)
-        self.assertIn("jasonewillis/AEC", workflow)
+        self.assertIn(
+            "https://github.com/jasonewillis/AEC/releases/latest/download/"
+            "aec-release-manifest.json",
+            workflow,
+        )
+        self.assertNotIn("gh release download", workflow)
         self.assertIn("aec-release-manifest.json", workflow)
         self.assertIn("scripts/check_aec_release.py", workflow)
         self.assertIn("--notify-repository", workflow)

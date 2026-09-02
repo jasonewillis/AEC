@@ -9,6 +9,10 @@ permissions:
   contents: read
   issues: write
 
+concurrency:
+  group: aec-release-notification
+  cancel-in-progress: false
+
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -17,15 +21,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Download the latest reviewed release signal
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir -p tmp/aec-release
-          gh release download \
-            --repo jasonewillis/AEC \
-            --pattern aec-release-manifest.json \
-            --dir tmp/aec-release
+          curl --fail --location --silent --show-error \
+            https://github.com/jasonewillis/AEC/releases/latest/download/aec-release-manifest.json \
+            --output tmp/aec-release/aec-release-manifest.json
       - name: Compare the tracked pin and notify once
         env:
           GH_TOKEN: ${{ github.token }}
