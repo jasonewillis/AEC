@@ -1,0 +1,38 @@
+name: Check for reviewed AEC releases
+
+on:
+  schedule:
+    - cron: "17 14 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: aec-release-notification
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Download the latest reviewed release signal
+        run: |
+          set -euo pipefail
+          mkdir -p tmp/aec-release
+          curl --fail --location --silent --show-error \
+            https://github.com/jasonewillis/AEC/releases/latest/download/aec-release-manifest.json \
+            --output tmp/aec-release/aec-release-manifest.json
+      - name: Compare the tracked pin and notify once
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check_aec_release.py \
+            --pin .aec-pin \
+            --manifest tmp/aec-release/aec-release-manifest.json \
+            --notify-repository "$GITHUB_REPOSITORY"

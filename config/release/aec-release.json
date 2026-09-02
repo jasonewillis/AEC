@@ -9,8 +9,8 @@
     "resolution_request": "2.0.0",
     "workflow": "1.0.0"
   },
-  "release_notes": "docs/releases/v0.1.0.md",
-  "release_version": "0.1.0",
+  "release_notes": "docs/releases/v0.2.0.md",
+  "release_version": "0.2.0",
   "repository": "jasonewillis/AEC",
   "schema_version": "1.0.0"
 }

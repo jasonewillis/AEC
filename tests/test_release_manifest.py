@@ -47,8 +47,8 @@ def descriptor() -> dict[str, object]:
         "channel": "beta",
         "compatibility": "validation-required",
         "contracts": dict(CONTRACT_VERSIONS),
-        "release_notes": "docs/releases/v0.1.0.md",
-        "release_version": "0.1.0",
+        "release_notes": "docs/releases/v0.2.0.md",
+        "release_version": "0.2.0",
         "repository": OFFICIAL_REPOSITORY,
         "schema_version": "1.0.0",
     }
@@ -147,11 +147,11 @@ class ReleaseManifestTests(unittest.TestCase):
             },
         )
         release_schema = schema["properties"]["release"]["properties"]
-        self.assertEqual("0.1.0", release_schema["version"]["const"])
+        self.assertEqual("0.2.0", release_schema["version"]["const"])
         self.assertEqual(CURRENT_RELEASE_VERSION, release_schema["version"]["const"])
-        self.assertEqual("v0.1.0", release_schema["tag"]["const"])
+        self.assertEqual("v0.2.0", release_schema["tag"]["const"])
         self.assertEqual(
-            "https://github.com/jasonewillis/AEC/releases/tag/v0.1.0",
+            "https://github.com/jasonewillis/AEC/releases/tag/v0.2.0",
             release_schema["notes_url"]["const"],
         )
         timestamp_pattern = re.compile(release_schema["published_at"]["pattern"])
@@ -173,14 +173,14 @@ class ReleaseManifestTests(unittest.TestCase):
             descriptor(),
             repository="jasonewillis/AEC",
             revision=revision,
-            tag="v0.1.0",
+            tag="v0.2.0",
             published_at="2026-07-26T20:00:00Z",
         )
 
         self.assertEqual([], validate_release_manifest(manifest))
         self.assertEqual(RELEASE_MANIFEST_SCHEMA_VERSION, manifest["schema_version"])
         self.assertEqual(revision, manifest["release"]["revision"])
-        self.assertEqual("v0.1.0", manifest["release"]["tag"])
+        self.assertEqual("v0.2.0", manifest["release"]["tag"])
         self.assertEqual(
             PUBLIC_CARD_SCHEMA_VERSION, manifest["contracts"]["public_card"]
         )
@@ -197,14 +197,14 @@ class ReleaseManifestTests(unittest.TestCase):
             manifest["consumer_update"],
         )
         self.assertEqual(
-            "https://github.com/jasonewillis/AEC/releases/tag/v0.1.0",
+            "https://github.com/jasonewillis/AEC/releases/tag/v0.2.0",
             manifest["release"]["notes_url"],
         )
         self.assertEqual(canonical_json(manifest), canonical_json(manifest))
 
     def test_tag_revision_time_repository_and_tamper_fail_closed(self) -> None:
         cases = (
-            {"tag": "v0.2.0"},
+            {"tag": "v0.3.0"},
             {"revision": "main"},
             {"published_at": "2026-07-26"},
             {"repository": "fork/AEC"},
@@ -214,7 +214,7 @@ class ReleaseManifestTests(unittest.TestCase):
                 arguments = {
                     "repository": "jasonewillis/AEC",
                     "revision": "b" * 40,
-                    "tag": "v0.1.0",
+                    "tag": "v0.2.0",
                     "published_at": "2026-07-26T20:00:00Z",
                     **replacement,
                 }
@@ -225,7 +225,7 @@ class ReleaseManifestTests(unittest.TestCase):
             descriptor(),
             repository="jasonewillis/AEC",
             revision="b" * 40,
-            tag="v0.1.0",
+            tag="v0.2.0",
             published_at="2026-07-26T20:00:00Z",
         )
         tampered = copy.deepcopy(manifest)
@@ -237,7 +237,7 @@ class ReleaseManifestTests(unittest.TestCase):
             descriptor(),
             repository=OFFICIAL_REPOSITORY,
             revision="d" * 40,
-            tag="v0.1.0",
+            tag="v0.2.0",
             published_at="2026-07-26T20:00:00Z",
         )
         for timestamp in (
@@ -254,13 +254,13 @@ class ReleaseManifestTests(unittest.TestCase):
         changed_identity = copy.deepcopy(baseline)
         changed_identity["release"].update(
             {
-                "notes_url": "https://github.com/jasonewillis/AEC/releases/tag/v0.2.0",
-                "tag": "v0.2.0",
-                "version": "0.2.0",
+                "notes_url": "https://github.com/jasonewillis/AEC/releases/tag/v0.3.0",
+                "tag": "v0.3.0",
+                "version": "0.3.0",
             }
         )
         self.assertIn(
-            "release.version must equal 0.1.0",
+            "release.version must equal 0.2.0",
             validate_release_manifest(changed_identity),
         )
 
@@ -279,7 +279,7 @@ class ReleaseManifestTests(unittest.TestCase):
                     "--revision",
                     "c" * 40,
                     "--tag",
-                    "v0.1.0",
+                    "v0.2.0",
                     "--published-at",
                     "2026-07-26T20:00:00Z",
                     "--output",
@@ -367,7 +367,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
         facts = {
             "repository": OFFICIAL_REPOSITORY,
             "revision": "a" * 40,
-            "tag": "v0.1.0",
+            "tag": "v0.2.0",
             "main_contains_revision": True,
             "immutable_releases_enabled": True,
             "existing_release_state": "missing",
@@ -379,7 +379,7 @@ class ReleaseWorkflowTests(unittest.TestCase):
             ("main_contains_revision", False, "ancestor of main"),
             ("immutable_releases_enabled", False, "immutability must be enabled"),
             ("existing_release_state", "published", "published release already exists"),
-            ("tag", "v0.2.0", "tag must equal"),
+            ("tag", "v0.3.0", "tag must equal"),
             ("revision", "main", "40-character Git commit"),
             ("token_available", False, "AEC_RELEASE_TOKEN is required"),
         )

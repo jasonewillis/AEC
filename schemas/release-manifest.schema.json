@@ -46,7 +46,7 @@
       "properties": {
         "channel": {"enum": ["alpha", "beta", "stable"]},
         "notes_url": {
-          "const": "https://github.com/jasonewillis/AEC/releases/tag/v0.1.0"
+          "const": "https://github.com/jasonewillis/AEC/releases/tag/v0.2.0"
         },
         "published_at": {
           "format": "date-time",
@@ -54,8 +54,8 @@
           "type": "string"
         },
         "revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-        "tag": {"const": "v0.1.0"},
-        "version": {"const": "0.1.0"}
+        "tag": {"const": "v0.2.0"},
+        "version": {"const": "0.2.0"}
       },
       "required": [
         "channel",

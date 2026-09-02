@@ -14,7 +14,7 @@ from tools.release_api_evidence import (
 
 
 REPOSITORY = "jasonewillis/AEC"
-TAG = "v0.1.0"
+TAG = "v0.2.0"
 REVISION = "61bea570a35de7ae1c60a06dede7e0ca010ad9a7"
 MAIN = "b" * 40
 
@@ -159,7 +159,7 @@ class ReleaseApiEvidenceTests(unittest.TestCase):
         for replacement in (
             {"repository": "fork/AEC"},
             {"tag": "main"},
-            {"tag": "v0.2.0"},
+            {"tag": "v0.3.0"},
             {"expected_revision": ""},
             {"expected_revision": "A" * 40},
             {"token": ""},

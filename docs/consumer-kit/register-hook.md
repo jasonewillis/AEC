@@ -14,10 +14,15 @@ Vendor AEC at one exact commit, then prove that commit before you trust a card:
 
 ```bash
 printf 'tmp/\n.local/\n' >> .gitignore
+printf '%s\n' <full-40-character-commit> > .aec-pin
 git clone https://github.com/jasonewillis/AEC .local/aec
-git -C .local/aec checkout <full-40-character-commit>
+git -C .local/aec checkout "$(cat .aec-pin)"
 (cd .local/aec && python3 -m tools.aec_coach doctor)
 ```
+
+Commit `.aec-pin`; it is the consumer-owned record of the adopted revision and
+the only line an update pull request needs to change. The vendored checkout
+remains ignored.
 
 Ignore `.local/` *before* you clone. `.local/aec` is a second Git repository
 inside yours; a later `git add -A` with it untracked commits it as an embedded
@@ -149,6 +154,29 @@ here. Only the registered prompt hook (step 3) emits it, because a hook must
 stay non-blocking for the host prompt and so reports failure as visible text
 with exit `0`, where `checkpoint` is a command and reports failure as an exit
 code.
+
+## Step 6 — Receive reviewed-release notifications
+
+Copy the read-only checker and consumer-owned workflow, then commit both:
+
+```bash
+cp .local/aec/docs/consumer-kit/check_aec_release.py scripts/check_aec_release.py
+mkdir -p .github/workflows
+cp .local/aec/docs/consumer-kit/aec-release-notification.yml \
+  .github/workflows/aec-release-notification.yml
+```
+
+The workflow runs weekly and on manual dispatch. It downloads only the latest
+official release manifest, compares its exact revision with `.aec-pin`, and
+opens at most one `[AEC UPDATE] <tag> available` issue. It does not check out or
+execute the candidate, change the pin, open or merge a pull request, or deploy.
+Installing this copied workflow is the consumer's authorization for its own
+repository to create that notification issue; AEC itself retains no consumer
+credential or lifecycle authority.
+
+When an issue appears, change `.aec-pin` on a consumer-owned branch, check out
+that exact revision, rerun `doctor` and the listed routine, material, and
+human-render probes, then use the consumer's normal review and merge process.
 
 ## What stays yours
 
