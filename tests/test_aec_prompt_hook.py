@@ -219,7 +219,7 @@ class PromptHookTests(unittest.TestCase):
             "STOP RULE",
             "TRANSFERABLE LESSON",
             "Routine: do not manufacture choices; decision_context stays null.",
-            "Material fork: present 2-3 bounded choices",
+            "every choice must use literal Pros: and Cons: labels; dimension bullets do not substitute for them",
             "1. [Recommended]",
             "Pros:",
             "Cons:",
