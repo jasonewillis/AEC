@@ -1,7 +1,7 @@
 # Agentic Engineering Coach
 
 AEC is an agent-agnostic mentoring and conformance layer for software delivery.
-It gives Claude, Codex, and future agents the same answer to four questions:
+It gives Claude, Codex, and future agents the same answer to six questions:
 
 1. Where is this task in the delivery lifecycle?
 2. What is the earliest unmet gate?
@@ -110,6 +110,9 @@ Administration read access and Contents write access. The workflow fails before 
 a release unless repository release immutability is enabled.
 
 ## Documentation
+
+- [Product requirements](docs/PRD.md) — canonical product goals, priorities, and
+  trustworthy-beta acceptance gates
 
 **Architecture** — what AEC is and what it refuses to do.
 
