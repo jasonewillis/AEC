@@ -116,6 +116,10 @@
       "test-fixture",
       "3fe431171dfb124d340c103c82ea9794dfd000fbf682b08ff92f26bdeadd34a0"
     ],
+    "tests/fixtures/human-render/sentinel-material.json": [
+      "test-fixture",
+      "e2802e07295aafbddaeee7f9f66db9ee9ac17c296de2332c093528d377aa682f"
+    ],
     "tests/fixtures/outcomes/golden.json": [
       "test-fixture",
       "9dfb6f823faf7263debea44fbbd3456f7de224e0def3ec28bb6d40d7970a2b6e"
