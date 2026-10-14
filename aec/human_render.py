@@ -532,6 +532,11 @@ def render_decision(card: dict[str, Any], *, orientation: bool = True) -> str | 
 
     lines = [
         section_heading("[AEC: Decision]", rule=orientation),
+        *labeled_lines(
+            "SOURCE",
+            "Validated caller input. AEC does not independently select, score, "
+            "or verify the choices.",
+        ),
         *labeled_lines("QUESTION", support["question"]),
         "",
     ]
@@ -546,10 +551,20 @@ def render_decision(card: dict[str, Any], *, orientation: bool = True) -> str | 
 
     recommendation = support.get("recommendation") or {}
     lines.extend(labeled_lines("RECOMMEND", recommendation.get("choice")))
+    why = recommendation.get("why")
+    if why:
+        lines.extend(labeled_lines("WHY", why))
+    context = support.get("context") or {}
+    evidence_quality = context.get("evidence_quality")
+    if evidence_quality:
+        lines.extend(labeled_lines("EVIDENCE", evidence_quality))
     lines.extend(labeled_lines("CONFIDENCE", recommendation.get("confidence")))
     principal_uncertainty = recommendation.get("principal_uncertainty")
     if principal_uncertainty:
         lines.extend(labeled_lines("UNCERTAINTY", principal_uncertainty))
+    falsifier = recommendation.get("falsifier")
+    if falsifier:
+        lines.extend(labeled_lines("FALSIFIER", falsifier))
     expected_result = recommendation.get("expected_result") or {}
     if expected_result:
         lines.extend(
