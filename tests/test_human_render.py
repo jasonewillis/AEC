@@ -10,11 +10,16 @@ those same constants rather than re-reading JSON.
 
 from __future__ import annotations
 
+import copy
+import io
 import json
 import re
+import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
 from aec.cards import PHASE_RAIL, STAGE_PHASES, validate_public_card
 from aec.consumer import ConsumerStateRejection, resolve_consumer_state
@@ -26,6 +31,7 @@ from aec.human_render import (
     ORIENTATION_TRIGGERS,
     RAIL_CONNECTOR,
     TEXT_WIDTH,
+    TRADEOFF_DIMENSIONS,
     PHASE_DISPLAY_NAMES,
     RailDefinition,
     RenderFailure,
@@ -40,6 +46,7 @@ from aec.human_render import (
     render_rail,
 )
 from aec.state_builder import AEC_SELF_PROFILE, build_state
+from tools.aec_coach import main as coach_main
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +56,11 @@ CATALOG = json.loads(
 WORKFLOW = json.loads(
     (ROOT / "config" / "workflows" / "ticket-to-pr.json").read_text(encoding="utf-8")
 )
+SENTINEL_MATERIAL_STATE = json.loads(
+    (ROOT / "tests" / "fixtures" / "human-render" / "sentinel-material.json")
+    .read_text(encoding="utf-8")
+)
+SENTINEL_REVISION = "1490149014901490149014901490149014901490"
 
 
 class HumanRenderContractTests(unittest.TestCase):
@@ -394,6 +406,15 @@ class RenderMentoringTests(unittest.TestCase):
 
 
 class RenderDecisionTests(unittest.TestCase):
+    def _resolve_sentinel(self, state: dict[str, object] | None = None):
+        return resolve_consumer_state(
+            SENTINEL_MATERIAL_STATE if state is None else state,
+            CATALOG,
+            current_time="2026-10-13T12:00:00Z",
+            expected_environment="sentinel-test",
+            expected_revision=SENTINEL_REVISION,
+        )
+
     def test_returns_none_when_decision_support_is_null(self) -> None:
         card = minimal_card(decision_support=None)
 
@@ -449,6 +470,137 @@ class RenderDecisionTests(unittest.TestCase):
         self.assertIn("An example revisit condition.", text)
         self.assertIn("OWNER    agent", text)
         self.assertIn("[AEC: Decision]", render_human(card, RAIL_DEFINITION))
+
+    def test_consumer_fixture_renders_every_validated_material_decision_field(self) -> None:
+        """G1.1-G1.3/G1.8: every accepted caller fact reaches the human block."""
+        result = self._resolve_sentinel()
+        self.assertNotIsInstance(result, ConsumerStateRejection)
+        card = result.to_dict()
+        self.assertEqual([], validate_public_card(card))
+
+        text = render_human(card, RAIL_DEFINITION)
+
+        normalized = " ".join(text.split("[AEC: Decision]", 1)[1].split())
+        required_fragments = [
+            "SOURCE Validated caller input. AEC does not independently select, score, or verify the choices.",
+            "QUESTION SENTINEL question: where should release status appear?",
+            "CHOICE sentinel-inline-summary",
+            "SUMMARY SENTINEL choice one summary: keep the status inside the existing release view.",
+            "CHOICE sentinel-separate-summary",
+            "SUMMARY SENTINEL choice two summary: add a separate release-status view.",
+            "RECOMMEND sentinel-inline-summary",
+            "WHY SENTINEL why: it keeps the result beside the action that produced it.",
+            "EVIDENCE indirect",
+            "CONFIDENCE medium",
+            "UNCERTAINTY SENTINEL uncertainty: whether the existing view has enough visual capacity.",
+            "FALSIFIER SENTINEL falsifier: users reach a separate view with fewer steps and no added errors.",
+            "EXPECTED measure=sentinel-navigation-steps, baseline=7, target=3, "
+            "direction=decrease, unit=steps, threshold=SENTINEL threshold: no more than "
+            "three navigation steps.",
+            "REVISIT SENTINEL revisit one: the existing view exceeds its tested density limit.",
+            "REVISIT SENTINEL revisit two: navigation testing favors a separate view.",
+            "OWNER consumer-owner · SENTINEL authority reason: the consumer owner controls "
+            "the release interface.",
+        ]
+        for ordinal in ("one", "two"):
+            for dimension in TRADEOFF_DIMENSIONS:
+                required_fragments.append(
+                    f"{dimension.upper()} SENTINEL choice {ordinal} {dimension} tradeoff."
+                )
+        for fragment in required_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, normalized)
+        self.assertIn("[AEC: Decision]", text)
+        oriented = render_human(card, RAIL_DEFINITION, orientation=True)
+        for fragment in required_fragments:
+            with self.subTest(oriented_fragment=fragment):
+                self.assertIn(fragment, " ".join(oriented.split()))
+
+    def test_consumer_fixture_render_preserves_canonical_hashes_and_payload(self) -> None:
+        """G1.7: presentation is pure over the accepted, hash-bound card."""
+        result = self._resolve_sentinel()
+        self.assertNotIsInstance(result, ConsumerStateRejection)
+        card = result.to_dict()
+        before = json.dumps(card, sort_keys=True, separators=(",", ":"))
+        hashes = (card["resolution_hash"], card["card_hash"])
+
+        render_human(card, RAIL_DEFINITION)
+
+        self.assertEqual(before, json.dumps(card, sort_keys=True, separators=(",", ":")))
+        self.assertEqual(hashes, (card["resolution_hash"], card["card_hash"]))
+        self.assertEqual([], validate_public_card(card))
+
+    def test_consumer_boundary_rejects_malformed_stale_and_mismatched_decisions(self) -> None:
+        """G1.5: rejected caller state yields no card that can become trusted text."""
+        malformed = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        del malformed["decision_context"]["recommendation"]["falsifier"]
+        stale = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        stale["expires_at"] = "2026-10-13T11:59:59Z"
+        mismatched = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        mismatched["decision_context"]["context"]["revision"] = "0" * 40
+
+        for name, state, code in (
+            ("malformed", malformed, "CONSUMER_STATE_INVALID"),
+            ("stale", stale, "CONSUMER_STATE_STALE"),
+            ("revision-mismatched", mismatched, "CONSUMER_STATE_INVALID"),
+        ):
+            with self.subTest(case=name):
+                result = self._resolve_sentinel(state)
+                self.assertIsInstance(result, ConsumerStateRejection)
+                self.assertEqual(code, result.code)
+                self.assertIsNone(result.to_dict()["card"])
+
+    def test_checkpoint_cli_emits_no_trusted_block_for_rejected_consumer_state(self) -> None:
+        """G1.5: the human CLI keeps rejected decision text off standard output."""
+        malformed = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        del malformed["decision_context"]["recommendation"]["falsifier"]
+        stale = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        stale["expires_at"] = "2026-10-13T11:59:59Z"
+        mismatched = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        mismatched["decision_context"]["context"]["revision"] = "0" * 40
+
+        for name, state in (
+            ("malformed", malformed),
+            ("stale", stale),
+            ("revision-mismatched", mismatched),
+        ):
+            with self.subTest(case=name), tempfile.TemporaryDirectory() as directory:
+                state_path = Path(directory) / "consumer-state.json"
+                state_path.write_text(json.dumps(state), encoding="utf-8")
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                with (
+                    patch("tools.aec_coach.current_revision", return_value=SENTINEL_REVISION),
+                    patch("tools.aec_coach.utc_now", return_value="2026-10-13T12:00:00Z"),
+                    redirect_stdout(stdout),
+                    redirect_stderr(stderr),
+                ):
+                    exit_code = coach_main(
+                        [
+                            "checkpoint",
+                            str(state_path),
+                            "--project-root",
+                            str(ROOT),
+                            "--environment",
+                            "sentinel-test",
+                        ]
+                    )
+                self.assertEqual(1, exit_code)
+                self.assertEqual("", stdout.getvalue())
+                self.assertIn("consumer state rejected", stderr.getvalue())
+                self.assertNotIn("[AEC: Decision]", stderr.getvalue())
+
+    def test_routine_consumer_state_renders_no_decision_block(self) -> None:
+        """G1.6: removing the optional caller fork keeps routine guidance routine."""
+        routine = copy.deepcopy(SENTINEL_MATERIAL_STATE)
+        del routine["decision_context"]
+        result = self._resolve_sentinel(routine)
+        self.assertNotIsInstance(result, ConsumerStateRejection)
+
+        text = render_human(result.to_dict(), RAIL_DEFINITION)
+
+        self.assertNotIn("[AEC: Decision]", text)
+        self.assertNotIn("Validated caller input", text)
 
 
 OBSERVATION_SUPPORT = {

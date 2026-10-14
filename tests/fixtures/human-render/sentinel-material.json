@@ -1,0 +1,124 @@
+{
+  "blockers": [],
+  "capabilities": {
+    "capabilities": [
+      "normalized-resolution"
+    ],
+    "identity": "portable-python",
+    "version": "portable-python:1.0.0"
+  },
+  "consumer_profile": {
+    "aec_mode": "read-only-mentor",
+    "agent_adapters": [
+      "sentinel-console"
+    ],
+    "lifecycle_authority": "consumer-owned",
+    "profile_version": "sentinel-console:1.0.0",
+    "project": "sentinel-labs/release-console",
+    "schema_version": "1.0.0",
+    "workflow": "ticket-to-pr"
+  },
+  "decision_context": {
+    "authority": {
+      "owner": "consumer-owner",
+      "reason": "SENTINEL authority reason: the consumer owner controls the release interface."
+    },
+    "choices": [
+      {
+        "identity": "sentinel-inline-summary",
+        "summary": "SENTINEL choice one summary: keep the status inside the existing release view.",
+        "tradeoffs": {
+          "maintainability": "SENTINEL choice one maintainability tradeoff.",
+          "quality": "SENTINEL choice one quality tradeoff.",
+          "reversibility": "SENTINEL choice one reversibility tradeoff.",
+          "risk": "SENTINEL choice one risk tradeoff.",
+          "scope": "SENTINEL choice one scope tradeoff."
+        }
+      },
+      {
+        "identity": "sentinel-separate-summary",
+        "summary": "SENTINEL choice two summary: add a separate release-status view.",
+        "tradeoffs": {
+          "maintainability": "SENTINEL choice two maintainability tradeoff.",
+          "quality": "SENTINEL choice two quality tradeoff.",
+          "reversibility": "SENTINEL choice two reversibility tradeoff.",
+          "risk": "SENTINEL choice two risk tradeoff.",
+          "scope": "SENTINEL choice two scope tradeoff."
+        }
+      }
+    ],
+    "context": {
+      "evidence_quality": "indirect",
+      "revision": "1490149014901490149014901490149014901490"
+    },
+    "question": "SENTINEL question: where should release status appear?",
+    "recommendation": {
+      "choice": "sentinel-inline-summary",
+      "confidence": "medium",
+      "expected_result": {
+        "baseline": "7",
+        "direction": "decrease",
+        "measure": "sentinel-navigation-steps",
+        "target": "3",
+        "threshold": "SENTINEL threshold: no more than three navigation steps.",
+        "unit": "steps"
+      },
+      "falsifier": "SENTINEL falsifier: users reach a separate view with fewer steps and no added errors.",
+      "principal_uncertainty": "SENTINEL uncertainty: whether the existing view has enough visual capacity.",
+      "revisit_when": [
+        "SENTINEL revisit one: the existing view exceeds its tested density limit.",
+        "SENTINEL revisit two: navigation testing favors a separate view."
+      ],
+      "why": "SENTINEL why: it keeps the result beside the action that produced it."
+    },
+    "schema_version": "2.0.0"
+  },
+  "effects": {
+    "executes": false,
+    "mutates": false
+  },
+  "environment": {
+    "identity": "sentinel-test"
+  },
+  "evidence": [],
+  "expires_at": "2026-10-14T00:00:00Z",
+  "observed_at": "2026-10-13T00:00:00Z",
+  "policy": {
+    "facts": {
+      "require_exact_environment": true,
+      "require_exact_revision": true
+    },
+    "identity": "default-delivery",
+    "revision": "default-delivery:1.0.0"
+  },
+  "procedures": {
+    "available": [
+      {
+        "identity": "verify-evidence",
+        "revision": "verify-evidence:1.0.0"
+      }
+    ],
+    "required": {
+      "identity": "verify-evidence",
+      "revision": "verify-evidence:1.0.0"
+    }
+  },
+  "provider": {
+    "identity": "consumer-state-provider",
+    "revision": "consumer-state-provider:1.0.0"
+  },
+  "revision": {
+    "identity": "1490149014901490149014901490149014901490"
+  },
+  "schema_version": "1.0.0",
+  "task": {
+    "identity": "sentinel-release-console-149"
+  },
+  "workflow_position": {
+    "lane": "PRODUCT",
+    "phase": "Verify",
+    "stage": "Execute",
+    "workflow": "ticket-to-pr",
+    "workflow_revision": "ticket-to-pr:1.0.0"
+  }
+}

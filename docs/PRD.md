@@ -97,7 +97,7 @@ distance between a valid framework contract and a complete consumer experience:
 |---|---|---|
 | Pure resolver | Shipped with nine phases, deterministic hashes, blocker precedence, and red fixtures | Caller facts remain caller claims; AEC does not discover lifecycle truth |
 | Consumer state | `aec-coach state` supports `--project-root`, `--profile`, evidence, blockers, and decision context | Consolidated onboarding is incomplete; observation context is supported by the pure builder but has no CLI input |
-| Human renderer | Shipped rail, guidance, mentoring, observation, and decision blocks | Material decisions omit `recommendation.why`, `recommendation.falsifier`, and `context.evidence_quality` |
+| Human renderer | Shipped rail, guidance, mentoring, observation, and decision blocks | Complete validated material-decision input and caller-authorship boundary; G1 delivery evidence is tracked in [#149](https://github.com/jasonewillis/AEC/issues/149), separate from consumer-host adoption |
 | Agent guidance | Intake guidance requests bounded options and tradeoffs | Guidance cannot guarantee that an agent response uses literal Pros/Cons or is semantically thoughtful |
 | Pin doctor | Routine and material fixed probes run through the public path | Fixed fixtures do not prove a consumer's profile, producer, hook, privacy rules, or task state |
 | Loader parity | Claude and Codex loader receipts can bind the same pinned skills and decision | Loader parity does not prove rendered human-output parity in a consumer host |
@@ -122,8 +122,9 @@ python3 -m unittest discover -s tests -v
 ```
 
 On `55b6dc8`, the first four commands pass; the unit suite passed 453 tests in
-212.623 seconds. G1 through G6 below are future acceptance contracts and are explicitly
-**NOT IMPLEMENTED** unless the baseline matrix says otherwise. Their delivery issues must
+212.623 seconds. G2 through G6 below remain future acceptance contracts and are explicitly
+**NOT IMPLEMENTED** unless the baseline matrix says otherwise. G1 implementation and
+acceptance evidence are tracked in [#149](https://github.com/jasonewillis/AEC/issues/149). Delivery issues must
 name concrete verification commands and red evidence before implementation is accepted.
 
 ## Goals and binary acceptance
@@ -132,6 +133,11 @@ name concrete verification commands and red evidence before implementation is ac
 
 **Goal G1:** Make the human decision block complete enough for a person to assess the
 same material fork the validator accepted.
+
+**Current evidence:** implementation and focused red/green proof use a distinct
+synthetic consumer fixture. Review, merge, mutation results, and exact-revision
+acceptance are recorded in [#149](https://github.com/jasonewillis/AEC/issues/149).
+This does not publish a release or prove adoption by a real consumer host.
 
 1. **G1.1** A golden material-decision render displays the question and every declared
    choice with quality, risk, reversibility, maintainability, and scope tradeoffs.
@@ -147,9 +153,9 @@ same material fork the validator accepted.
 8. **G1.8** Consumer wording states that decision support is validated caller input; AEC
    does not independently select, score, or verify the choices.
 
-**Recommended next slice:** implement G1 with one consumer-specific material-decision
-fixture. It closes a visible trust gap within the existing contract and requires no new
-schema, authority, or service.
+**Recommended next slice:** G2 consumer-specific compatibility and onboarding, after
+G1 acceptance is recorded in #149. The G1 fixture proves framework behavior for a
+synthetic consumer; it does not substitute for consumer-owned integration evidence.
 
 ### P0 — Consumer-specific compatibility and onboarding
 
